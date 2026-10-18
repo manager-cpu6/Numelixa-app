@@ -224,8 +224,8 @@ class _HomePage extends StatelessWidget {
 }
 
 class _DataCard extends StatefulWidget {
-  const _DataCard({required this.title, required this.icon, required this.path});
-  final String title, path;
+  const _DataCard({required this.title, required this.icon, required String path});
+  final String title;
   final IconData icon;
   @override
   State<_DataCard> createState() => _DataCardState();
@@ -288,7 +288,6 @@ class _CatalogPage extends StatefulWidget {
 }
 class _CatalogPageState extends State<_CatalogPage> {
   late Future<Map<String, dynamic>> _future;
-  String? _selectedService;
   @override
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().services(token: context.read<AuthService>().accessToken); }
@@ -334,6 +333,48 @@ class _CountriesPageState extends State<_CountriesPage> {
   @override
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().countries(service: widget.service, token: context.read<AuthService>().accessToken); }
+  Future<void> _confirmPurchase(Map<String, dynamic> country) async {
+    final countryCode = (country['id'] ?? country['code'] ?? '').toString();
+    if (countryCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This country has no supported purchase code.')));
+      return;
+    }
+    final name = (country['name'] ?? country['title'] ?? countryCode).toString();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Buy virtual number?'),
+        content: Text('Request a live ${widget.service} number for $name? The server will confirm stock and price before charging your wallet.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continue')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final auth = context.read<AuthService>();
+      final result = await NumelixaRepository().purchase(
+        token: auth.accessToken!,
+        country: countryCode,
+        service: widget.service,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result['ok'] == true
+          ? 'Number order submitted successfully.'
+          : (result['error'] ?? 'The order could not be completed.').toString()),
+      ));
+      if (result['ok'] == true) {
+        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _OrdersPage()));
+      }
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Network error. Please retry.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text('Countries · ${widget.service}')),
@@ -352,6 +393,7 @@ class _CountriesPageState extends State<_CountriesPage> {
               title: Text((country['name'] ?? country['title'] ?? country['id'] ?? 'Country').toString()),
               subtitle: Text('Stock: ${(country['stock'] is Map ? country['stock']['count'] : country['count']) ?? '—'}'),
               trailing: Text((country['stock'] is Map ? country['stock']['sellCoins'] : null)?.toString() ?? '—', style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w700)),
+              onTap: () => _confirmPurchase(country),
             )),
         ]);
       },
