@@ -151,7 +151,7 @@ class NotificationService {
       }
       await _register(token, auth);
     } catch (error) {
-      registrationStatus.value = 'FCM registration error: ' + error.toString();
+      registrationStatus.value = 'FCM registration error: $error;
       debugPrint('FCM token sync failed: $error');
     }
   }
