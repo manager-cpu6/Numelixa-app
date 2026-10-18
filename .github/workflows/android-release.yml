@@ -45,7 +45,7 @@ jobs:
                   create("release") {
                       val propsFile = rootProject.file("key.properties")
                       if (propsFile.exists()) {
-                          val props = java.util.Properties()
+                          val props = Properties()
                           propsFile.inputStream().use { props.load(it) }
                           storeFile = file(props["storeFile"] as String)
                           storePassword = props["storePassword"] as String
@@ -59,6 +59,10 @@ jobs:
           s = s.replace('signingConfig = signingConfigs.getByName("debug")',
               'signingConfig = if (rootProject.file("key.properties").exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")')
           g.write_text(s)
+          gp = Path('android/gradle.properties')
+          properties = gp.read_text() if gp.exists() else ''
+          if 'android.newDsl=false' not in properties:
+              gp.write_text(properties + '\\nandroid.newDsl=false\\n')
           PY
       - name: Configure Firebase (optional)
         env:
