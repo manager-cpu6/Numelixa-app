@@ -20,6 +20,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
   bool _booted = false;
+  bool _wasBackgrounded = false;
 
   @override
   void initState() {
@@ -30,7 +31,21 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _wasBackgrounded = true;
+      return;
+    }
     if (state != AppLifecycleState.resumed || !mounted) return;
+    final auth = context.read<AuthService>();
+    if (_wasBackgrounded && auth.biometricEnabled && auth.isSignedIn) {
+      auth.lockBiometrics();
+      auth.unlockBiometrics().then((_) {
+        if (mounted && !auth.biometricLocked) _syncNotifications();
+      }).catchError((_) {});
+      _wasBackgrounded = false;
+      return;
+    }
+    _wasBackgrounded = false;
     _syncNotifications();
   }
 
@@ -78,7 +93,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await notifications.initialize(auth: auth);
       // Ask only once a real account is signed in; registration requires that
       // account's mobile bearer token to associate the FCM token correctly.
-      if (auth.isSignedIn) {
+      if (auth.biometricLocked) {
+        try { await auth.unlockBiometrics(); } catch (_) {}
+      }
+      if (auth.isSignedIn && !auth.biometricLocked) {
         final permission = await notifications.requestPermission();
         if (permission.isGranted) await notifications.syncToken(auth);
       }
@@ -92,6 +110,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       return const _SplashScreen();
     }
     if (!auth.isSignedIn) return const _AuthScreen();
+    if (auth.biometricLocked) return const _BiometricLockScreen();
     if (auth.needsEmailVerification) return const _EmailVerificationScreen();
     final pages = [
       const _HomePage(),
