@@ -220,7 +220,7 @@ class _AuthScreenState extends State<_AuthScreen> {
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (error) {
-      if (mounted) setState(() => _error = 'Google Sign-In error: $error);
+      if (mounted) setState(() => _error = error.toString());
     }
   }
 
