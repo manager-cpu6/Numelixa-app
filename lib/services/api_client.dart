@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
 import '../core/config/app_config.dart';
 
 class ApiException implements Exception {
@@ -14,6 +15,11 @@ class ApiException implements Exception {
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
   final http.Client _client;
+  static final Future<String> _deviceLabel = DeviceInfoPlugin().androidInfo.then((info) {
+    final maker = info.manufacturer.trim();
+    final model = info.model.trim();
+    return [maker, model].where((part) => part.isNotEmpty).join(' ');
+  }).catchError((_) => 'Android device');
 
   Future<Map<String, dynamic>> get(String path, {String? accessToken}) =>
       _request('GET', path, accessToken: accessToken);
@@ -33,7 +39,13 @@ class ApiClient {
   Future<Map<String, dynamic>> _request(String method, String path,
       {Map<String, dynamic>? body, String? accessToken}) async {
     final uri = Uri.parse(AppConfig.apiBase).resolve(path);
-    final headers = <String, String>{'Accept': 'application/json', 'x-numelixa-client': 'android-app'};
+    final deviceLabel = await _deviceLabel;
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'x-numelixa-client': 'android-app',
+      'x-numelixa-device': deviceLabel.isEmpty ? 'Android device' : deviceLabel,
+      'x-numelixa-platform': 'Android',
+    };
     if (body != null) headers['Content-Type'] = 'application/json';
     if (accessToken != null && accessToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $accessToken';
