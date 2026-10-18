@@ -58,11 +58,17 @@ class ApiClient {
   }
 
   String _friendlyMessage(int status, dynamic body) {
+    // Prefer the server's actionable error over a generic HTTP label. This is
+    // especially important for diagnosing FCM token linking and OAuth tickets.
+    if (body is Map && body['message'] is String && (body['message'] as String).trim().isNotEmpty) {
+      return body['message'] as String;
+    }
+    if (body is Map && body['error'] is String && (body['error'] as String).trim().isNotEmpty) {
+      return body['error'] as String;
+    }
     if (status == 401) return 'Please sign in again.';
     if (status == 403) return 'You do not have permission to do that.';
     if (status >= 500) return 'The service is temporarily unavailable.';
-    if (body is Map && body['error'] is String) return body['error'] as String;
-    if (body is Map && body['message'] is String) return body['message'] as String;
-    return 'The request could not be completed.';
+    return 'The request could not be completed (HTTP $status).';
   }
 }
