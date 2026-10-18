@@ -23,6 +23,23 @@ jobs:
         run: |
           flutter create --platforms=android --org com.numelixa --project-name app /tmp/numelixa-platform
           cp -R /tmp/numelixa-platform/android ./android
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle.kts')
+          if p.exists():
+              s = p.read_text()
+              marker = '    id("com.android.application")'
+              if 'com.google.gms.google-services' not in s:
+                  s = s.replace(marker, marker + '\\n    id("com.google.gms.google-services") version "4.4.2"')
+                  p.write_text(s)
+          else:
+              p = Path('android/app/build.gradle')
+              s = p.read_text()
+              marker = "    id 'com.android.application'"
+              if 'com.google.gms.google-services' not in s:
+                  s = s.replace(marker, marker + "\\n    id 'com.google.gms.google-services' version '4.4.2'")
+                  p.write_text(s)
+          PY
       - name: Write Firebase Android configuration
         id: firebase_config
         env:
