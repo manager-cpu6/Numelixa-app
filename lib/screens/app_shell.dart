@@ -575,6 +575,70 @@ class _CatalogPageState extends State<_CatalogPage> {
   @override
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().services(token: context.read<AuthService>().accessToken); }
+
+  String _serviceKey(Map<String, dynamic> service) =>
+      (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? '')
+          .toString().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  String _serviceName(Map<String, dynamic> service) {
+    final raw = (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString().trim();
+    final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    const names = <String, String>{
+      'wa': 'WhatsApp', 'whatsapp': 'WhatsApp', 'tg': 'Telegram', 'telegram': 'Telegram',
+      'fb': 'Facebook', 'facebook': 'Facebook', 'ig': 'Instagram', 'instagram': 'Instagram',
+      'tt': 'TikTok', 'tiktok': 'TikTok', 'googlevoice': 'Google Voice', 'google': 'Google',
+      'gmail': 'Gmail', 'youtube': 'YouTube', 'ms': 'Microsoft', 'microsoft': 'Microsoft',
+      'discord': 'Discord', 'snapchat': 'Snapchat', 'reddit': 'Reddit', 'netflix': 'Netflix',
+      'amazon': 'Amazon', 'apple': 'Apple', 'x': 'X', 'twitter': 'X', 'spotify': 'Spotify',
+      'linkedin': 'LinkedIn', 'pinterest': 'Pinterest', 'twitch': 'Twitch', 'steam': 'Steam',
+      'uber': 'Uber', 'airbnb': 'Airbnb', 'yahoo': 'Yahoo', 'signal': 'Signal',
+      'viber': 'Viber', 'wechat': 'WeChat', 'line': 'LINE', 'kakaotalk': 'KakaoTalk',
+      'imo': 'imo', 'paypal': 'PayPal', 'binance': 'Binance', 'aliexpress': 'AliExpress',
+      'ebay': 'eBay', 'microsoftteams': 'Microsoft Teams', 'telegramx': 'Telegram X',
+      'olx': 'OLX', 'tinder': 'Tinder', 'bumble': 'Bumble', 'grab': 'Grab', 'bolt': 'Bolt',
+    };
+    if (names.containsKey(key)) return names[key]!;
+    if (raw.contains(' ') || raw.contains('&')) return raw;
+    return raw.replaceAll(RegExp(r'[_\-]+'), ' ')
+        .split(RegExp(r'\s+')).where((part) => part.isNotEmpty)
+        .map((part) => part.length <= 2 ? part.toUpperCase() : '\${part[0].toUpperCase()}\${part.substring(1)}')
+        .join(' ');
+  }
+
+  Widget _serviceLogo(Map<String, dynamic> service) {
+    final key = _serviceKey(service);
+    const logos = <String, String>{
+      'whatsapp': 'whatsapp/25D366', 'telegram': 'telegram/26A5E4',
+      'facebook': 'facebook/0866FF', 'instagram': 'instagram/E4405F',
+      'tiktok': 'tiktok/FFFFFF', 'googlevoice': 'googlevoice/4285F4',
+      'google': 'google/4285F4', 'gmail': 'gmail/EA4335', 'youtube': 'youtube/FF0033',
+      'microsoft': 'microsoft/737373', 'discord': 'discord/5865F2',
+      'snapchat': 'snapchat/FFFC00', 'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
+      'amazon': 'amazon/FF9900', 'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF',
+      'twitter': 'x/FFFFFF', 'spotify': 'spotify/1DB954', 'linkedin': 'linkedin/0A66C2',
+      'pinterest': 'pinterest/BD081C', 'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF',
+      'uber': 'uber/FFFFFF', 'airbnb': 'airbnb/FF5A5F', 'yahoo': 'yahoo/6001D2',
+      'signal': 'signal/3A76F0', 'viber': 'viber/7360F2', 'wechat': 'wechat/07C160',
+      'line': 'line/00C300', 'kakaotalk': 'kakaotalk/FFCD00', 'paypal': 'paypal/003087',
+      'binance': 'binance/F0B90B', 'ebay': 'ebay/E53238', 'tinder': 'tinder/FF6B6B',
+      'bumble': 'bumble/FFC629', 'grab': 'grab/00B14F', 'bolt': 'bolt/34D186', 'olx': 'olx/6E0AD6',
+    };
+    String? slug;
+    for (final entry in logos.entries) {
+      if (key == entry.key || key.startsWith(entry.key)) { slug = entry.value; break; }
+    }
+    return CircleAvatar(
+      radius: 23, backgroundColor: const Color(0xFF102844),
+      child: slug == null
+          ? const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 25)
+          : Padding(
+              padding: const EdgeInsets.all(9),
+              child: Image.network('https://cdn.simpleicons.org/$slug', fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 25)),
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
     future: _future,
@@ -587,21 +651,23 @@ class _CatalogPageState extends State<_CatalogPage> {
       final filteredServices = services.where((service) {
         final query = _search.trim().toLowerCase();
         if (query.isEmpty) return true;
-        return ['name','title','id','code','description','category'].any((key) => (service[key] ?? '').toString().toLowerCase().contains(query));
+        return ['name','title','id','code','description','category'].any((key) => (service[key] ?? '').toString().toLowerCase().contains(query))
+            || _serviceName(service).toLowerCase().contains(query);
       }).toList();
       return ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Choose a service', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        const Text('Search WhatsApp, Telegram, Facebook and more', style: TextStyle(color: Color(0xFF91A8C4))),
+        const Text('Find your service by its full name and official logo.', style: TextStyle(color: Color(0xFF91A8C4))),
         const SizedBox(height: 14),
         TextField(onChanged: (value) => setState(() => _search = value),
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), labelText: 'Search services', hintText: 'WhatsApp, Instagram…')),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), labelText: 'Search services', hintText: 'WhatsApp, Telegram, Instagram…')),
         const SizedBox(height: 12),
         if (filteredServices.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No services match your search.', textAlign: TextAlign.center)),
         for (final service in filteredServices)
           Card(child: ListTile(
-            leading: const Icon(Icons.verified_user_outlined, color: AppTheme.cyan),
-            title: Text((service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString()),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            leading: _serviceLogo(service),
+            title: Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w700)),
             subtitle: Text((service['description'] ?? service['category'] ?? 'Select to view country availability').toString()),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () {
@@ -614,7 +680,6 @@ class _CatalogPageState extends State<_CatalogPage> {
     },
   );
 }
-
 class _CountriesPage extends StatefulWidget {
   const _CountriesPage({required this.service});
   final String service;
