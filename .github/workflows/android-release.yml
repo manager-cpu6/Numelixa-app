@@ -108,6 +108,23 @@ jobs:
           ids = {c.get('client_info', {}).get('android_client_info', {}).get('package_name') for c in data.get('client', [])}
           if 'com.numelixa.app' not in ids:
               raise SystemExit('Firebase config must contain package com.numelixa.app; found: ' + str(ids))
+          matching = [c for c in data.get('client', [])
+                      if c.get('client_info', {}).get('android_client_info', {}).get('package_name') == 'com.numelixa.app']
+          oauth = [o for c in matching for o in c.get('oauth_client', [])]
+          types = {str(o.get('client_type')) for o in oauth}
+          if '1' not in types or '3' not in types:
+              raise SystemExit(
+                  'Firebase config is stale/incomplete: com.numelixa.app must include both Android OAuth client_type 1 and Web OAuth client_type 3. '
+                  'Re-download google-services.json after registering the release SHA-1 and Web OAuth client, then update GitHub secret FIREBASE_GOOGLE_SERVICES_JSON_BASE64.'
+              )
+          android_clients = [o for o in oauth if str(o.get('client_type')) == '1']
+          expected_sha1 = '69ce75089a191ac41ff96b0498bdfa002a00a910'
+          if not any(str(o.get('android_info', {}).get('certificate_hash', '')).replace(':', '').lower() == expected_sha1
+                     for o in android_clients):
+              raise SystemExit(
+                  'Firebase config Android OAuth client does not contain the release signing SHA-1 used by this repository. '
+                  'Register the release SHA-1 shown in the Diagnose Android OAuth signing configuration step and download a fresh google-services.json.'
+              )
           g = Path('android/app/build.gradle.kts')
           s = g.read_text()
           marker = '    id("com.android.application")'
