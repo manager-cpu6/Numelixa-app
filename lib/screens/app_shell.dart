@@ -719,6 +719,35 @@ class _OrdersPageState extends State<_OrdersPage> {
     );
   }
 
+  Widget _platformLogo(String service) {
+    final name = service.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    const logos = <String, String>{
+      'whatsapp': 'whatsapp/25D366', 'facebook': 'facebook/0866FF',
+      'instagram': 'instagram/E4405F', 'telegram': 'telegram/26A5E4',
+      'tiktok': 'tiktok/FFFFFF', 'google': 'google/4285F4',
+      'discord': 'discord/5865F2', 'snapchat': 'snapchat/FFFC00',
+      'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
+      'amazon': 'amazon/FF9900', 'microsoft': 'microsoft/737373',
+      'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF',
+      'twitter': 'x/FFFFFF', 'uber': 'uber/FFFFFF',
+      'airbnb': 'airbnb/FF5A5F', 'spotify': 'spotify/1DB954',
+      'linkedin': 'linkedin/0A66C2', 'pinterest': 'pinterest/BD081C',
+      'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF',
+    };
+    String? slug;
+    for (final entry in logos.entries) {
+      if (name == entry.key || name.contains(entry.key)) { slug = entry.value; break; }
+    }
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: const Color(0xFF102844),
+      child: slug == null
+          ? const Icon(Icons.apps_rounded, color: AppTheme.cyan)
+          : Image.network('https://cdn.simpleicons.org/$slug', width: 23, height: 23,
+              errorBuilder: (_, __, ___) => const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 22)),
+    );
+  }
+
   bool _isSuccessful(String status) {
     final s = status.toLowerCase().replaceAll('_', ' ').trim();
     return ['success', 'successful', 'completed', 'complete', 'finished', 'received'].any((v) => s == v || s.contains(v));
@@ -813,11 +842,7 @@ class _OrdersPageState extends State<_OrdersPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(children: [
-                                  const CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: Color(0xFF102844),
-                                    child: Icon(Icons.apps_rounded, color: AppTheme.cyan),
-                                  ),
+                                  _platformLogo((order['service'] ?? '').toString()),
                                   const SizedBox(width: 10),
                                   Expanded(child: Text(
                                     (order['service'] ?? 'Virtual number').toString(),
