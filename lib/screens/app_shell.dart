@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -724,13 +725,26 @@ class _CountriesPageState extends State<_CountriesPage> {
         service: widget.service,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result['ok'] == true
-          ? 'Number order submitted successfully.'
-          : (result['error'] ?? 'The order could not be completed.').toString()),
-      ));
-      if (result['ok'] == true) {
+      final purchased = result['order'] is Map
+          ? Map<String, dynamic>.from(result['order'] as Map)
+          : <String, dynamic>{};
+      final orderId = (purchased['id'] ?? purchased['_id'] ?? result['orderId'] ?? result['id'] ?? '').toString();
+      if (result['ok'] == true && orderId.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Number purchased. It is now in Activations.')),
+        );
+        Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => _OrderDetailPage(orderId: orderId),
+        ));
+      } else if (result['ok'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Purchase accepted. Open Activations to view the number.')),
+        );
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _OrdersPage()));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text((result['error'] ?? 'The order could not be completed.').toString()),
+        ));
       }
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
@@ -781,13 +795,23 @@ class _OrdersPage extends StatefulWidget {
 }
 
 class _OrdersPageState extends State<_OrdersPage> {
-  String _selected = 'successful';
+  String _selected = 'active';
   late Future<Map<String, dynamic>> _future;
+  Timer? _refreshTimer;
+  bool _loadingRefresh = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Keep activation status and incoming SMS fresh while this page is open.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refreshQuietly());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   void _load() {
@@ -795,6 +819,23 @@ class _OrdersPageState extends State<_OrdersPage> {
       token: context.read<AuthService>().accessToken!,
       limit: 100,
     );
+  }
+
+  Future<void> _refreshQuietly() async {
+    if (!mounted || _loadingRefresh) return;
+    _loadingRefresh = true;
+    try {
+      final fresh = NumelixaRepository().orders(
+        token: context.read<AuthService>().accessToken!,
+        limit: 100,
+      );
+      await fresh;
+      if (mounted) setState(() => _future = fresh);
+    } catch (_) {
+      // Keep the last usable order list if a background refresh temporarily fails.
+    } finally {
+      _loadingRefresh = false;
+    }
   }
 
   Widget _platformLogo(String service) {
@@ -843,7 +884,7 @@ class _OrdersPageState extends State<_OrdersPage> {
       'pinterest': 'Pinterest', 'twitch': 'Twitch', 'steam': 'Steam',
     };
     if (names.containsKey(key)) return names[key]!;
-    return raw.trim().split(RegExp(r'[_\-\s]+'))
+    return raw.trim().split(RegExp(r'[_\\-\\s]+'))
         .where((part) => part.isNotEmpty)
         .map((part) => part[0].toUpperCase() + part.substring(1))
         .join(' ');
@@ -853,40 +894,60 @@ class _OrdersPageState extends State<_OrdersPage> {
     final code = (order['code'] ?? '').toString().trim();
     if (code.isNotEmpty) return code;
     final sms = (order['fullSms'] ?? '').toString();
-    return RegExp(r'(?<!\d)\d{4,8}(?!\d)').firstMatch(sms)?.group(0) ?? '';
+    return RegExp(r'(?<!\\d)\\d{4,8}(?!\\d)').firstMatch(sms)?.group(0) ?? '';
   }
 
-  bool _isSuccessful(String status) {
-    final s = status.toLowerCase().replaceAll('_', ' ').trim();
-    return ['success', 'successful', 'completed', 'complete', 'finished', 'received'].any((v) => s == v || s.contains(v));
+  DateTime? _codeReceivedAt(Map<String, dynamic> order) {
+    for (final key in ['codeReceivedAt', 'smsReceivedAt', 'receivedAt', 'completedAt', 'updatedAt', 'createdAt']) {
+      final raw = order[key];
+      if (raw == null) continue;
+      final parsed = DateTime.tryParse(raw.toString());
+      if (parsed != null) return parsed.toLocal();
+    }
+    return null;
   }
 
-  bool _isCanceled(String status) {
-    final s = status.toLowerCase();
-    return s.contains('cancel');
+  bool _isCanceled(String status) => status.toLowerCase().contains('cancel');
+
+  bool _isSuccessful(Map<String, dynamic> order) {
+    final status = (order['status'] ?? '').toString().toLowerCase().replaceAll('_', ' ').trim();
+    final code = _smsCode(order);
+    if (code.isEmpty) return false;
+    final terminal = ['success', 'successful', 'completed', 'complete', 'finished', 'received']
+        .any((v) => status == v || status.contains(v));
+    if (!terminal) return false;
+    final receivedAt = _codeReceivedAt(order);
+    // Keep the received code under Activations for ten minutes, then archive it.
+    if (receivedAt == null) return false;
+    return DateTime.now().difference(receivedAt) >= const Duration(minutes: 10);
   }
 
-  Future<void> _getNewCode(Map<String, dynamic> order) async {
-    final id = (order['id'] ?? '').toString();
+  bool _isActive(Map<String, dynamic> order) =>
+      !_isCanceled((order['status'] ?? '').toString()) && !_isSuccessful(order);
+
+  Future<void> _copyText(String value, String successMessage) async {
+    if (value.trim().isEmpty || value == 'Number unavailable') return;
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
+  }
+
+  Future<void> _getCode(Map<String, dynamic> order) async {
+    final id = (order['id'] ?? order['_id'] ?? '').toString();
     if (id.isEmpty) return;
     try {
-      final accessToken = context.read<AuthService>().accessToken!;
       final result = await NumelixaRepository().checkSms(
-        token: accessToken,
+        token: context.read<AuthService>().accessToken!,
         orderId: id,
       );
       if (!mounted) return;
-      final code = (result['code'] ?? '').toString();
+      final code = (result['code'] ?? result['smsCode'] ?? '').toString().trim();
       if (code.isNotEmpty) {
         await Clipboard.setData(ClipboardData(text: code));
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Latest SMS code copied. This checks the existing activation; it does not create a new paid order.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SMS code received and copied.')));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No additional SMS code is available for this activation yet.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No SMS code yet. The activation will keep checking.')));
       }
       setState(_load);
     } on ApiException catch (error) {
@@ -896,9 +957,40 @@ class _OrdersPageState extends State<_OrdersPage> {
     }
   }
 
+  Future<void> _cancelOrder(Map<String, dynamic> order) async {
+    final id = (order['id'] ?? order['_id'] ?? '').toString();
+    if (id.isEmpty) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel activation?'),
+        content: const Text('The app will request cancellation from Numelixa. Any refund depends on the server confirming a successful cancellation.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep number')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Cancel activation')),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    try {
+      await NumelixaRepository().cancelOrder(
+        token: context.read<AuthService>().accessToken!,
+        orderId: id,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancellation request sent. Refreshing activations…')));
+      setState(_load);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted) setState(_load);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancellation could not be confirmed. No refund is assumed.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Your orders')),
+    appBar: AppBar(title: const Text('Activations')),
     body: FutureBuilder<Map<String, dynamic>>(
       future: _future,
       builder: (context, snapshot) {
@@ -912,15 +1004,24 @@ class _OrdersPageState extends State<_OrdersPage> {
         final orders = raw is List
             ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
             : <Map<String, dynamic>>[];
-        final filtered = orders.where((o) {
-          final status = (o['status'] ?? '').toString();
-          return _selected == 'successful' ? _isSuccessful(status) : _isCanceled(status);
-        }).toList();
+        final filtered = orders.where((order) {
+          final status = (order['status'] ?? '').toString();
+          if (_selected == 'active') return _isActive(order);
+          if (_selected == 'successful') return _isSuccessful(order);
+          return _isCanceled(status);
+        }).toList()
+          ..sort((a, b) {
+            final aa = DateTime.tryParse((a['createdAt'] ?? '').toString());
+            final bb = DateTime.tryParse((b['createdAt'] ?? '').toString());
+            return (bb ?? DateTime.fromMillisecondsSinceEpoch(0))
+                .compareTo(aa ?? DateTime.fromMillisecondsSinceEpoch(0));
+          });
         return Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: SegmentedButton<String>(
               segments: const [
+                ButtonSegment(value: 'active', label: Text('Activations')),
                 ButtonSegment(value: 'successful', label: Text('Successful')),
                 ButtonSegment(value: 'canceled', label: Text('Canceled')),
               ],
@@ -931,14 +1032,16 @@ class _OrdersPageState extends State<_OrdersPage> {
           Expanded(
             child: filtered.isEmpty
               ? _RetryState(
-                  message: _selected == 'successful'
-                    ? 'Successful activations with received SMS will appear here.'
-                    : 'Canceled orders will appear here.',
+                  message: _selected == 'active'
+                    ? 'New numbers stay here while waiting for SMS. You can copy the number or cancel the activation.'
+                    : _selected == 'successful'
+                      ? 'Activations with a received code older than 10 minutes appear here.'
+                      : 'Canceled activations appear here.',
                   onRetry: () => setState(_load),
                   empty: true,
                 )
               : RefreshIndicator(
-                  onRefresh: () async => setState(_load),
+                  onRefresh: _refreshQuietly,
                   child: ListView(
                     padding: const EdgeInsets.all(12),
                     children: [
@@ -956,42 +1059,72 @@ class _OrdersPageState extends State<_OrdersPage> {
                                     _platformName((order['service'] ?? 'Virtual number').toString()),
                                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                                   )),
-                                  Text((order['status'] ?? '').toString(),
-                                    style: TextStyle(color: _selected == 'successful' ? AppTheme.mint : const Color(0xFFFF788C), fontWeight: FontWeight.w700)),
-                                ]),
-                                const SizedBox(height: 12),
-                                SelectableText(
-                                  (order['phone'] ?? order['phoneNumber'] ?? 'Number unavailable').toString(),
-                                  style: const TextStyle(fontSize: 18, color: AppTheme.cyan, fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 5),
-                                Row(children: [const Text('Platform: '), Expanded(child: Text(_platformName((order['service'] ?? 'Virtual number').toString())))]),
-                                Row(children: [const Text('Country: '), Expanded(child: Text((order['country'] ?? order['countryCode'] ?? '—').toString()))]),
-                                if (_selected == 'successful') ...[
-                                  const SizedBox(height: 7),
-                                  Row(children: [
-                                    const Text('SMS code: ', style: TextStyle(color: Color(0xFF91A8C4))),
-                                    Expanded(child: SelectableText(_smsCode(order).isEmpty ? 'Code unavailable' : _smsCode(order),
-                                      style: const TextStyle(fontWeight: FontWeight.w800))),
-                                    if (_smsCode(order).isNotEmpty)
-                                      IconButton(
-                                        tooltip: 'Copy SMS code',
-                                        onPressed: () => Clipboard.setData(ClipboardData(text: _smsCode(order))),
-                                        icon: const Icon(Icons.copy_rounded),
-                                      ),
-                                  ]),
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton.icon(
-                                      onPressed: () => _getNewCode(order),
-                                      icon: const Icon(Icons.sms_outlined),
-                                      label: const Text('Get New Code'),
+                                  Text(
+                                    _selected == 'active'
+                                      ? (_smsCode(order).isEmpty ? 'Waiting for SMS' : 'Code received')
+                                      : _selected == 'successful' ? 'Successful' : 'Canceled',
+                                    style: TextStyle(
+                                      color: _selected == 'active'
+                                        ? AppTheme.cyan
+                                        : _selected == 'successful' ? AppTheme.mint : const Color(0xFFFF788C),
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
+                                ]),
+                                const SizedBox(height: 12),
+                                Row(children: [
+                                  Expanded(child: SelectableText(
+                                    (order['phone'] ?? order['phoneNumber'] ?? order['number'] ?? 'Number unavailable').toString(),
+                                    style: const TextStyle(fontSize: 18, color: AppTheme.cyan, fontWeight: FontWeight.w800),
+                                  )),
+                                  IconButton(
+                                    tooltip: 'Copy number',
+                                    onPressed: () => _copyText((order['phone'] ?? order['phoneNumber'] ?? order['number'] ?? '').toString(), 'Number copied.'),
+                                    icon: const Icon(Icons.copy_rounded),
+                                  ),
+                                ]),
+                                const SizedBox(height: 5),
+                                Row(children: [const Text('Country: '), Expanded(child: Text((order['country'] ?? order['countryCode'] ?? '—').toString()))]),
+                                if (_smsCode(order).isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Row(children: [
+                                    const Text('SMS code: ', style: TextStyle(color: Color(0xFF91A8C4))),
+                                    Expanded(child: SelectableText(_smsCode(order), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17))),
+                                    IconButton(
+                                      tooltip: 'Copy SMS code',
+                                      onPressed: () => _copyText(_smsCode(order), 'SMS code copied.'),
+                                      icon: const Icon(Icons.copy_rounded),
+                                    ),
+                                  ]),
+                                  if (_selected == 'active')
+                                    Text('This code stays in Activations for up to 10 minutes before moving to Successful.',
+                                      style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12)),
+                                ] else if (_selected == 'active') ...[
+                                  const SizedBox(height: 8),
+                                  SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                                    onPressed: () => _getCode(order),
+                                    icon: const Icon(Icons.sms_outlined),
+                                    label: const Text('Check for SMS code'),
+                                  )),
                                 ],
-                                if (_selected == 'canceled')
-                                  Row(children: [const Text('Canceled at: '), Expanded(child: Text((order['completedAt'] ?? order['createdAt'] ?? '—').toString(), style: const TextStyle(color: Color(0xFF91A8C4))))]),
+                                if (_selected == 'active') ...[
+                                  const SizedBox(height: 8),
+                                  Row(children: [
+                                    Expanded(child: OutlinedButton.icon(
+                                      onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                                        builder: (_) => _OrderDetailPage(orderId: (order['id'] ?? order['_id'] ?? '').toString()),
+                                      )),
+                                      icon: const Icon(Icons.open_in_new_rounded),
+                                      label: const Text('Details'),
+                                    )),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: FilledButton.tonalIcon(
+                                      onPressed: () => _cancelOrder(order),
+                                      icon: const Icon(Icons.cancel_outlined),
+                                      label: const Text('Cancel'),
+                                    )),
+                                  ]),
+                                ],
                               ],
                             ),
                           ),
