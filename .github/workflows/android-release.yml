@@ -45,7 +45,7 @@ jobs:
                           <category android:name="android.intent.category.BROWSABLE" />
                           <data android:scheme="com.numelixa.app" android:host="auth" android:path="/callback" />
                       </intent-filter>'''
-              s = s.replace('android:exported="true">', 'android:exported="true">\\n' + callback, 1)
+              s = s.replace('android:exported="true">', 'android:exported="true">\n' + callback, 1)
           p.write_text(s)
           g = Path('android/app/build.gradle.kts')
           s = g.read_text()
