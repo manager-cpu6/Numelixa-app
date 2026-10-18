@@ -944,11 +944,15 @@ class _WalletPageState extends State<_WalletPage> {
         const Text('Choose a package, asset and network. Always copy the exact amount.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.4)),
         const SizedBox(height: 12),
         FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
-          if (snapshot.hasError) return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-            Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
-            TextButton(onPressed: () => setState(_load), child: const Text('Retry payment options')),
-          ])));
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
+          }
+          if (snapshot.hasError) {
+            return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+              Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
+              TextButton(onPressed: () => setState(_load), child: const Text('Retry payment options')),
+            ])));
+          }
           final assets = _asMaps(snapshot.data?['assets']);
           if (assets.isEmpty) {
             return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
