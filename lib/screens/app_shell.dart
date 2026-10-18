@@ -601,7 +601,7 @@ class _CatalogPageState extends State<_CatalogPage> {
     if (raw.contains(' ') || raw.contains('&')) return raw;
     return raw.replaceAll(RegExp(r'[_\-]+'), ' ')
         .split(RegExp(r'\s+')).where((part) => part.isNotEmpty)
-        .map((part) => part.length <= 2 ? part.toUpperCase() : '\${part[0].toUpperCase()}\${part.substring(1)}')
+        .map((part) => part.length <= 2 ? part.toUpperCase() : '${part[0].toUpperCase()}${part.substring(1)}')
         .join(' ');
   }
 
