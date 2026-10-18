@@ -29,7 +29,7 @@ class ApiClient {
   Future<Map<String, dynamic>> _request(String method, String path,
       {Map<String, dynamic>? body, String? accessToken}) async {
     final uri = Uri.parse(AppConfig.apiBase).resolve(path);
-    final headers = <String, String>{'Accept': 'application/json'};
+    final headers = <String, String>{'Accept': 'application/json', 'x-numelixa-client': 'android-app'};
     if (body != null) headers['Content-Type'] = 'application/json';
     if (accessToken != null && accessToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $accessToken';
