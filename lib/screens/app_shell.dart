@@ -955,10 +955,18 @@ class _WalletPageState extends State<_WalletPage> {
           final coin = (selectedAsset['coin'] ?? '').toString();
           final networks = _asMaps(selectedAsset['networks']);
           if (_currency != coin) {
-            WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() { _currency = coin; _network = null; }); });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() { _currency = coin; _network = null; });
+              }
+            });
           }
           if (networks.isNotEmpty && !networks.any((n) => n['network'] == _network)) {
-            WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() => _network = (networks.first['network'] ?? '').toString()); });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() => _network = (networks.first['network'] ?? '').toString());
+              }
+            });
           }
           return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Text('Coin package', style: TextStyle(fontWeight: FontWeight.w700)),
