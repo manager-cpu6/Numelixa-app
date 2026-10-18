@@ -950,7 +950,9 @@ class _WalletPageState extends State<_WalletPage> {
             TextButton(onPressed: () => setState(_load), child: const Text('Retry payment options')),
           ])));
           final assets = _asMaps(snapshot.data?['assets']);
-          if (assets.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
+          if (assets.isEmpty) {
+            return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
+          }
           final selectedAsset = assets.firstWhere((a) => a['coin'] == _currency, orElse: () => assets.first);
           final coin = (selectedAsset['coin'] ?? '').toString();
           final networks = _asMaps(selectedAsset['networks']);
