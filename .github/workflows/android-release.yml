@@ -145,7 +145,7 @@ jobs:
           storePassword=$STORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
-          storeFile=release-key.jks
+          storeFile=../release-key.jks
           EOF
           echo "configured=true" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
