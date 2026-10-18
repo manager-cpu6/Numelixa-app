@@ -220,6 +220,7 @@ class _HomePage extends StatelessWidget {
       const Text('Your workspace', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
       const _ActionTile(icon: Icons.public_rounded, title: 'Browse services', subtitle: 'Explore the live catalog', destination: 'catalog'),
+      const _ActionTile(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Manage waiting activations', destination: 'active'),
       const _ActionTile(icon: Icons.sms_outlined, title: 'Your orders', subtitle: 'View activations and SMS status', destination: 'orders'),
       const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account and order updates', destination: 'notifications'),
       const SizedBox(height: 14),
@@ -278,6 +279,7 @@ class _ActionTile extends StatelessWidget {
         final page = switch (destination) {
           'catalog' => const _CatalogPage(),
           'orders' => const _OrdersPage(),
+          'active' => const _ActiveNumbersPage(),
           _ => const _NotificationsPage(),
         };
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -414,9 +416,137 @@ class _OrdersPage extends StatelessWidget {
     load: (repo, token) => repo.orders(token: token, limit: 100),
     listKey: 'orders',
     empty: 'No orders found on this account.',
+    onItemTap: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _OrderDetailPage(orderId: (item['id'] ?? '').toString()))),
     itemTitle: (item) => '${item['service'] ?? 'Virtual number'} · ${item['phone'] ?? item['phoneNumber'] ?? 'Number pending'}',
     itemSubtitle: (item) => '${item['country'] ?? item['countryCode'] ?? ''}  •  ${item['status'] ?? 'unknown'}',
   );
+}
+
+class _ActiveNumbersPage extends StatelessWidget {
+  const _ActiveNumbersPage();
+  @override
+  Widget build(BuildContext context) => _ProtectedListPage(
+    title: 'Active numbers',
+    load: (repo, token) => repo.orders(token: token, limit: 100, status: 'waiting'),
+    listKey: 'orders',
+    empty: 'You have no active waiting numbers.',
+    onItemTap: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _OrderDetailPage(orderId: (item['id'] ?? '').toString()))),
+    itemTitle: (item) => '${item['service'] ?? 'Virtual number'} · ${item['phone'] ?? 'Number pending'}',
+    itemSubtitle: (item) => '${item['country'] ?? ''} • Waiting for SMS',
+  );
+}
+
+class _OrderDetailPage extends StatefulWidget {
+  const _OrderDetailPage({required this.orderId});
+  final String orderId;
+  @override
+  State<_OrderDetailPage> createState() => _OrderDetailPageState();
+}
+class _OrderDetailPageState extends State<_OrderDetailPage> {
+  late Future<Map<String, dynamic>> _future;
+  bool _working = false;
+  @override
+  void initState() { super.initState(); _load(); }
+  void _load() { _future = NumelixaRepository().order(token: context.read<AuthService>().accessToken!, id: widget.orderId); }
+
+  Future<void> _checkSms() async {
+    setState(() => _working = true);
+    try {
+      final result = await NumelixaRepository().checkSms(token: context.read<AuthService>().accessToken!, orderId: widget.orderId);
+      if (!mounted) return;
+      final code = (result['code'] ?? '').toString();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(code.isEmpty ? 'No SMS received yet. Try again shortly.' : 'Verification code received.')));
+      setState(_load);
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) setState(_load);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not check SMS. Please retry.')));
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _cancelOrder() async {
+    final confirm = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('Cancel number?'),
+      content: const Text('Numelixa will request cancellation from the provider. A refund is only recorded when cancellation succeeds.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep number')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Cancel number')),
+      ],
+    ));
+    if (confirm != true || !mounted) return;
+    setState(() => _working = true);
+    try {
+      await NumelixaRepository().cancelOrder(token: context.read<AuthService>().accessToken!, orderId: widget.orderId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancellation confirmed by Numelixa.')));
+      setState(_load);
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) setState(_load);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cancellation could not be confirmed. No refund is assumed.')));
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Order details')),
+    body: FutureBuilder<Map<String, dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
+        final order = snapshot.data?['order'];
+        if (order is! Map) return _RetryState(message: 'Order details are unavailable.', onRetry: () => setState(_load), empty: true);
+        final code = (order['code'] ?? '').toString();
+        final status = (order['status'] ?? 'unknown').toString();
+        return ListView(padding: const EdgeInsets.all(18), children: [
+          Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text((order['service'] ?? 'Virtual number').toString(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 14),
+            _DetailLine(label: 'Country', value: (order['country'] ?? '').toString()),
+            _DetailLine(label: 'Status', value: status),
+            _DetailLine(label: 'Price', value: '${order['price'] ?? 0} coins'),
+            _DetailLine(label: 'Created', value: (order['createdAt'] ?? '').toString()),
+            _DetailLine(label: 'Expires', value: (order['expiresAt'] ?? '').toString()),
+          ]))),
+          const SizedBox(height: 14),
+          Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('SMS verification', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Text(code.isEmpty ? 'No code received yet.' : code, style: TextStyle(fontSize: code.isEmpty ? 14 : 30, fontWeight: FontWeight.w800, color: code.isEmpty ? const Color(0xFF91A8C4) : AppTheme.mint)),
+            if ((order['fullSms'] ?? '').toString().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text((order['fullSms']).toString(), style: const TextStyle(color: Color(0xFFB2C7DD))),
+            ],
+          ]))),
+          const SizedBox(height: 14),
+          FilledButton.icon(onPressed: _working ? null : _checkSms, icon: const Icon(Icons.refresh_rounded), label: Text(_working ? 'Please wait…' : 'Check for SMS')),
+          if (status == 'waiting') ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(onPressed: _working ? null : _cancelOrder, icon: const Icon(Icons.cancel_outlined), label: const Text('Cancel number')),
+          ],
+        ]);
+      },
+    ),
+  );
+}
+
+class _DetailLine extends StatelessWidget {
+  const _DetailLine({required this.label, required this.value});
+  final String label, value;
+  @override
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(children: [
+    SizedBox(width: 92, child: Text(label, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12))),
+    Expanded(child: Text(value.isEmpty ? '—' : value, style: const TextStyle(fontWeight: FontWeight.w600))),
+  ]));
 }
 
 class _WalletPage extends StatelessWidget {
@@ -448,10 +578,11 @@ class _NotificationsPage extends StatelessWidget {
 typedef _LoadList = Future<Map<String, dynamic>> Function(NumelixaRepository, String);
 typedef _ItemText = String Function(Map<String, dynamic>);
 class _ProtectedListPage extends StatefulWidget {
-  const _ProtectedListPage({required this.title, required this.load, required this.listKey, required this.empty, required this.itemTitle, required this.itemSubtitle});
+  const _ProtectedListPage({required this.title, required this.load, required this.listKey, required this.empty, required this.itemTitle, required this.itemSubtitle, this.onItemTap});
   final String title, listKey, empty;
   final _LoadList load;
   final _ItemText itemTitle, itemSubtitle;
+  final ValueChanged<Map<String, dynamic>>? onItemTap;
   @override
   State<_ProtectedListPage> createState() => _ProtectedListPageState();
 }
@@ -477,6 +608,7 @@ class _ProtectedListPageState extends State<_ProtectedListPage> {
               leading: Icon(widget.title == 'Notifications' ? Icons.notifications_none_rounded : Icons.receipt_long_rounded, color: AppTheme.cyan),
               title: Text(widget.itemTitle(item), maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(widget.itemSubtitle(item), maxLines: 3, overflow: TextOverflow.ellipsis),
+              onTap: widget.onItemTap == null ? null : () => widget.onItemTap!(item),
             )),
         ]));
       },
