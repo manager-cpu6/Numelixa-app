@@ -802,16 +802,197 @@ class _DetailLine extends StatelessWidget {
   ]));
 }
 
-class _WalletPage extends StatelessWidget {
+class _WalletPage extends StatefulWidget {
   const _WalletPage();
   @override
-  Widget build(BuildContext context) => _ProtectedListPage(
-    title: 'Transactions',
-    load: (repo, token) => repo.transactions(token: token),
-    listKey: 'transactions',
-    empty: 'No transactions found.',
-    itemTitle: (item) => '${item['description'] ?? item['type'] ?? 'Transaction'}',
-    itemSubtitle: (item) => '${item['amount'] ?? 0} coins · ${item['createdAt'] ?? ''}',
+  State<_WalletPage> createState() => _WalletPageState();
+}
+
+class _WalletPageState extends State<_WalletPage> {
+  late Future<Map<String, dynamic>> _transactions;
+  late Future<Map<String, dynamic>> _balance;
+  late Future<Map<String, dynamic>> _assets;
+  int _coins = 36;
+  String? _currency;
+  String? _network;
+  bool _creating = false;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  void _load() {
+    final token = context.read<AuthService>().accessToken!;
+    final repo = NumelixaRepository();
+    _transactions = repo.transactions(token: token);
+    _balance = repo.balance(token: token);
+    _assets = repo.depositAssets(token: token);
+  }
+
+  List<Map<String, dynamic>> _asMaps(dynamic value) =>
+      value is List ? value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+
+  Future<void> _createDeposit(Map<String, dynamic> asset) async {
+    if (_currency == null || _network == null || _creating) return;
+    setState(() => _creating = true);
+    try {
+      final auth = context.read<AuthService>();
+      final result = await NumelixaRepository().createDeposit(
+        token: auth.accessToken!, coins: _coins, currency: _currency!, network: _network!);
+      if (!mounted) return;
+      if (result['ok'] != true || (result['address'] ?? '').toString().isEmpty) {
+        throw ApiException((result['error'] ?? 'Unable to create a deposit request.').toString());
+      }
+      await _showDeposit(result);
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to create the deposit request. Please retry.')));
+    } finally {
+      if (mounted) setState(() { _creating = false; _load(); });
+    }
+  }
+
+  Future<void> _showDeposit(Map<String, dynamic> payment) async {
+    final address = (payment['address'] ?? '').toString();
+    final amount = (payment['amount'] ?? '').toString();
+    final currency = (payment['currency'] ?? _currency ?? '').toString();
+    final network = (payment['networkName'] ?? payment['network'] ?? _network ?? '').toString();
+    final orderId = (payment['orderId'] ?? '').toString();
+    await showDialog<void>(context: context, barrierDismissible: false, builder: (dialogContext) => AlertDialog(
+      title: const Text('Complete your deposit'),
+      content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Text('Send exactly $amount $currency on $network. Sending a different amount or network may delay crediting.', style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.45)),
+        const SizedBox(height: 14),
+        const Text('Exact amount', style: TextStyle(fontWeight: FontWeight.w700)),
+        SelectableText('$amount $currency', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.mint)),
+        Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: amount));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exact amount copied.')));
+        }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy amount'))),
+        const SizedBox(height: 8),
+        const Text('Deposit address', style: TextStyle(fontWeight: FontWeight.w700)),
+        SelectableText(address, style: const TextStyle(color: AppTheme.cyan, height: 1.4)),
+        Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: address));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deposit address copied.')));
+        }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy address'))),
+        if ((payment['memo'] ?? '').toString().isNotEmpty) ...[
+          const Text('Memo / tag', style: TextStyle(fontWeight: FontWeight.w700)),
+          SelectableText((payment['memo']).toString()),
+        ],
+        const SizedBox(height: 8),
+        Text('Request: $orderId', style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
+        const Text('The wallet is credited only after the payment is confirmed.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
+      ])),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+        FilledButton(onPressed: () async {
+          try {
+            final status = await NumelixaRepository().depositStatus(
+              token: context.read<AuthService>().accessToken!, orderId: orderId);
+            final state = (status['status'] ?? 'pending').toString();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+              state == 'paid' ? 'Payment confirmed. Your wallet is being updated.' : 'Payment status: $state. Check again after sending.')));
+            if (state == 'paid') {
+              Navigator.pop(dialogContext);
+              setState(_load);
+            }
+          } catch (_) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
+          }
+        }, child: const Text('Check payment')),
+      ],
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Wallet')),
+    body: RefreshIndicator(onRefresh: () async => setState(_load), child: ListView(
+      padding: const EdgeInsets.all(14), children: [
+        FutureBuilder<Map<String, dynamic>>(future: _balance, builder: (context, snapshot) {
+          final value = snapshot.data?['balance'];
+          return Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Available balance', style: TextStyle(color: Color(0xFFA7B7D0))),
+            const SizedBox(height: 6),
+            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '$value coins',
+              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.mint)),
+            if (snapshot.hasError) Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
+          ])));
+        }),
+        const SizedBox(height: 8),
+        const Text('Add coins', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 5),
+        const Text('Choose a package, asset and network. Always copy the exact amount.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.4)),
+        const SizedBox(height: 12),
+        FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
+          if (snapshot.hasError) return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+            Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
+            TextButton(onPressed: () => setState(_load), child: const Text('Retry payment options')),
+          ])));
+          final assets = _asMaps(snapshot.data?['assets']);
+          if (assets.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
+          final selectedAsset = assets.firstWhere((a) => a['coin'] == _currency, orElse: () => assets.first);
+          final coin = (selectedAsset['coin'] ?? '').toString();
+          final networks = _asMaps(selectedAsset['networks']);
+          if (_currency != coin) {
+            WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() { _currency = coin; _network = null; }); });
+          }
+          if (networks.isNotEmpty && !networks.any((n) => n['network'] == _network)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() => _network = (networks.first['network'] ?? '').toString()); });
+          }
+          return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('Coin package', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<int>(value: _coins, decoration: const InputDecoration(),
+              items: const [
+                DropdownMenuItem(value: 36, child: Text('36 coins · \$0.77')),
+                DropdownMenuItem(value: 75, child: Text('75 coins · \$1.65')),
+                DropdownMenuItem(value: 250, child: Text('250 coins · \$5.49')),
+                DropdownMenuItem(value: 499, child: Text('499 coins · \$10.99')),
+              ], onChanged: (value) { if (value != null) setState(() => _coins = value); }),
+            const SizedBox(height: 12),
+            const Text('Cryptocurrency', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(value: coin, decoration: const InputDecoration(),
+              items: assets.map((a) => DropdownMenuItem<String>(
+                value: (a['coin'] ?? '').toString(),
+                child: Text('${a['name'] ?? a['coin']} (${a['coin']})'),
+              )).toList(),
+              onChanged: (value) => setState(() { _currency = value; _network = null; })),
+            const SizedBox(height: 12),
+            const Text('Network', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(value: networks.any((n) => n['network'] == _network) ? _network : null,
+              decoration: const InputDecoration(),
+              items: networks.map((n) => DropdownMenuItem<String>(value: (n['network'] ?? '').toString(),
+                child: Text((n['networkName'] ?? n['network'] ?? '').toString()))).toList(),
+              onChanged: (value) => setState(() => _network = value)),
+            const SizedBox(height: 14),
+            FilledButton.icon(onPressed: _creating || _network == null ? null : () => _createDeposit(selectedAsset),
+              icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_card_rounded),
+              label: Text(_creating ? 'Creating deposit…' : 'Create deposit request')),
+          ])));
+        }),
+        const SizedBox(height: 20),
+        const Text('Transaction history', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        FutureBuilder<Map<String, dynamic>>(future: _transactions, builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()));
+          if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
+          final items = _asMaps(snapshot.data?['transactions']);
+          if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions found yet.')));
+          return Column(children: items.map((item) => Card(child: ListTile(
+            leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
+            title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
+            subtitle: Text('${item['createdAt'] ?? ''}'),
+            trailing: Text('${item['amount'] ?? 0} coins', style: const TextStyle(fontWeight: FontWeight.w800)),
+          ))).toList());
+        }),
+      ],
+    )),
   );
 }
 
