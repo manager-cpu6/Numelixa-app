@@ -64,7 +64,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     if (!auth.isReady) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const _SplashScreen();
     }
     if (!auth.isSignedIn) return const _ApiKeySignIn();
     final pages = [
@@ -107,6 +107,29 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        width: 82, height: 82, alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(27),
+          gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
+        ),
+        child: const Icon(Icons.public_rounded, color: Colors.white, size: 46),
+      ),
+      const SizedBox(height: 20),
+      const Text('NUMELIXA', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 3)),
+      const SizedBox(height: 7),
+      const Text('Numbers, without the noise.', style: TextStyle(color: Color(0xFF91A8C4))),
+      const SizedBox(height: 25),
+      const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+    ])),
+  );
+}
+
 class _ApiKeySignIn extends StatefulWidget {
   const _ApiKeySignIn();
   @override
@@ -119,6 +142,39 @@ class _ApiKeySignInState extends State<_ApiKeySignIn> {
   bool _busy = false;
   @override
   void dispose() { _controller.dispose(); super.dispose(); }
+
+  Future<void> _forgotPassword() async {
+    final emailController = TextEditingController();
+    final email = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset password'),
+        content: TextField(
+          controller: emailController,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          decoration: const InputDecoration(labelText: 'Account email'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, emailController.text.trim()), child: const Text('Send reset link')),
+        ],
+      ),
+    );
+    emailController.dispose();
+    if (email == null || email.isEmpty || !mounted) return;
+    setState(() { _busy = true; _error = null; });
+    try {
+      await NumelixaRepository().forgotPassword(email: email);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('If the account is eligible, Numelixa will send a password reset email.')));
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not request a reset link. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _submit() async {
     setState(() { _busy = true; _error = null; });
@@ -184,7 +240,9 @@ class _ApiKeySignInState extends State<_ApiKeySignIn> {
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
             child: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Connect securely'),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          TextButton(onPressed: _busy ? null : _forgotPassword, child: const Text('Forgot password?')),
+          const SizedBox(height: 8),
           const Text('Email/password login and native Google sign-in require the backend to return a mobile bearer credential. The current web login sets a browser cookie only, so this app will not reuse website cookies.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 11)),
         ],
       )),
