@@ -1,7 +1,7 @@
 name: Numelixa Android CI
 'on':
   push:
-    branches: [main]
+    branches: [main, feat/native-commerce-auth-notifications]
     tags: ['v*']
   workflow_dispatch:
 permissions:

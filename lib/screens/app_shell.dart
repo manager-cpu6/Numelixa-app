@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -13,14 +15,30 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
   bool _booted = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     appNotificationRoute.addListener(_handleNotificationRoute);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    _syncNotifications();
+  }
+
+  Future<void> _syncNotifications() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isReady || !auth.isSignedIn) return;
+    final notifications = context.read<NotificationService>();
+    final permission = await notifications.requestPermission();
+    if (!mounted) return;
+    if (permission.isGranted) await notifications.syncToken(auth);
   }
 
   void _handleNotificationRoute() {
@@ -39,6 +57,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     appNotificationRoute.removeListener(_handleNotificationRoute);
     super.dispose();
   }
@@ -55,8 +74,12 @@ class _AppShellState extends State<AppShell> {
       if (!mounted) return;
       final notifications = context.read<NotificationService>();
       await notifications.initialize(auth: auth);
-      await notifications.requestPermission();
-      await notifications.syncToken(auth);
+      // Ask only once a real account is signed in; registration requires that
+      // account's mobile bearer token to associate the FCM token correctly.
+      if (auth.isSignedIn) {
+        final permission = await notifications.requestPermission();
+        if (permission.isGranted) await notifications.syncToken(auth);
+      }
     });
   }
 
@@ -66,7 +89,8 @@ class _AppShellState extends State<AppShell> {
     if (!auth.isReady) {
       return const _SplashScreen();
     }
-    if (!auth.isSignedIn) return const _ApiKeySignIn();
+    if (!auth.isSignedIn) return const _AuthScreen();
+    if (auth.needsEmailVerification) return const _EmailVerificationScreen();
     final pages = [
       const _HomePage(),
       const _CatalogPage(),
@@ -130,124 +154,289 @@ class _SplashScreen extends StatelessWidget {
   );
 }
 
-class _ApiKeySignIn extends StatefulWidget {
-  const _ApiKeySignIn();
+class _AuthScreen extends StatefulWidget {
+  const _AuthScreen();
   @override
-  State<_ApiKeySignIn> createState() => _ApiKeySignInState();
+  State<_AuthScreen> createState() => _AuthScreenState();
 }
 
-class _ApiKeySignInState extends State<_ApiKeySignIn> {
-  final _controller = TextEditingController();
+class _AuthScreenState extends State<_AuthScreen> {
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _apiKey = TextEditingController();
+  bool _creating = false;
+  bool _showApiKey = false;
+  bool _obscurePassword = true;
   String? _error;
-  bool _busy = false;
+
   @override
-  void dispose() { _controller.dispose(); super.dispose(); }
+  void dispose() {
+    _name.dispose(); _email.dispose(); _password.dispose(); _apiKey.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (!email.contains('@') || password.isEmpty || (_creating && _name.text.trim().length < 2)) {
+      setState(() => _error = _creating
+        ? 'Enter your name, a valid email, and a password of at least 8 characters.'
+        : 'Enter your account email and password.');
+      return;
+    }
+    if (_creating && password.length < 8) {
+      setState(() => _error = 'Your password must contain at least 8 characters.');
+      return;
+    }
+    setState(() { _error = null; });
+    try {
+      if (_creating) {
+        await context.read<AuthService>().register(name: _name.text, email: email, password: password);
+      } else {
+        await context.read<AuthService>().signInWithEmail(email: email, password: password);
+      }
+      if (!mounted) return;
+      final auth = context.read<AuthService>();
+      final notifications = context.read<NotificationService>();
+      final permission = await notifications.requestPermission();
+      if (permission.isGranted) await notifications.syncToken(auth);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not connect. Please check your internet and try again.');
+    }
+  }
+
+  Future<void> _google() async {
+    setState(() => _error = null);
+    try {
+      await context.read<AuthService>().signInWithGoogle();
+      if (!mounted) return;
+      final auth = context.read<AuthService>();
+      final notifications = context.read<NotificationService>();
+      final permission = await notifications.requestPermission();
+      if (permission.isGranted) await notifications.syncToken(auth);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Google Sign-In could not be completed. Check Android OAuth configuration.');
+    }
+  }
 
   Future<void> _forgotPassword() async {
-    final emailController = TextEditingController();
+    final controller = TextEditingController(text: _email.text.trim());
     final email = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset password'),
         content: TextField(
-          controller: emailController,
+          controller: controller,
           keyboardType: TextInputType.emailAddress,
-          autocorrect: false,
           decoration: const InputDecoration(labelText: 'Account email'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, emailController.text.trim()), child: const Text('Send reset link')),
+          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Send reset link')),
         ],
       ),
     );
-    emailController.dispose();
+    controller.dispose();
     if (email == null || email.isEmpty || !mounted) return;
-    setState(() { _busy = true; _error = null; });
     try {
       await NumelixaRepository().forgotPassword(email: email);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('If the account is eligible, Numelixa will send a password reset email.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('If the account exists, a password reset email will be sent.')));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not request a reset link. Check your connection.');
+      if (mounted) setState(() => _error = 'Could not request a reset email.');
+    }
+  }
+
+  Future<void> _apiKeyLogin() async {
+    try {
+      await context.read<AuthService>().signInWithApiKey(_apiKey.text);
+      if (mounted) {
+        final auth = context.read<AuthService>();
+        final notifications = context.read<NotificationService>();
+        final permission = await notifications.requestPermission();
+        if (permission.isGranted) await notifications.syncToken(auth);
+      }
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not validate this API key.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    return Scaffold(
+      body: SafeArea(child: Center(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(child: Container(
+              width: 78, height: 78, alignment: Alignment.center,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(26),
+                gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
+                boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))]),
+              child: const Icon(Icons.public_rounded, size: 42, color: Colors.white),
+            )),
+            const SizedBox(height: 26),
+            const Text('Welcome to Numelixa', textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.7)),
+            const SizedBox(height: 8),
+            const Text('Global virtual numbers, with a secure account and instant SMS updates.',
+              textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
+            const SizedBox(height: 24),
+            Row(children: [
+              Expanded(child: FilledButton.tonal(
+                onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _error = null; }),
+                child: const Text('Log in'))),
+              const SizedBox(width: 10),
+              Expanded(child: OutlinedButton(
+                onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _error = null; }),
+                child: const Text('Create account'))),
+            ]),
+            if (_creating) ...[
+              const SizedBox(height: 16),
+              TextField(controller: _name, textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline_rounded))),
+            ],
+            const SizedBox(height: 12),
+            TextField(controller: _email, keyboardType: TextInputType.emailAddress,
+              autocorrect: false, autofillHints: const [AutofillHints.email],
+              decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.email_outlined))),
+            const SizedBox(height: 12),
+            TextField(controller: _password, obscureText: _obscurePassword,
+              autofillHints: [_creating ? AutofillHints.newPassword : AutofillHints.password],
+              decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword))),
+              onSubmitted: (_) => auth.isValidating ? null : _submit()),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: Color(0xFFFF788C), height: 1.4)),
+            ],
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: auth.isValidating ? null : _submit,
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: auth.isValidating
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(_creating ? 'Create account' : 'Log in securely')),
+            if (!_creating) Align(alignment: Alignment.centerRight,
+              child: TextButton(onPressed: auth.isValidating ? null : _forgotPassword, child: const Text('Forgot password?'))),
+            const SizedBox(height: 6),
+            OutlinedButton.icon(
+              onPressed: auth.isValidating ? null : _google,
+              icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
+              label: const Text('Continue with Google'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+            ),
+            const SizedBox(height: 18),
+            TextButton.icon(
+              onPressed: () => setState(() { _showApiKey = !_showApiKey; _error = null; }),
+              icon: const Icon(Icons.key_rounded, size: 17),
+              label: Text(_showApiKey ? 'Hide developer API-key login' : 'Use developer API key instead')),
+            if (_showApiKey) ...[
+              TextField(controller: _apiKey, obscureText: true, autocorrect: false,
+                decoration: const InputDecoration(labelText: 'Numelixa API key', hintText: 'nx_live_…')),
+              const SizedBox(height: 8),
+              OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin, child: const Text('Connect API key')),
+            ],
+            const SizedBox(height: 12),
+            const Text('By continuing, you agree to use Numelixa responsibly. Your session is stored securely on this device.',
+              textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 11)),
+          ],
+        )),
+      ))),
+    );
+  }
+}
+
+class _EmailVerificationScreen extends StatefulWidget {
+  const _EmailVerificationScreen();
+  @override
+  State<_EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+}
+
+class _EmailVerificationScreenState extends State<_EmailVerificationScreen> {
+  final _code = TextEditingController();
+  bool _busy = false;
+  String? _error;
+  @override
+  void dispose() { _code.dispose(); super.dispose(); }
+
+  Future<void> _verify() async {
+    if (!RegExp(r'^\d{6}$').hasMatch(_code.text.trim())) {
+      setState(() => _error = 'Enter the 6-digit code sent to your email.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; });
+    try {
+      final auth = context.read<AuthService>();
+      final notifications = context.read<NotificationService>();
+      final ok = await auth.verifyEmailCode(_code.text);
+      if (!ok) throw const ApiException('The verification code was not accepted.');
+      if (!mounted) return;
+      await notifications.syncToken(auth);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not verify this code. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _submit() async {
+  Future<void> _resend() async {
     setState(() { _busy = true; _error = null; });
     try {
-      await context.read<AuthService>().signInWithApiKey(_controller.text);
-      if (mounted) {
-        final auth = context.read<AuthService>();
-        await context.read<NotificationService>().syncToken(auth);
-      }
+      await context.read<AuthService>().resendVerificationCode();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A verification code request was submitted. Check your inbox.')));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not connect. Check your internet and try again.');
+      if (mounted) setState(() => _error = 'Could not send another verification code.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(child: Center(child: SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            height: 78, width: 78, alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(26),
-              gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
-              boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))],
-            ),
-            child: const Icon(Icons.public_rounded, size: 42, color: Colors.white),
-          ),
-          const SizedBox(height: 30),
-          const Text('Welcome to Numelixa', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.7)),
-          const SizedBox(height: 9),
-          const Text('Your global virtual numbers, in one secure mobile app.', style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
-          const SizedBox(height: 28),
-          const Text('Connect your account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          const Text('Use your personal API key to authenticate with the existing Numelixa API. Your key is stored only in Android secure storage.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.45, fontSize: 13)),
-          const SizedBox(height: 18),
-          TextField(
-            controller: _controller,
-            obscureText: true,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: const InputDecoration(
-              labelText: 'Numelixa API key',
-              hintText: 'nx_live_…',
-              prefixIcon: Icon(Icons.key_rounded),
-            ),
-            onSubmitted: (_) => _busy ? null : _submit(),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Color(0xFFFF788C))),
+  Widget build(BuildContext context) {
+    final email = (context.watch<AuthService>().user?['email'] ?? '').toString();
+    return Scaffold(
+      body: SafeArea(child: Center(child: SingleChildScrollView(padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Icon(Icons.mark_email_read_outlined, size: 64, color: AppTheme.cyan),
+            const SizedBox(height: 20),
+            const Text('Verify your email', textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            Text('Enter the 6-digit code sent to $email to activate purchases and your wallet.',
+              textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
+            const SizedBox(height: 22),
+            TextField(controller: _code, keyboardType: TextInputType.number, maxLength: 6,
+              textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w800),
+              decoration: const InputDecoration(labelText: 'Verification code', counterText: '')),
+            if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: const TextStyle(color: Color(0xFFFF788C)))],
+            const SizedBox(height: 14),
+            FilledButton(onPressed: _busy ? null : _verify,
+              child: _busy ? const CircularProgressIndicator(strokeWidth: 2) : const Text('Verify email')),
+            TextButton(onPressed: _busy ? null : _resend, child: const Text('Resend code')),
+            TextButton(onPressed: () async => context.read<AuthService>().logout(), child: const Text('Sign out')),
           ],
-          const SizedBox(height: 18),
-          FilledButton(
-            onPressed: _busy ? null : _submit,
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            child: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Connect securely'),
-          ),
-          const SizedBox(height: 8),
-          TextButton(onPressed: _busy ? null : _forgotPassword, child: const Text('Forgot password?')),
-          const SizedBox(height: 8),
-          const Text('Email/password login and native Google sign-in require the backend to return a mobile bearer credential. The current web login sets a browser cookie only, so this app will not reuse website cookies.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 11)),
-        ],
-      )),
-    ))),
-  );
+        )),
+      ))),
+    );
+  }
 }
 
 class _HomePage extends StatelessWidget {
@@ -353,6 +542,7 @@ class _CatalogPage extends StatefulWidget {
 }
 class _CatalogPageState extends State<_CatalogPage> {
   late Future<Map<String, dynamic>> _future;
+  String _search = '';
   @override
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().services(token: context.read<AuthService>().accessToken); }
@@ -365,12 +555,21 @@ class _CatalogPageState extends State<_CatalogPage> {
       final raw = snapshot.data?['services'];
       final services = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
       if (services.isEmpty) return _RetryState(message: 'No live services are available right now.', onRetry: () => setState(_load));
+      final filteredServices = services.where((service) {
+        final query = _search.trim().toLowerCase();
+        if (query.isEmpty) return true;
+        return ['name','title','id','code','description','category'].any((key) => (service[key] ?? '').toString().toLowerCase().contains(query));
+      }).toList();
       return ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Choose a service', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        const Text('Live catalog from Numelixa', style: TextStyle(color: Color(0xFF91A8C4))),
+        const Text('Search WhatsApp, Telegram, Facebook and more', style: TextStyle(color: Color(0xFF91A8C4))),
         const SizedBox(height: 14),
-        for (final service in services)
+        TextField(onChanged: (value) => setState(() => _search = value),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), labelText: 'Search services', hintText: 'WhatsApp, Instagram…')),
+        const SizedBox(height: 12),
+        if (filteredServices.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No services match your search.', textAlign: TextAlign.center)),
+        for (final service in filteredServices)
           Card(child: ListTile(
             leading: const Icon(Icons.verified_user_outlined, color: AppTheme.cyan),
             title: Text((service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString()),
@@ -395,6 +594,7 @@ class _CountriesPage extends StatefulWidget {
 }
 class _CountriesPageState extends State<_CountriesPage> {
   late Future<Map<String, dynamic>> _future;
+  String _search = '';
   @override
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().countries(service: widget.service, token: context.read<AuthService>().accessToken); }
@@ -451,8 +651,17 @@ class _CountriesPageState extends State<_CountriesPage> {
         final raw = snapshot.data?['countries'];
         final countries = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
         if (countries.isEmpty) return _RetryState(message: 'No live country availability for this service.', onRetry: () => setState(_load));
+        final filteredCountries = countries.where((country) {
+          final query = _search.trim().toLowerCase();
+          if (query.isEmpty) return true;
+          return ['name','title','id','code','country','countryCode'].any((key) => (country[key] ?? '').toString().toLowerCase().contains(query));
+        }).toList();
         return ListView(padding: const EdgeInsets.all(14), children: [
-          for (final country in countries)
+          TextField(onChanged: (value) => setState(() => _search = value),
+            decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), labelText: 'Search countries', hintText: 'United States, India…')),
+          const SizedBox(height: 12),
+          if (filteredCountries.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No countries match your search.', textAlign: TextAlign.center)),
+          for (final country in filteredCountries)
             Card(child: ListTile(
               leading: Text((country['flag'] ?? '🌐').toString(), style: const TextStyle(fontSize: 25)),
               title: Text((country['name'] ?? country['title'] ?? country['id'] ?? 'Country').toString()),
@@ -567,7 +776,18 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
           Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text((order['service'] ?? 'Virtual number').toString(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700)),
+            Row(children: [
+              Expanded(child: SelectableText((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700))),
+              IconButton(tooltip: 'Copy number', icon: const Icon(Icons.copy_rounded), onPressed: () async {
+                final number = (order['phone'] ?? order['number'] ?? '').toString();
+                final messenger = ScaffoldMessenger.of(context);
+                if (number.isNotEmpty) {
+                  await Clipboard.setData(ClipboardData(text: number));
+                  if (!mounted) return;
+                  messenger.showSnackBar(const SnackBar(content: Text('Number copied.')));
+                }
+              }),
+            ]),
             const SizedBox(height: 14),
             _DetailLine(label: 'Country', value: (order['country'] ?? '').toString()),
             _DetailLine(label: 'Status', value: status),
@@ -577,9 +797,32 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
           ]))),
           const SizedBox(height: 14),
           Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('SMS verification', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            Row(children: [
+              const Expanded(child: Text('SMS verification', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+              if (code.isNotEmpty) IconButton(tooltip: 'Copy SMS code', icon: const Icon(Icons.copy_rounded), onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                await Clipboard.setData(ClipboardData(text: code));
+                if (!mounted) return;
+                messenger.showSnackBar(const SnackBar(content: Text('SMS code copied.')));
+              }),
+            ]),
             const SizedBox(height: 12),
-            Text(code.isEmpty ? 'No code received yet.' : code, style: TextStyle(fontSize: code.isEmpty ? 14 : 30, fontWeight: FontWeight.w800, color: code.isEmpty ? const Color(0xFF91A8C4) : AppTheme.mint)),
+            Container(width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+              decoration: BoxDecoration(color: const Color(0xFF08243A), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF1677FF).withValues(alpha: .35))),
+              child: Column(children: [
+                Text(code.isEmpty ? 'Waiting for your code' : code, textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: code.isEmpty ? 15 : 32, letterSpacing: code.isEmpty ? 0 : 5, fontWeight: FontWeight.w900, color: code.isEmpty ? const Color(0xFF91A8C4) : AppTheme.mint)),
+                if (code.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  FilledButton.icon(onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (!mounted) return;
+                    messenger.showSnackBar(const SnackBar(content: Text('SMS code copied.')));
+                  }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy verification code')),
+                ],
+              ]),
+            ),
             if ((order['fullSms'] ?? '').toString().isNotEmpty) ...[
               const SizedBox(height: 10),
               Text((order['fullSms']).toString(), style: const TextStyle(color: Color(0xFFB2C7DD))),
@@ -607,16 +850,213 @@ class _DetailLine extends StatelessWidget {
   ]));
 }
 
-class _WalletPage extends StatelessWidget {
+class _WalletPage extends StatefulWidget {
   const _WalletPage();
   @override
-  Widget build(BuildContext context) => _ProtectedListPage(
-    title: 'Transactions',
-    load: (repo, token) => repo.transactions(token: token),
-    listKey: 'transactions',
-    empty: 'No transactions found.',
-    itemTitle: (item) => '${item['description'] ?? item['type'] ?? 'Transaction'}',
-    itemSubtitle: (item) => '${item['amount'] ?? 0} coins · ${item['createdAt'] ?? ''}',
+  State<_WalletPage> createState() => _WalletPageState();
+}
+
+class _WalletPageState extends State<_WalletPage> {
+  late Future<Map<String, dynamic>> _transactions;
+  late Future<Map<String, dynamic>> _balance;
+  late Future<Map<String, dynamic>> _assets;
+  int _coins = 36;
+  String? _currency;
+  String? _network;
+  bool _creating = false;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  void _load() {
+    final token = context.read<AuthService>().accessToken!;
+    final repo = NumelixaRepository();
+    _transactions = repo.transactions(token: token);
+    _balance = repo.balance(token: token);
+    _assets = repo.depositAssets(token: token);
+  }
+
+  List<Map<String, dynamic>> _asMaps(dynamic value) =>
+      value is List ? value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+
+  Future<void> _createDeposit(Map<String, dynamic> asset) async {
+    if (_currency == null || _network == null || _creating) return;
+    setState(() => _creating = true);
+    try {
+      final auth = context.read<AuthService>();
+      final result = await NumelixaRepository().createDeposit(
+        token: auth.accessToken!, coins: _coins, currency: _currency!, network: _network!);
+      if (!mounted) return;
+      if (result['ok'] != true || (result['address'] ?? '').toString().isEmpty) {
+        throw ApiException((result['error'] ?? 'Unable to create a deposit request.').toString());
+      }
+      await _showDeposit(result);
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to create the deposit request. Please retry.')));
+    } finally {
+      if (mounted) setState(() { _creating = false; _load(); });
+    }
+  }
+
+  Future<void> _showDeposit(Map<String, dynamic> payment) async {
+    final address = (payment['address'] ?? '').toString();
+    final amount = (payment['amount'] ?? '').toString();
+    final currency = (payment['currency'] ?? _currency ?? '').toString();
+    final network = (payment['networkName'] ?? payment['network'] ?? _network ?? '').toString();
+    final orderId = (payment['orderId'] ?? '').toString();
+    await showDialog<void>(context: context, barrierDismissible: false, builder: (dialogContext) => AlertDialog(
+      title: const Text('Complete your deposit'),
+      content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Text('Send exactly $amount $currency on $network. Sending a different amount or network may delay crediting.', style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.45)),
+        const SizedBox(height: 14),
+        const Text('Exact amount', style: TextStyle(fontWeight: FontWeight.w700)),
+        SelectableText('$amount $currency', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.mint)),
+        Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: amount));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exact amount copied.')));
+        }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy amount'))),
+        const SizedBox(height: 8),
+        const Text('Deposit address', style: TextStyle(fontWeight: FontWeight.w700)),
+        SelectableText(address, style: const TextStyle(color: AppTheme.cyan, height: 1.4)),
+        Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: address));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deposit address copied.')));
+        }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy address'))),
+        if ((payment['memo'] ?? '').toString().isNotEmpty) ...[
+          const Text('Memo / tag', style: TextStyle(fontWeight: FontWeight.w700)),
+          SelectableText((payment['memo']).toString()),
+        ],
+        const SizedBox(height: 8),
+        Text('Request: $orderId', style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
+        const Text('The wallet is credited only after the payment is confirmed.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
+      ])),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+        FilledButton(onPressed: () async {
+          final token = context.read<AuthService>().accessToken!;
+          final messenger = ScaffoldMessenger.of(context);
+          final navigator = Navigator.of(dialogContext);
+          try {
+            final status = await NumelixaRepository().depositStatus(token: token, orderId: orderId);
+            final state = (status['status'] ?? 'pending').toString();
+            if (!mounted) return;
+            messenger.showSnackBar(SnackBar(content: Text(
+              state == 'paid' ? 'Payment confirmed. Your wallet is being updated.' : 'Payment status: $state. Check again after sending.')));
+            if (state == 'paid') {
+              navigator.pop();
+              setState(_load);
+            }
+          } catch (_) {
+            if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
+          }
+        }, child: const Text('Check payment')),
+      ],
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Wallet')),
+    body: RefreshIndicator(onRefresh: () async => setState(_load), child: ListView(
+      padding: const EdgeInsets.all(14), children: [
+        FutureBuilder<Map<String, dynamic>>(future: _balance, builder: (context, snapshot) {
+          final value = snapshot.data?['balance'];
+          return Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Available balance', style: TextStyle(color: Color(0xFFA7B7D0))),
+            const SizedBox(height: 6),
+            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '$value coins',
+              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.mint)),
+            if (snapshot.hasError) Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
+          ])));
+        }),
+        const SizedBox(height: 8),
+        const Text('Add coins', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 5),
+        const Text('Choose a package, asset and network. Always copy the exact amount.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.4)),
+        const SizedBox(height: 12),
+        FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
+          }
+          if (snapshot.hasError) {
+            return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+              Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
+              TextButton(onPressed: () => setState(_load), child: const Text('Retry payment options')),
+            ])));
+          }
+          final assets = _asMaps(snapshot.data?['assets']);
+          if (assets.isEmpty) {
+            return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
+          }
+          final selectedAsset = assets.firstWhere((a) => a['coin'] == _currency, orElse: () => assets.first);
+          final coin = (selectedAsset['coin'] ?? '').toString();
+          final networks = _asMaps(selectedAsset['networks']);
+          if (_currency != coin) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() { _currency = coin; _network = null; });
+              }
+            });
+          }
+          if (networks.isNotEmpty && !networks.any((n) => n['network'] == _network)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() => _network = (networks.first['network'] ?? '').toString());
+              }
+            });
+          }
+          return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('Coin package', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<int>(initialValue: _coins, decoration: const InputDecoration(),
+              items: const [
+                DropdownMenuItem(value: 36, child: Text('36 coins · \$0.77')),
+                DropdownMenuItem(value: 75, child: Text('75 coins · \$1.65')),
+                DropdownMenuItem(value: 250, child: Text('250 coins · \$5.49')),
+                DropdownMenuItem(value: 499, child: Text('499 coins · \$10.99')),
+              ], onChanged: (value) { if (value != null) setState(() => _coins = value); }),
+            const SizedBox(height: 12),
+            const Text('Cryptocurrency', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(initialValue: coin, decoration: const InputDecoration(),
+              items: assets.map((a) => DropdownMenuItem<String>(
+                value: (a['coin'] ?? '').toString(),
+                child: Text('${a['name'] ?? a['coin']} (${a['coin']})'),
+              )).toList(),
+              onChanged: (value) => setState(() { _currency = value; _network = null; })),
+            const SizedBox(height: 12),
+            const Text('Network', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(initialValue: networks.any((n) => n['network'] == _network) ? _network : null,
+              decoration: const InputDecoration(),
+              items: networks.map((n) => DropdownMenuItem<String>(value: (n['network'] ?? '').toString(),
+                child: Text((n['networkName'] ?? n['network'] ?? '').toString()))).toList(),
+              onChanged: (value) => setState(() => _network = value)),
+            const SizedBox(height: 14),
+            FilledButton.icon(onPressed: _creating || _network == null ? null : () => _createDeposit(selectedAsset),
+              icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_card_rounded),
+              label: Text(_creating ? 'Creating deposit…' : 'Create deposit request')),
+          ])));
+        }),
+        const SizedBox(height: 20),
+        const Text('Transaction history', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        FutureBuilder<Map<String, dynamic>>(future: _transactions, builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()));
+          if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
+          final items = _asMaps(snapshot.data?['transactions']);
+          if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions found yet.')));
+          return Column(children: items.map((item) => Card(child: ListTile(
+            leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
+            title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
+            subtitle: Text('${item['createdAt'] ?? ''}'),
+            trailing: Text('${item['amount'] ?? 0} coins', style: const TextStyle(fontWeight: FontWeight.w800)),
+          ))).toList());
+        }),
+      ],
+    )),
   );
 }
 
@@ -689,7 +1129,16 @@ class _AccountPage extends StatelessWidget {
       const SizedBox(height: 22),
       const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Secure API session'), subtitle: Text('Bearer credential verified by Numelixa.'))),
       Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
-      Card(child: ListTile(leading: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyan), title: const Text('Notification permissions'), subtitle: const Text('Manage Android notification settings'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.read<NotificationService>().openNotificationSettings())),
+      Card(child: ValueListenableBuilder<String>(
+        valueListenable: context.read<NotificationService>().registrationStatus,
+        builder: (context, status, _) => ListTile(
+          leading: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyan),
+          title: const Text('Push notifications'),
+          subtitle: Text(status),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => context.read<NotificationService>().openNotificationSettings(),
+        ),
+      )),
       const SizedBox(height: 18),
       OutlinedButton.icon(
         onPressed: () async { await context.read<AuthService>().logout(); },

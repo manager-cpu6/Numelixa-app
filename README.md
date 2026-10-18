@@ -4,7 +4,12 @@ Standalone native Flutter application in `manager-cpu6/Numelixa-app`. It does no
 
 ## Implemented mobile functionality
 
-- Native dark Numelixa shell and secure API-key sign-in.
+- Native email/password login and account registration, email verification-code confirmation/resend, password-reset email request, Google Sign-In ID-token exchange, and revocable 30-day mobile bearer sessions.
+- Searchable service catalog and searchable country list for each selected service.
+- Live wallet balance, supported crypto/network selection, package-based deposit creation, exact-amount/address copying, payment status checks, and transaction history.
+- Order details with one-tap number and SMS-code copying; SMS-code pushes are delivered by the existing order watcher when the provider reports the code.
+
+- Native dark Numelixa shell and secure API-key sign-in (kept as a developer fallback).
 - Server-validated bearer credential stored with `flutter_secure_storage`; session restoration revalidates against `GET /api/me`.
 - Typed repository for existing balance, services, countries, orders, order details, SMS polling, cancellation, transactions, notification list/read and password-reset request routes.
 - Live service and country catalog screens; no fabricated balances, orders, stock or SMS values.
@@ -29,9 +34,9 @@ The accessible `manager-cpu6/Virt-num` source confirms:
 
 The app uses the real existing bearer/API-key authentication path instead of capturing website cookies. Users can connect with an API key from the existing developer-key screen. This is a real but less convenient bridge, not a replacement for native email/password login.
 
-## Backend contract still required for full native login
+## Native authentication and backend session contract
 
-The website repository must remain untouched unless separately approved. To support native email/password and Google sign-in without browser cookies, the backend needs a JSON mobile-session exchange that returns a short-lived access token and preferably a rotating refresh token, plus refresh/revoke endpoints. The current login/signup/google-native-complete routes do not return those credentials. No backend changes were made.
+The mobile feature branch adds revocable, opaque 30-day bearer sessions for Android email/password login and signup, plus Google ID-token exchange and native session completion. Only a SHA-256 hash of each mobile token is stored in the sessions collection. The website UI is not changed. Google Sign-In still requires a valid Android OAuth client (package `com.numelixa.app` and the release signing certificate SHA-1) plus the matching Web OAuth client ID in the existing Google/Firebase configuration.
 
 For full SMS/transaction notification tap details, backend payloads should include a stable `type` and `orderId` where relevant. Current app routing opens Orders, Wallet or Notifications based on those fields.
 

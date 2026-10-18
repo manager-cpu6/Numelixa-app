@@ -66,6 +66,23 @@ class NumelixaRepository {
   Future<Map<String, dynamic>> transactions({required String token}) =>
       _api.get('/api/v1/transactions', accessToken: token);
 
+  Future<Map<String, dynamic>> depositAssets({required String token}) =>
+      _api.get('/api/payments/binance/networks', accessToken: token);
+
+  Future<Map<String, dynamic>> createDeposit({
+    required String token,
+    required int coins,
+    required String currency,
+    required String network,
+  }) => _api.post('/api/payments/binance/create', accessToken: token,
+      body: {'coins': coins, 'currency': currency, 'network': network});
+
+  Future<Map<String, dynamic>> depositStatus({
+    required String token,
+    required String orderId,
+  }) => _api.get('/api/payments/binance/status?orderId=${Uri.encodeQueryComponent(orderId)}',
+      accessToken: token);
+
   Future<Map<String, dynamic>> notifications({required String token}) =>
       _api.get('/api/notifications', accessToken: token);
 
