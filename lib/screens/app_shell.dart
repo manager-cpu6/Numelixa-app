@@ -809,8 +809,8 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   style: const TextStyle(fontSize: 18, color: AppTheme.cyan, fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 5),
-                                Text('Platform: ' + (order['service'] ?? 'Virtual number').toString()),
-                                Text('Country: ' + (order['country'] ?? order['countryCode'] ?? '—').toString()),
+                                Text((order['service'] ?? 'Virtual number').toString(), semanticsLabel: 'Platform'),
+                                Text((order['country'] ?? order['countryCode'] ?? '—').toString(), semanticsLabel: 'Country'),
                                 if (_selected == 'successful') ...[
                                   const SizedBox(height: 7),
                                   Row(children: [
@@ -835,7 +835,7 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   ),
                                 ],
                                 if (_selected == 'canceled')
-                                  Text('Canceled at: ' + (order['completedAt'] ?? order['createdAt'] ?? '—').toString(),
+                                  Text((order['completedAt'] ?? order['createdAt'] ?? '—').toString(), semanticsLabel: 'Canceled at',
                                     style: const TextStyle(color: Color(0xFF91A8C4))),
                               ],
                             ),
