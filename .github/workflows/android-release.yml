@@ -99,18 +99,28 @@ jobs:
         id: signing
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_B64_PART1: ${{ secrets.ANDROID_KEYSTORE_BASE64_PART1 }}
+          KEYSTORE_B64_PART2: ${{ secrets.ANDROID_KEYSTORE_BASE64_PART2 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         shell: bash
         run: |
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is required for a publicly downloadable signed release."
-            exit 1
+          # Prefer two-part secrets to avoid mobile clipboard truncation. Otherwise use the original full secret.
+          if [ -n "$KEYSTORE_B64_PART1" ] || [ -n "$KEYSTORE_B64_PART2" ]; then
+            if [ -z "$KEYSTORE_B64_PART1" ] || [ -z "$KEYSTORE_B64_PART2" ]; then
+              echo "::error::Both ANDROID_KEYSTORE_BASE64_PART1 and ANDROID_KEYSTORE_BASE64_PART2 must be set."
+              exit 1
+            fi
+            printf '%s%s' "$KEYSTORE_B64_PART1" "$KEYSTORE_B64_PART2" | tr -d '[:space:]' > /tmp/keystore.base64
+          else
+            if [ -z "$KEYSTORE_B64" ]; then
+              echo "::error::Set ANDROID_KEYSTORE_BASE64 or both split keystore secrets."
+              exit 1
+            fi
+            printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' > /tmp/keystore.base64
           fi
           test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
-          # Normalize whitespace and validate without ever printing secret content.
-          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' > /tmp/keystore.base64
           python3 - <<'PY'
           import base64
           from pathlib import Path
