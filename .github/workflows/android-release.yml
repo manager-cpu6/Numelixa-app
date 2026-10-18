@@ -31,7 +31,12 @@ jobs:
           permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
           if "android.permission.POST_NOTIFICATIONS" not in text:
               text = text.replace("<application", permission + "\\n    <application", 1)
+          text = text.replace('android:label="app"', 'android:label="Numelixa"')
+          text = text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@drawable/numelixa_icon"')
           manifest.write_text(text)
+          icon_dir = Path("android/app/src/main/res/drawable")
+          icon_dir.mkdir(parents=True, exist_ok=True)
+          icon_dir.joinpath("numelixa_icon.xml").write_text(Path("android/numelixa_icon.xml").read_text())
 
           gradle = Path("android/app/build.gradle.kts")
           text = gradle.read_text()
