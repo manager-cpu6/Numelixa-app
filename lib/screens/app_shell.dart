@@ -765,7 +765,7 @@ class _OrdersPageState extends State<_OrdersPage> {
       'pinterest': 'Pinterest', 'twitch': 'Twitch', 'steam': 'Steam',
     };
     if (names.containsKey(key)) return names[key]!;
-    return raw.trim().split(RegExp(r'[_\\-\\s]+'))
+    return raw.trim().split(RegExp(r'[_\-\s]+'))
         .where((part) => part.isNotEmpty)
         .map((part) => part[0].toUpperCase() + part.substring(1))
         .join(' ');
@@ -775,7 +775,7 @@ class _OrdersPageState extends State<_OrdersPage> {
     final code = (order['code'] ?? '').toString().trim();
     if (code.isNotEmpty) return code;
     final sms = (order['fullSms'] ?? '').toString();
-    return RegExp(r'(?<!\\d)\\d{4,8}(?!\\d)').firstMatch(sms)?.group(0) ?? '';
+    return RegExp(r'(?<!\d)\d{4,8}(?!\d)').firstMatch(sms)?.group(0) ?? '';
   }
 
   bool _isSuccessful(String status) {
