@@ -725,22 +725,13 @@ class _CountriesPageState extends State<_CountriesPage> {
         service: widget.service,
       );
       if (!mounted) return;
-      final purchased = result['order'] is Map
-          ? Map<String, dynamic>.from(result['order'] as Map)
-          : <String, dynamic>{};
-      final orderId = (purchased['id'] ?? purchased['_id'] ?? result['orderId'] ?? result['id'] ?? '').toString();
-      if (result['ok'] == true && orderId.isNotEmpty) {
+      if (result['ok'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Number purchased. It is now in Activations.')),
+          const SnackBar(content: Text('Number purchased. Opening Activations…')),
         );
         Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => _OrderDetailPage(orderId: orderId),
+          builder: (_) => const _OrdersPage(),
         ));
-      } else if (result['ok'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Purchase accepted. Open Activations to view the number.')),
-        );
-        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _OrdersPage()));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text((result['error'] ?? 'The order could not be completed.').toString()),
