@@ -167,7 +167,7 @@ class NotificationService {
       }
       registrationStatus.value = 'This device is linked to your Numelixa account.';
     } on ApiException catch (error) {
-      registrationStatus.value = 'Device registration failed: ${error.message}';
+      registrationStatus.value = 'Device registration failed (HTTP ${error.statusCode ?? 'unknown'}): ${error.message}';
       debugPrint('FCM registration not linked: ${error.message}');
     }
   }
