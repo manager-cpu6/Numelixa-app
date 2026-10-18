@@ -17,6 +17,29 @@ class _AppShellState extends State<AppShell> {
   bool _booted = false;
 
   @override
+  void initState() {
+    super.initState();
+    appNotificationRoute.addListener(_handleNotificationRoute);
+  }
+
+  void _handleNotificationRoute() {
+    final route = appNotificationRoute.value;
+    if (!mounted || route == null) return;
+    appNotificationRoute.value = null;
+    if (route == 'orders') setState(() => _index = 2);
+    else if (route == 'wallet') setState(() => _index = 3);
+    else {
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _NotificationsPage()));
+    }
+  }
+
+  @override
+  void dispose() {
+    appNotificationRoute.removeListener(_handleNotificationRoute);
+    super.dispose();
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_booted) return;
