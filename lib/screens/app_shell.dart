@@ -712,8 +712,9 @@ class _OrdersPageState extends State<_OrdersPage> {
     final id = (order['id'] ?? '').toString();
     if (id.isEmpty) return;
     try {
+      final accessToken = context.read<AuthService>().accessToken!;
       final result = await NumelixaRepository().checkSms(
-        token: context.read<AuthService>().accessToken!,
+        token: accessToken,
         orderId: id,
       );
       if (!mounted) return;
@@ -809,8 +810,8 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   style: const TextStyle(fontSize: 18, color: AppTheme.cyan, fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 5),
-                                Text((order['service'] ?? 'Virtual number').toString(), semanticsLabel: 'Platform'),
-                                Text((order['country'] ?? order['countryCode'] ?? '—').toString(), semanticsLabel: 'Country'),
+                                Row(children: [const Text('Platform: '), Expanded(child: Text((order['service'] ?? 'Virtual number').toString()))]),
+                                Row(children: [const Text('Country: '), Expanded(child: Text((order['country'] ?? order['countryCode'] ?? '—').toString()))]),
                                 if (_selected == 'successful') ...[
                                   const SizedBox(height: 7),
                                   Row(children: [
@@ -835,7 +836,7 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   ),
                                 ],
                                 if (_selected == 'canceled')
-                                  Text((order['completedAt'] ?? order['createdAt'] ?? '—').toString(), semanticsLabel: 'Canceled at',
+                                  Text('Canceled at', semanticsLabel: (order['completedAt'] ?? order['createdAt'] ?? '—').toString(),
                                     style: const TextStyle(color: Color(0xFF91A8C4))),
                               ],
                             ),
