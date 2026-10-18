@@ -70,7 +70,6 @@ class NotificationService {
   }
 
   Future<PermissionStatus> requestPermission() async {
-    if (!firebaseReady) return PermissionStatus.denied;
     var status = await Permission.notification.status;
     if (status.isGranted) return status;
     if (status.isPermanentlyDenied || status.isRestricted) return status;
