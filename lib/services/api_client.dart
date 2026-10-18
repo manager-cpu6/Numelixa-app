@@ -61,6 +61,7 @@ class ApiClient {
     if (status == 401) return 'Please sign in again.';
     if (status == 403) return 'You do not have permission to do that.';
     if (status >= 500) return 'The service is temporarily unavailable.';
+    if (body is Map && body['error'] is String) return body['error'] as String;
     if (body is Map && body['message'] is String) return body['message'] as String;
     return 'The request could not be completed.';
   }
