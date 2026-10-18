@@ -148,6 +148,25 @@ jobs:
           storeFile=../release-key.jks
           EOF
           echo "configured=true" >> "$GITHUB_OUTPUT"
+      - name: Diagnose Android OAuth signing configuration
+        if: steps.signing.outputs.configured == 'true'
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        shell: bash
+        run: |
+          echo "Release signing certificate SHA-1 (add this to the Android OAuth client if missing):"
+          keytool -list -v -keystore android/release-key.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E 'SHA1:|SHA-1:'
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('android/app/google-services.json').read_text())
+          print('OAuth clients bundled in Firebase config:')
+          for client in data.get('client', []):
+              package=client.get('client_info', {}).get('android_client_info', {}).get('package_name', '')
+              for oauth in client.get('oauth_client', []):
+                  print('package=' + str(package) + ' client_type=' + str(oauth.get('client_type')) + ' client_id=' + str(oauth.get('client_id', '')))
+          PY
       - name: Install dependencies
         run: flutter pub get
       - name: Static analysis
