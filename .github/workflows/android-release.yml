@@ -118,6 +118,15 @@ jobs:
                   'Re-download google-services.json after registering the release SHA-1 and Web OAuth client, then update GitHub secret FIREBASE_GOOGLE_SERVICES_JSON_BASE64.'
               )
           android_clients = [o for o in oauth if str(o.get('client_type')) == '1']
+          web_clients = [o for o in oauth if str(o.get('client_type')) == '3']
+          malformed = [o.get('client_id', '') for o in android_clients + web_clients
+                       if not str(o.get('client_id', '')).endswith('.apps.googleusercontent.com')]
+          if malformed:
+              raise SystemExit(
+                  'Firebase OAuth client ID is malformed: every Android/Web OAuth client must end with '
+                  '".apps.googleusercontent.com". Found invalid client ID(s): ' + ', '.join(map(str, malformed)) +
+                  '. Download a fresh google-services.json from Firebase Console and update FIREBASE_GOOGLE_SERVICES_JSON_BASE64.'
+              )
           expected_sha1 = '69ce75089a191ac41ff96b0498bdfa002a00a910'
           if not any(str(o.get('android_info', {}).get('certificate_hash', '')).replace(':', '').lower() == expected_sha1
                      for o in android_clients):
