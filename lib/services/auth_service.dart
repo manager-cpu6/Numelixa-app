@@ -202,7 +202,7 @@ class AuthService extends ChangeNotifier {
   }
 
   void updateUserFields(Map<String, dynamic> fields) {
-    _user = {...?_user, ...fields};
+    _user = {...(_user ?? const <String, dynamic>{}), ...fields};
     notifyListeners();
   }
 
