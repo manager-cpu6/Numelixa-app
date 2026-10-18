@@ -210,7 +210,7 @@ class _HomePage extends StatelessWidget {
         ]),
       ),
       const SizedBox(height: 18),
-      _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined, path: 'balance'),
+      _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
       const SizedBox(height: 12),
       const Text('Your workspace', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
