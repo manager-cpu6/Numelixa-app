@@ -81,15 +81,22 @@ class NotificationService {
   Future<PermissionStatus> requestPermission() async {
     var status = await Permission.notification.status;
     if (status.isGranted) {
+      registrationStatus.value = 'Notification permission is enabled; checking device registration.';
       await _fcm.requestPermission(alert: true, badge: true, sound: true);
       return status;
     }
-    if (status.isPermanentlyDenied || status.isRestricted) return status;
+    if (status.isPermanentlyDenied || status.isRestricted) {
+      registrationStatus.value = 'Notifications are blocked. Open Android settings and allow Numelixa notifications.';
+      return status;
+    }
     // Ask after account sign-in, not on the anonymous splash screen. Do not
     // persist a local "already asked" bit: it prevented retry after a denial.
     status = await Permission.notification.request();
     if (status.isGranted) {
+      registrationStatus.value = 'Notification permission is enabled; linking this device.';
       await _fcm.requestPermission(alert: true, badge: true, sound: true);
+    } else {
+      registrationStatus.value = 'Notifications are disabled. Enable them to receive SMS codes and order updates.';
     }
     return status;
   }
