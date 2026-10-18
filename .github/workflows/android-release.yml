@@ -40,7 +40,7 @@ jobs:
           g = Path('android/app/build.gradle.kts')
           s = g.read_text()
           if 'import java.util.Properties' not in s:
-              s = 'import java.util.Properties\\n' + s
+              s = 'import java.util.Properties\n' + s
           if 'create("release")' not in s:
               marker = '    buildTypes {'
               signing = '''    signingConfigs {
