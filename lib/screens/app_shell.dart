@@ -748,6 +748,36 @@ class _OrdersPageState extends State<_OrdersPage> {
     );
   }
 
+  String _platformName(String raw) {
+    final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    const names = <String, String>{
+      'wa': 'WhatsApp', 'whatsapp': 'WhatsApp',
+      'fb': 'Facebook', 'facebook': 'Facebook',
+      'ig': 'Instagram', 'instagram': 'Instagram',
+      'tg': 'Telegram', 'telegram': 'Telegram',
+      'tt': 'TikTok', 'tiktok': 'TikTok',
+      'googlevoice': 'Google Voice', 'google': 'Google',
+      'ms': 'Microsoft', 'microsoft': 'Microsoft',
+      'discord': 'Discord', 'snapchat': 'Snapchat',
+      'reddit': 'Reddit', 'netflix': 'Netflix', 'amazon': 'Amazon',
+      'apple': 'Apple', 'x': 'X', 'twitter': 'X',
+      'spotify': 'Spotify', 'linkedin': 'LinkedIn',
+      'pinterest': 'Pinterest', 'twitch': 'Twitch', 'steam': 'Steam',
+    };
+    if (names.containsKey(key)) return names[key]!;
+    return raw.trim().split(RegExp(r'[_\\-\\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
+  }
+
+  String _smsCode(Map<String, dynamic> order) {
+    final code = (order['code'] ?? '').toString().trim();
+    if (code.isNotEmpty) return code;
+    final sms = (order['fullSms'] ?? '').toString();
+    return RegExp(r'(?<!\\d)\\d{4,8}(?!\\d)').firstMatch(sms)?.group(0) ?? '';
+  }
+
   bool _isSuccessful(String status) {
     final s = status.toLowerCase().replaceAll('_', ' ').trim();
     return ['success', 'successful', 'completed', 'complete', 'finished', 'received'].any((v) => s == v || s.contains(v));
@@ -845,7 +875,7 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   _platformLogo((order['service'] ?? '').toString()),
                                   const SizedBox(width: 10),
                                   Expanded(child: Text(
-                                    (order['service'] ?? 'Virtual number').toString(),
+                                    _platformName((order['service'] ?? 'Virtual number').toString()),
                                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                                   )),
                                   Text((order['status'] ?? '').toString(),
@@ -857,18 +887,18 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   style: const TextStyle(fontSize: 18, color: AppTheme.cyan, fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 5),
-                                Row(children: [const Text('Platform: '), Expanded(child: Text((order['service'] ?? 'Virtual number').toString()))]),
+                                Row(children: [const Text('Platform: '), Expanded(child: Text(_platformName((order['service'] ?? 'Virtual number').toString())))]),
                                 Row(children: [const Text('Country: '), Expanded(child: Text((order['country'] ?? order['countryCode'] ?? '—').toString()))]),
                                 if (_selected == 'successful') ...[
                                   const SizedBox(height: 7),
                                   Row(children: [
                                     const Text('SMS code: ', style: TextStyle(color: Color(0xFF91A8C4))),
-                                    Expanded(child: SelectableText((order['code'] ?? 'Code unavailable').toString(),
+                                    Expanded(child: SelectableText(_smsCode(order).isEmpty ? 'Code unavailable' : _smsCode(order),
                                       style: const TextStyle(fontWeight: FontWeight.w800))),
-                                    if ((order['code'] ?? '').toString().isNotEmpty)
+                                    if (_smsCode(order).isNotEmpty)
                                       IconButton(
                                         tooltip: 'Copy SMS code',
-                                        onPressed: () => Clipboard.setData(ClipboardData(text: order['code'].toString())),
+                                        onPressed: () => Clipboard.setData(ClipboardData(text: _smsCode(order))),
                                         icon: const Icon(Icons.copy_rounded),
                                       ),
                                   ]),
