@@ -62,6 +62,7 @@ class AuthService extends ChangeNotifier {
     } catch (error) {
       debugPrint('Initial Google callback could not be restored: $error');
     }
+    await _applyCachedAvatar();
     _biometricEnabled = (await _storage.read(key: 'numelixa_biometric_lock')) == 'true';
     _biometricLocked = _biometricEnabled && isSignedIn;
     _ready = true;
@@ -219,6 +220,19 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  Future<void> _applyCachedAvatar() async {
+    final id = (_user?['id'] ?? '').toString();
+    if (id.isEmpty) return;
+    try {
+      final cached = await _storage.read(key: 'numelixa_profile_avatar_$id');
+      if (cached != null && cached.startsWith('data:image/')) {
+        _user = {...(_user ?? const <String, dynamic>{}), 'avatarDataUrl': cached, 'avatarUrl': cached};
+      }
+    } catch (_) {
+      // A cached avatar is a convenience; server data remains authoritative if local storage fails.
+    }
+  }
+
   void updateUserFields(Map<String, dynamic> fields) {
     _user = {...(_user ?? const <String, dynamic>{}), ...fields};
     notifyListeners();
@@ -228,6 +242,10 @@ class AuthService extends ChangeNotifier {
     final result = await _api.put('/api/mobile/profile/avatar',
         accessToken: _accessToken, body: {'avatar': dataUrl});
     final avatar = (result['avatarUrl'] ?? dataUrl).toString();
+    final id = (_user?['id'] ?? '').toString();
+    if (id.isNotEmpty) {
+      await _storage.write(key: 'numelixa_profile_avatar_$id', value: avatar);
+    }
     updateUserFields({'avatarDataUrl': avatar, 'avatarUrl': avatar});
   }
 
@@ -279,6 +297,7 @@ class AuthService extends ChangeNotifier {
         _user = Map<String, dynamic>.from(response['user']);
       }
     }
+    await _applyCachedAvatar();
     _ready = true;
   }
 
