@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'api_client.dart';
 import '../core/config/app_config.dart';
@@ -25,7 +24,6 @@ String _routeFor(Map<String, dynamic> data) {
 class NotificationService {
   NotificationService({required this.firebaseReady});
   final bool firebaseReady;
-  static const _storage = FlutterSecureStorage();
   FirebaseMessaging? _messaging;
   FirebaseMessaging get _fcm => _messaging ??= FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
