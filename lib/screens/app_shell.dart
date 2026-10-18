@@ -1483,7 +1483,8 @@ class _DevicesPageState extends State<_DevicesPage> {
 
   Future<void> _remove(Map<String, dynamic> device) async {
     final auth = context.read<AuthService>();
-    final id = (device['sessionId'] ?? '').toString();
+    final id = (device['deviceId'] ?? device['sessionId'] ?? '').toString();
+    final sessionId = (device['sessionId'] ?? '').toString();
     final isCurrent = device['current'] == true;
     final yes = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
       title: const Text('Remove device?'),
@@ -1495,7 +1496,7 @@ class _DevicesPageState extends State<_DevicesPage> {
     ));
     if (yes != true || !mounted) return;
     try {
-      await auth.removeDevice(id);
+      await auth.removeDevice(id, sessionId: sessionId);
       if (isCurrent) {
         await auth.logout();
         if (mounted) Navigator.of(context).pop();
