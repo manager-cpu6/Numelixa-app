@@ -26,7 +26,6 @@ class NotificationService {
   NotificationService({required this.firebaseReady});
   final bool firebaseReady;
   static const _storage = FlutterSecureStorage();
-  static const _permissionAskedKey = 'numelixa_notification_permission_asked';
   FirebaseMessaging? _messaging;
   FirebaseMessaging get _fcm => _messaging ??= FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
@@ -53,13 +52,20 @@ class NotificationService {
         }
       },
     );
-    const channel = AndroidNotificationChannel(
-      'general', 'Numelixa notifications',
-      description: 'Account, order, and SMS updates',
-      importance: Importance.high,
-    );
-    await _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+    final androidNotifications = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    const channels = <AndroidNotificationChannel>[
+      AndroidNotificationChannel('general', 'Numelixa notifications',
+        description: 'Account, order, and SMS updates', importance: Importance.high),
+      AndroidNotificationChannel('verification', 'SMS and verification codes',
+        description: 'Incoming SMS codes and verification updates', importance: Importance.high),
+      AndroidNotificationChannel('security', 'Account security',
+        description: 'Login and account security alerts', importance: Importance.high),
+      AndroidNotificationChannel('admin', 'Numelixa announcements',
+        description: 'Important announcements and push tests', importance: Importance.high),
+    ];
+    for (final channel in channels) {
+      await androidNotifications?.createNotificationChannel(channel);
+    }
     FirebaseMessaging.onMessage.listen(_showForeground);
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       appNotificationRoute.value = _routeFor(message.data);
@@ -71,11 +77,13 @@ class NotificationService {
 
   Future<PermissionStatus> requestPermission() async {
     var status = await Permission.notification.status;
-    if (status.isGranted) return status;
+    if (status.isGranted) {
+      await _fcm.requestPermission(alert: true, badge: true, sound: true);
+      return status;
+    }
     if (status.isPermanentlyDenied || status.isRestricted) return status;
-    final alreadyAsked = await _storage.read(key: _permissionAskedKey) == 'true';
-    if (alreadyAsked) return status;
-    await _storage.write(key: _permissionAskedKey, value: 'true');
+    // Ask after account sign-in, not on the anonymous splash screen. Do not
+    // persist a local "already asked" bit: it prevented retry after a denial.
     status = await Permission.notification.request();
     if (status.isGranted) {
       await _fcm.requestPermission(alert: true, badge: true, sound: true);
