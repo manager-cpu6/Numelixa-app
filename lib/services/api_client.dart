@@ -22,6 +22,10 @@ class ApiClient {
           {Map<String, dynamic>? body, String? accessToken}) =>
       _request('POST', path, body: body, accessToken: accessToken);
 
+  Future<Map<String, dynamic>> delete(String path,
+          {Map<String, dynamic>? body, String? accessToken}) =>
+      _request('DELETE', path, body: body, accessToken: accessToken);
+
   Future<Map<String, dynamic>> _request(String method, String path,
       {Map<String, dynamic>? body, String? accessToken}) async {
     final uri = Uri.parse(AppConfig.apiBase).resolve(path);
@@ -31,9 +35,11 @@ class ApiClient {
       headers['Authorization'] = 'Bearer $accessToken';
     }
     try {
-      final request = method == 'GET'
-          ? _client.get(uri, headers: headers)
-          : _client.post(uri, headers: headers, body: jsonEncode(body ?? {}));
+      final request = switch (method) {
+        'GET' => _client.get(uri, headers: headers),
+        'DELETE' => _client.delete(uri, headers: headers, body: body == null ? null : jsonEncode(body)),
+        _ => _client.post(uri, headers: headers, body: jsonEncode(body ?? {})),
+      };
       final response = await request.timeout(const Duration(seconds: 20));
       final decoded = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
       if (response.statusCode < 200 || response.statusCode >= 300) {
