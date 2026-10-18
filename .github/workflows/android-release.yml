@@ -30,11 +30,12 @@ jobs:
           flutter create --platforms=android --org com.numelixa --project-name app .
           python3 - <<'PY'
           from pathlib import Path
+          from java.util import Properties
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
           if 'android.permission.POST_NOTIFICATIONS' not in s:
-              s = s.replace('<application', permission + '\\n    <application', 1)
+              s = s.replace('<application', permission + '\n    <application', 1)
           s = s.replace('android:label="app"', 'android:label="Numelixa"')
           p.write_text(s)
           g = Path('android/app/build.gradle.kts')
@@ -62,7 +63,7 @@ jobs:
           gp = Path('android/gradle.properties')
           properties = gp.read_text() if gp.exists() else ''
           if 'android.newDsl=false' not in properties:
-              gp.write_text(properties + '\\nandroid.newDsl=false\\n')
+              gp.write_text(properties + '\nandroid.newDsl=false\n')
           PY
       - name: Configure Firebase (optional)
         env:
@@ -86,7 +87,7 @@ jobs:
           s = g.read_text()
           marker = '    id("com.android.application")'
           if 'com.google.gms.google-services' not in s:
-              s = s.replace(marker, marker + '\\n    id("com.google.gms.google-services") version "4.4.2"', 1)
+              s = s.replace(marker, marker + '\n    id("com.google.gms.google-services") version "4.4.2"', 1)
           g.write_text(s)
           PY
       - name: Configure release signing (optional)
