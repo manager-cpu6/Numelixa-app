@@ -1,0 +1,59 @@
+name: Numelixa Flutter Android Release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Write Firebase Android configuration
+        env:
+          FIREBASE_CONFIG_B64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$FIREBASE_CONFIG_B64" ]; then
+            echo "$FIREBASE_CONFIG_B64" | base64 --decode > android/app/google-services.json
+          else
+            echo "FIREBASE_GOOGLE_SERVICES_JSON_BASE64 is not configured; Firebase-enabled release cannot be verified."
+            exit 1
+          fi
+      - name: Configure Android release signing (optional)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 --decode > android/app/release-key.jks
+            cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release-key.jks
+          EOF
+          fi
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: numelixa-android-release
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
