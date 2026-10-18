@@ -1,6 +1,8 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api_client.dart';
 
 class AuthService extends ChangeNotifier {
@@ -92,29 +94,51 @@ class AuthService extends ChangeNotifier {
   Future<void> signInWithGoogle() async {
     _validating = true;
     notifyListeners();
+    StreamSubscription<Uri>? callbackSubscription;
     try {
+      // Use the website's verified Google Identity Services flow. This avoids
+      // depending on a missing Android OAuth client/SHA-1 in Firebase config.
       final config = await _api.get('/api/auth/google/config');
-      final clientId = (config['clientId'] ?? '').toString().trim();
-      if (clientId.isEmpty) {
+      if ((config['clientId'] ?? '').toString().trim().isEmpty) {
         throw const ApiException('Google Sign-In is not configured for Numelixa yet.');
       }
-      final google = GoogleSignIn(serverClientId: clientId, scopes: const ['email', 'profile']);
-      final account = await google.signIn();
-      if (account == null) throw const ApiException('Google sign-in was cancelled.');
-      final authentication = await account.authentication;
-      final idToken = authentication.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        await google.signOut();
-        throw const ApiException('Google did not return a sign-in token. Check the Android OAuth configuration.');
+
+      final callback = Completer<Uri>();
+      final links = AppLinks();
+      callbackSubscription = links.uriLinkStream.listen((uri) {
+        if (uri.scheme == 'com.numelixa.app' &&
+            uri.host == 'auth' &&
+            uri.path == '/callback' &&
+            uri.queryParameters['ticket']?.isNotEmpty == true &&
+            !callback.isCompleted) {
+          callback.complete(uri);
+        }
+      });
+
+      final launched = await launchUrl(
+        Uri.parse('https://www.numelixa.com/auth/native/google'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw const ApiException('Could not open the secure Google sign-in page. Check your browser and internet connection.');
       }
-      final credential = await _api.post('/api/auth/google/native/credential', body: {'credential': idToken});
-      final ticket = (credential['ticket'] ?? '').toString();
-      if (ticket.isEmpty) throw const ApiException('Google sign-in could not be completed.');
+
+      final uri = await callback.future.timeout(
+        const Duration(minutes: 3),
+        onTimeout: () => throw const ApiException('Google sign-in timed out. Return to Numelixa and try again.'),
+      );
+      final ticket = (uri.queryParameters['ticket'] ?? '').trim();
+      if (ticket.isEmpty) {
+        throw const ApiException('Google returned to Numelixa without a sign-in ticket. Please try again.');
+      }
       final complete = await _api.post('/api/auth/google/native/complete', body: {'ticket': ticket});
       final token = (complete['accessToken'] ?? '').toString();
-      if (token.isEmpty) throw const ApiException('The server did not issue a mobile session.');
+      if (token.isEmpty) {
+        throw const ApiException('The server did not issue a mobile session. Please try again.');
+      }
       await _saveSession(token, complete['user']);
     } finally {
+      await callbackSubscription?.cancel();
       _validating = false;
       notifyListeners();
     }
