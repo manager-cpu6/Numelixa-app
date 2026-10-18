@@ -161,7 +161,7 @@ class NotificationService {
     try {
       final result = await _api.post(AppConfig.pushRegistrationPath,
         accessToken: auth.accessToken,
-        body: {'token': token, 'platform': 'android', 'deviceId': await ApiClient.deviceId, 'appVersion': '1.0.0'});
+        body: {'token': token, 'platform': 'android', 'deviceId': await ApiClient.deviceId, 'appVersion': '1.0.1'});
       if (result['registered'] != true || result['linked'] != true) {
         throw const ApiException('The server did not confirm device registration and user association.');
       }
