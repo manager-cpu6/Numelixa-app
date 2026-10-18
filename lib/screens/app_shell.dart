@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
@@ -18,6 +20,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
   bool _booted = false;
+  bool _wasBackgrounded = false;
 
   @override
   void initState() {
@@ -28,7 +31,21 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _wasBackgrounded = true;
+      return;
+    }
     if (state != AppLifecycleState.resumed || !mounted) return;
+    final auth = context.read<AuthService>();
+    if (_wasBackgrounded && auth.biometricEnabled && auth.isSignedIn) {
+      auth.lockBiometrics();
+      auth.unlockBiometrics().then((_) {
+        if (mounted && !auth.biometricLocked) _syncNotifications();
+      }).catchError((_) {});
+      _wasBackgrounded = false;
+      return;
+    }
+    _wasBackgrounded = false;
     _syncNotifications();
   }
 
@@ -76,7 +93,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await notifications.initialize(auth: auth);
       // Ask only once a real account is signed in; registration requires that
       // account's mobile bearer token to associate the FCM token correctly.
-      if (auth.isSignedIn) {
+      if (auth.biometricLocked) {
+        try { await auth.unlockBiometrics(); } catch (_) {}
+      }
+      if (auth.isSignedIn && !auth.biometricLocked) {
         final permission = await notifications.requestPermission();
         if (permission.isGranted) await notifications.syncToken(auth);
       }
@@ -90,6 +110,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       return const _SplashScreen();
     }
     if (!auth.isSignedIn) return const _AuthScreen();
+    if (auth.biometricLocked) return const _BiometricLockScreen();
     if (auth.needsEmailVerification) return const _EmailVerificationScreen();
     final pages = [
       const _HomePage(),
@@ -219,8 +240,8 @@ class _AuthScreenState extends State<_AuthScreen> {
       if (permission.isGranted) await notifications.syncToken(auth);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Google Sign-In could not be completed. Check Android OAuth configuration.');
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
     }
   }
 
@@ -675,17 +696,235 @@ class _CountriesPageState extends State<_CountriesPage> {
   );
 }
 
-class _OrdersPage extends StatelessWidget {
+class _OrdersPage extends StatefulWidget {
   const _OrdersPage();
   @override
-  Widget build(BuildContext context) => _ProtectedListPage(
-    title: 'Your orders',
-    load: (repo, token) => repo.orders(token: token, limit: 100),
-    listKey: 'orders',
-    empty: 'No orders found on this account.',
-    onItemTap: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _OrderDetailPage(orderId: (item['id'] ?? '').toString()))),
-    itemTitle: (item) => '${item['service'] ?? 'Virtual number'} · ${item['phone'] ?? item['phoneNumber'] ?? 'Number pending'}',
-    itemSubtitle: (item) => '${item['country'] ?? item['countryCode'] ?? ''}  •  ${item['status'] ?? 'unknown'}',
+  State<_OrdersPage> createState() => _OrdersPageState();
+}
+
+class _OrdersPageState extends State<_OrdersPage> {
+  String _selected = 'successful';
+  late Future<Map<String, dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  void _load() {
+    _future = NumelixaRepository().orders(
+      token: context.read<AuthService>().accessToken!,
+      limit: 100,
+    );
+  }
+
+  Widget _platformLogo(String service) {
+    final name = service.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    const logos = <String, String>{
+      'whatsapp': 'whatsapp/25D366', 'facebook': 'facebook/0866FF',
+      'instagram': 'instagram/E4405F', 'telegram': 'telegram/26A5E4',
+      'tiktok': 'tiktok/FFFFFF', 'google': 'google/4285F4',
+      'discord': 'discord/5865F2', 'snapchat': 'snapchat/FFFC00',
+      'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
+      'amazon': 'amazon/FF9900', 'microsoft': 'microsoft/737373',
+      'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF',
+      'twitter': 'x/FFFFFF', 'uber': 'uber/FFFFFF',
+      'airbnb': 'airbnb/FF5A5F', 'spotify': 'spotify/1DB954',
+      'linkedin': 'linkedin/0A66C2', 'pinterest': 'pinterest/BD081C',
+      'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF',
+    };
+    String? slug;
+    for (final entry in logos.entries) {
+      if (name == entry.key || name.contains(entry.key)) { slug = entry.value; break; }
+    }
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: const Color(0xFF102844),
+      child: slug == null
+          ? const Icon(Icons.apps_rounded, color: AppTheme.cyan)
+          : Image.network('https://cdn.simpleicons.org/$slug', width: 23, height: 23,
+              errorBuilder: (_, __, ___) => const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 22)),
+    );
+  }
+
+  String _platformName(String raw) {
+    final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    const names = <String, String>{
+      'wa': 'WhatsApp', 'whatsapp': 'WhatsApp',
+      'fb': 'Facebook', 'facebook': 'Facebook',
+      'ig': 'Instagram', 'instagram': 'Instagram',
+      'tg': 'Telegram', 'telegram': 'Telegram',
+      'tt': 'TikTok', 'tiktok': 'TikTok',
+      'googlevoice': 'Google Voice', 'google': 'Google',
+      'ms': 'Microsoft', 'microsoft': 'Microsoft',
+      'discord': 'Discord', 'snapchat': 'Snapchat',
+      'reddit': 'Reddit', 'netflix': 'Netflix', 'amazon': 'Amazon',
+      'apple': 'Apple', 'x': 'X', 'twitter': 'X',
+      'spotify': 'Spotify', 'linkedin': 'LinkedIn',
+      'pinterest': 'Pinterest', 'twitch': 'Twitch', 'steam': 'Steam',
+    };
+    if (names.containsKey(key)) return names[key]!;
+    return raw.trim().split(RegExp(r'[_\-\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
+  }
+
+  String _smsCode(Map<String, dynamic> order) {
+    final code = (order['code'] ?? '').toString().trim();
+    if (code.isNotEmpty) return code;
+    final sms = (order['fullSms'] ?? '').toString();
+    return RegExp(r'(?<!\d)\d{4,8}(?!\d)').firstMatch(sms)?.group(0) ?? '';
+  }
+
+  bool _isSuccessful(String status) {
+    final s = status.toLowerCase().replaceAll('_', ' ').trim();
+    return ['success', 'successful', 'completed', 'complete', 'finished', 'received'].any((v) => s == v || s.contains(v));
+  }
+
+  bool _isCanceled(String status) {
+    final s = status.toLowerCase();
+    return s.contains('cancel');
+  }
+
+  Future<void> _getNewCode(Map<String, dynamic> order) async {
+    final id = (order['id'] ?? '').toString();
+    if (id.isEmpty) return;
+    try {
+      final accessToken = context.read<AuthService>().accessToken!;
+      final result = await NumelixaRepository().checkSms(
+        token: accessToken,
+        orderId: id,
+      );
+      if (!mounted) return;
+      final code = (result['code'] ?? '').toString();
+      if (code.isNotEmpty) {
+        await Clipboard.setData(ClipboardData(text: code));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Latest SMS code copied. This checks the existing activation; it does not create a new paid order.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No additional SMS code is available for this activation yet.')),
+        );
+      }
+      setState(_load);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not check this activation. Try again.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Your orders')),
+    body: FutureBuilder<Map<String, dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
+        }
+        final raw = snapshot.data?['orders'];
+        final orders = raw is List
+            ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+            : <Map<String, dynamic>>[];
+        final filtered = orders.where((o) {
+          final status = (o['status'] ?? '').toString();
+          return _selected == 'successful' ? _isSuccessful(status) : _isCanceled(status);
+        }).toList();
+        return Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'successful', label: Text('Successful')),
+                ButtonSegment(value: 'canceled', label: Text('Canceled')),
+              ],
+              selected: {_selected},
+              onSelectionChanged: (value) => setState(() => _selected = value.first),
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+              ? _RetryState(
+                  message: _selected == 'successful'
+                    ? 'Successful activations with received SMS will appear here.'
+                    : 'Canceled orders will appear here.',
+                  onRetry: () => setState(_load),
+                  empty: true,
+                )
+              : RefreshIndicator(
+                  onRefresh: () async => setState(_load),
+                  child: ListView(
+                    padding: const EdgeInsets.all(12),
+                    children: [
+                      for (final order in filtered)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  _platformLogo((order['service'] ?? '').toString()),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text(
+                                    _platformName((order['service'] ?? 'Virtual number').toString()),
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                                  )),
+                                  Text((order['status'] ?? '').toString(),
+                                    style: TextStyle(color: _selected == 'successful' ? AppTheme.mint : const Color(0xFFFF788C), fontWeight: FontWeight.w700)),
+                                ]),
+                                const SizedBox(height: 12),
+                                SelectableText(
+                                  (order['phone'] ?? order['phoneNumber'] ?? 'Number unavailable').toString(),
+                                  style: const TextStyle(fontSize: 18, color: AppTheme.cyan, fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 5),
+                                Row(children: [const Text('Platform: '), Expanded(child: Text(_platformName((order['service'] ?? 'Virtual number').toString())))]),
+                                Row(children: [const Text('Country: '), Expanded(child: Text((order['country'] ?? order['countryCode'] ?? '—').toString()))]),
+                                if (_selected == 'successful') ...[
+                                  const SizedBox(height: 7),
+                                  Row(children: [
+                                    const Text('SMS code: ', style: TextStyle(color: Color(0xFF91A8C4))),
+                                    Expanded(child: SelectableText(_smsCode(order).isEmpty ? 'Code unavailable' : _smsCode(order),
+                                      style: const TextStyle(fontWeight: FontWeight.w800))),
+                                    if (_smsCode(order).isNotEmpty)
+                                      IconButton(
+                                        tooltip: 'Copy SMS code',
+                                        onPressed: () => Clipboard.setData(ClipboardData(text: _smsCode(order))),
+                                        icon: const Icon(Icons.copy_rounded),
+                                      ),
+                                  ]),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _getNewCode(order),
+                                      icon: const Icon(Icons.sms_outlined),
+                                      label: const Text('Get New Code'),
+                                    ),
+                                  ),
+                                ],
+                                if (_selected == 'canceled')
+                                  Row(children: [const Text('Canceled at: '), Expanded(child: Text((order['completedAt'] ?? order['createdAt'] ?? '—').toString(), style: const TextStyle(color: Color(0xFF91A8C4))))]),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+          ),
+        ]);
+      },
+    ),
   );
 }
 
@@ -1114,20 +1353,115 @@ class _ProtectedListPageState extends State<_ProtectedListPage> {
   );
 }
 
-class _AccountPage extends StatelessWidget {
+class _AccountPage extends StatefulWidget {
   const _AccountPage();
+  @override
+  State<_AccountPage> createState() => _AccountPageState();
+}
+
+class _AccountPageState extends State<_AccountPage> {
+  final ImagePicker _picker = ImagePicker();
+  bool _photoBusy = false;
+
+  ImageProvider<Object>? _avatarProvider(Map<String, dynamic> user) {
+    final value = (user['avatarDataUrl'] ?? user['avatarUrl'] ?? '').toString();
+    if (value.startsWith('data:image/') && value.contains(',')) {
+      try { return MemoryImage(base64Decode(value.substring(value.indexOf(',') + 1))); } catch (_) { return null; }
+    }
+    if (value.startsWith('https://') || value.startsWith('http://')) return NetworkImage(value);
+    return null;
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    final file = await _picker.pickImage(source: source, maxWidth: 640, maxHeight: 640, imageQuality: 72);
+    if (file == null || !mounted) return;
+    setState(() => _photoBusy = true);
+    try {
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 450 * 1024) throw const ApiException('Profile photo must be smaller than 450 KB.');
+      final lower = file.name.toLowerCase();
+      final mime = lower.endsWith('.png') ? 'image/png' : lower.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+      await context.read<AuthService>().uploadProfilePhoto('data:$mime;base64,${base64Encode(bytes)}');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated.')));
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not update profile photo. Try again.')));
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  Future<void> _showPhotoOptions() async {
+    await showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Take a photo'), onTap: () { Navigator.pop(sheetContext); _pickPhoto(ImageSource.camera); }),
+        ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose from gallery'), onTap: () { Navigator.pop(sheetContext); _pickPhoto(ImageSource.gallery); }),
+      ],
+    )));
+  }
+
+  Future<void> _changePassword() async {
+    final auth = context.read<AuthService>();
+    try {
+      await auth.requestPasswordChangeCode();
+      if (!mounted) return;
+      final changed = await showDialog<bool>(context: context, builder: (_) => const _PasswordChangeDialog());
+      if (changed == true && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed successfully.')));
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not send the password code. Try again.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final user = auth.user ?? const <String, dynamic>{};
+    final avatar = _avatarProvider(user);
     return ListView(padding: const EdgeInsets.all(18), children: [
       const SizedBox(height: 12),
-      const CircleAvatar(radius: 34, backgroundColor: Color(0xFF123C64), child: Icon(Icons.person_outline_rounded, size: 35, color: AppTheme.cyan)),
+      Center(child: Stack(children: [
+        CircleAvatar(radius: 42, backgroundColor: const Color(0xFF123C64), backgroundImage: avatar,
+          child: avatar == null ? const Icon(Icons.person_outline_rounded, size: 40, color: AppTheme.cyan) : null),
+        Positioned(right: 0, bottom: 0, child: Material(
+          color: AppTheme.cyan, shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: 'Change profile photo',
+            onPressed: _photoBusy ? null : _showPhotoOptions,
+            icon: _photoBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Color(0xFF03121F), size: 19),
+          ),
+        )),
+      ])),
       const SizedBox(height: 12),
       Text((user['name'] ?? 'Numelixa user').toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       Text((user['email'] ?? '').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 22),
       const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Secure API session'), subtitle: Text('Bearer credential verified by Numelixa.'))),
+      Card(child: ListTile(leading: const Icon(Icons.devices_other_rounded, color: AppTheme.cyan), title: const Text('Your devices'), subtitle: const Text('View signed-in devices, location and recent activity.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DevicesPage())))),
+      Card(child: ListTile(leading: const Icon(Icons.password_rounded, color: AppTheme.cyan), title: const Text('Change password'), subtitle: const Text('Verify a code sent to your email.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: _changePassword)),
+      Card(child: SwitchListTile(
+        secondary: const Icon(Icons.fingerprint_rounded, color: AppTheme.cyan),
+        title: const Text('Biometric app lock'),
+        subtitle: Text(auth.biometricEnabled ? 'Fingerprint or face authentication is enabled.' : 'Require fingerprint or face authentication when reopening Numelixa.'),
+        value: auth.biometricEnabled,
+        onChanged: (enabled) async {
+          try {
+            if (enabled) {
+              final ok = await auth.enableBiometricLock();
+              if (ok && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric lock enabled.')));
+            } else {
+              await auth.disableBiometricLock();
+            }
+          } on ApiException catch (error) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+          } catch (_) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric authentication could not be configured on this device.')));
+          }
+        },
+      )),
       Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
       Card(child: ValueListenableBuilder<String>(
         valueListenable: context.read<NotificationService>().registrationStatus,
@@ -1135,7 +1469,16 @@ class _AccountPage extends StatelessWidget {
           leading: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyan),
           title: const Text('Push notifications'),
           subtitle: Text(status),
-          trailing: const Icon(Icons.chevron_right_rounded),
+          trailing: IconButton(
+            tooltip: 'Retry notification registration',
+            onPressed: () async {
+              final auth = context.read<AuthService>();
+              final notifications = context.read<NotificationService>();
+              final permission = await notifications.requestPermission();
+              if (permission.isGranted) await notifications.syncToken(auth);
+            },
+            icon: const Icon(Icons.refresh_rounded),
+          ),
           onTap: () => context.read<NotificationService>().openNotificationSettings(),
         ),
       )),
@@ -1147,6 +1490,168 @@ class _AccountPage extends StatelessWidget {
       ),
     ]);
   }
+}
+
+class _DevicesPage extends StatefulWidget {
+  const _DevicesPage();
+  @override
+  State<_DevicesPage> createState() => _DevicesPageState();
+}
+
+class _DevicesPageState extends State<_DevicesPage> {
+  late Future<Map<String, dynamic>> _future;
+  @override
+  void initState() { super.initState(); _load(); }
+  void _load() { _future = context.read<AuthService>().listDevices(); }
+
+  String _location(Map<String, dynamic> device) {
+    final parts = [device['city'], device['region'], device['country']]
+        .where((value) => value != null && value.toString().trim().isNotEmpty)
+        .map((value) => value.toString().trim()).toList();
+    return parts.isEmpty ? 'Not available' : parts.join(', ');
+  }
+
+  String _date(dynamic value) {
+    if (value == null) return 'Unknown';
+    final date = DateTime.tryParse(value.toString());
+    if (date == null) return value.toString();
+    return date.toLocal().toString().split('.').first;
+  }
+
+  Future<void> _remove(Map<String, dynamic> device) async {
+    final auth = context.read<AuthService>();
+    final id = (device['deviceId'] ?? device['sessionId'] ?? '').toString();
+    final sessionId = (device['sessionId'] ?? '').toString();
+    final isCurrent = device['current'] == true;
+    final yes = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Remove device?'),
+      content: Text(isCurrent ? 'This is the device you are using now. Removing it will sign you out.' : 'This device session will be revoked and must sign in again.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Remove')),
+      ],
+    ));
+    if (yes != true || !mounted) return;
+    try {
+      await auth.removeDevice(id, sessionId: sessionId);
+      if (isCurrent) {
+        await auth.logout();
+        if (mounted) Navigator.of(context).pop();
+      } else if (mounted) {
+        setState(_load);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Device session removed.')));
+      }
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not remove this device.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Your devices')),
+    body: FutureBuilder<Map<String, dynamic>>(future: _future, builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+      if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
+      final raw = snapshot.data?['devices'];
+      final devices = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+      if (devices.isEmpty) return _RetryState(message: 'No active device sessions were found.', onRetry: () => setState(_load), empty: true);
+      return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView(padding: const EdgeInsets.all(12), children: [
+        for (final device in devices)
+          Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.devices_rounded, color: AppTheme.cyan, size: 28),
+              const SizedBox(width: 10),
+              Expanded(child: Text((device['device'] ?? 'Device').toString(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
+              if (device['current'] == true) const Chip(label: Text('This device')),
+            ]),
+            const SizedBox(height: 8),
+            Text('Platform: ${device['platform'] ?? 'Unknown'} · ${device['browser'] ?? 'App'}'),
+            Text('Location: ${_location(device)}'),
+            Text('Signed in: ${_date(device['createdAt'])}'),
+            Text('Last active: ${_date(device['lastSeenAt'])}'),
+            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () => _remove(device), icon: const Icon(Icons.logout_rounded), label: const Text('Remove device'))),
+          ]))),
+      ]));
+    }),
+  );
+}
+
+class _PasswordChangeDialog extends StatefulWidget {
+  const _PasswordChangeDialog();
+  @override
+  State<_PasswordChangeDialog> createState() => _PasswordChangeDialogState();
+}
+class _PasswordChangeDialogState extends State<_PasswordChangeDialog> {
+  final _code = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+  @override
+  void dispose() { _code.dispose(); _password.dispose(); super.dispose(); }
+  Future<void> _submit() async {
+    setState(() { _busy = true; _error = null; });
+    try {
+      await context.read<AuthService>().confirmPasswordChange(code: _code.text, newPassword: _password.text);
+      if (mounted) Navigator.of(context).pop(true);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not change the password. Try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Change password'),
+    content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Text('Enter the 6-digit code sent to your email, then choose a new password.'),
+      const SizedBox(height: 12),
+      TextField(controller: _code, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'Email verification code')),
+      TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'New password (8+ characters)')),
+      if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: const TextStyle(color: Color(0xFFFF788C)))),
+    ])),
+    actions: [
+      TextButton(onPressed: _busy ? null : () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Saving…' : 'Update password')),
+    ],
+  );
+}
+
+class _BiometricLockScreen extends StatefulWidget {
+  const _BiometricLockScreen();
+  @override
+  State<_BiometricLockScreen> createState() => _BiometricLockScreenState();
+}
+class _BiometricLockScreenState extends State<_BiometricLockScreen> {
+  bool _busy = false;
+  String? _error;
+  Future<void> _unlock() async {
+    setState(() { _busy = true; _error = null; });
+    try {
+      final ok = await context.read<AuthService>().unlockBiometrics();
+      if (!ok && mounted) setState(() => _error = 'Authentication was not completed. Try again.');
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Biometric authentication failed. Try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.fingerprint_rounded, size: 64, color: AppTheme.cyan),
+      const SizedBox(height: 16),
+      const Text('Numelixa is locked', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8),
+      const Text('Use your fingerprint or face authentication to continue.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4))),
+      if (_error != null) Padding(padding: const EdgeInsets.all(8), child: Text(_error!, style: const TextStyle(color: Color(0xFFFF788C)))),
+      const SizedBox(height: 18),
+      FilledButton.icon(onPressed: _busy ? null : _unlock, icon: const Icon(Icons.lock_open_rounded), label: Text(_busy ? 'Checking…' : 'Unlock with biometrics')),
+    ]))),
+  );
 }
 
 class _RetryState extends StatelessWidget {

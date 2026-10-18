@@ -151,7 +151,7 @@ class NotificationService {
       }
       await _register(token, auth);
     } catch (error) {
-      registrationStatus.value = 'Could not register this device for notifications. Retry when online.';
+      registrationStatus.value = error.toString();
       debugPrint('FCM token sync failed: $error');
     }
   }
@@ -161,13 +161,13 @@ class NotificationService {
     try {
       final result = await _api.post(AppConfig.pushRegistrationPath,
         accessToken: auth.accessToken,
-        body: {'token': token, 'platform': 'android'});
+        body: {'token': token, 'platform': 'android', 'deviceId': await ApiClient.deviceId, 'appVersion': '1.0.1'});
       if (result['registered'] != true || result['linked'] != true) {
         throw const ApiException('The server did not confirm device registration and user association.');
       }
       registrationStatus.value = 'This device is linked to your Numelixa account.';
     } on ApiException catch (error) {
-      registrationStatus.value = 'Device registration failed: ${error.message}';
+      registrationStatus.value = 'Device registration failed (HTTP ${error.statusCode ?? 'unknown'}): ${error.message}';
       debugPrint('FCM registration not linked: ${error.message}');
     }
   }

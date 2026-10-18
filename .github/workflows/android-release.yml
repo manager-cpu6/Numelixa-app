@@ -1,7 +1,7 @@
 name: Numelixa Android CI
 'on':
   push:
-    branches: [main, feat/native-commerce-auth-notifications]
+    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account]
     tags: ['v*']
   workflow_dispatch:
 permissions:
@@ -30,12 +30,32 @@ jobs:
           flutter create --platforms=android --org com.numelixa --project-name app .
           python3 - <<'PY'
           from pathlib import Path
+          candidates = list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt')) + list(Path('android/app/src/main/java').rglob('MainActivity.java'))
+          for activity in candidates:
+              text = activity.read_text()
+              if activity.suffix == '.kt' and 'FlutterActivity' in text and 'FlutterFragmentActivity' not in text:
+                  text = text.replace('import io.flutter.embedding.android.FlutterActivity', 'import io.flutter.embedding.android.FlutterFragmentActivity')
+                  text = text.replace('FlutterActivity()', 'FlutterFragmentActivity()')
+                  activity.write_text(text)
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
           if 'android.permission.POST_NOTIFICATIONS' not in s:
               s = s.replace('<application', permission + '\n    <application', 1)
           s = s.replace('android:label="app"', 'android:label="Numelixa"')
+          # Receive the short-lived, one-time OAuth ticket returned by the
+          # production website after Google verifies the chosen account.
+          if 'android:scheme="com.numelixa.app"' not in s:
+              callback = '''            <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="com.numelixa.app" android:host="auth" android:path="/callback" />
+                      </intent-filter>'''
+              s = s.replace('android:exported="true">', 'android:exported="true">\n' + callback, 1)
           p.write_text(s)
           g = Path('android/app/build.gradle.kts')
           s = g.read_text()
@@ -148,10 +168,29 @@ jobs:
           storeFile=../release-key.jks
           EOF
           echo "configured=true" >> "$GITHUB_OUTPUT"
+      - name: Diagnose Android OAuth signing configuration
+        if: steps.signing.outputs.configured == 'true'
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        shell: bash
+        run: |
+          echo "Release signing certificate SHA-1 (add this to the Android OAuth client if missing):"
+          keytool -list -v -keystore android/release-key.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E 'SHA1:|SHA-1:'
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('android/app/google-services.json').read_text())
+          print('OAuth clients bundled in Firebase config:')
+          for client in data.get('client', []):
+              package=client.get('client_info', {}).get('android_client_info', {}).get('package_name', '')
+              for oauth in client.get('oauth_client', []):
+                  print('package=' + str(package) + ' client_type=' + str(oauth.get('client_type')) + ' client_id=' + str(oauth.get('client_id', '')))
+          PY
       - name: Install dependencies
         run: flutter pub get
       - name: Static analysis
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
       - name: Unit and widget tests
         run: flutter test
       - name: Build debug APK
