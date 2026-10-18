@@ -60,7 +60,7 @@ class NumelixaRepository {
     required String token,
     required String orderId,
   }) =>
-      _api.post('/api/v1/orders/cancel',
+      _api.delete('/api/orders',
           accessToken: token, body: {'orderId': orderId});
 
   Future<Map<String, dynamic>> transactions({required String token}) =>
