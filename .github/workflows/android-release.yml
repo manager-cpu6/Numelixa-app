@@ -31,7 +31,7 @@ jobs:
           text = manifest.read_text()
           permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
           if "android.permission.POST_NOTIFICATIONS" not in text:
-              text = text.replace("<application", permission + "\\n    <application", 1)
+              text = text.replace("<application", permission + "\n    <application", 1)
           text = text.replace('android:label="app"', 'android:label="Numelixa"')
           text = text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@drawable/numelixa_icon"')
           manifest.write_text(text)
@@ -88,7 +88,7 @@ jobs:
           text = gradle.read_text()
           marker = '    id("com.android.application")'
           if 'com.google.gms.google-services' not in text:
-              text = text.replace(marker, marker + '\\n    id("com.google.gms.google-services") version "4.4.2"', 1)
+              text = text.replace(marker, marker + '\n    id("com.google.gms.google-services") version "4.4.2"', 1)
           gradle.write_text(text)
           PY
       - name: Configure release signing (optional)
