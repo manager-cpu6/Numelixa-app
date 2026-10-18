@@ -216,9 +216,9 @@ class AuthService extends ChangeNotifier {
   Future<Map<String, dynamic>> listDevices() =>
       _api.get('/api/mobile/devices', accessToken: _accessToken);
 
-  Future<void> removeDevice(String deviceId) async {
-    await _api.delete('/api/mobile/devices',
-        accessToken: _accessToken, body: {'deviceId': deviceId});
+  Future<void> removeDevice(String deviceId, {String? sessionId}) async {
+    await _api.delete('/api/mobile/devices', accessToken: _accessToken,
+        body: {'deviceId': deviceId, 'sessionId': sessionId});
   }
 
   Future<void> requestPasswordChangeCode() async {
