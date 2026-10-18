@@ -22,6 +22,10 @@ class ApiClient {
           {Map<String, dynamic>? body, String? accessToken}) =>
       _request('POST', path, body: body, accessToken: accessToken);
 
+  Future<Map<String, dynamic>> put(String path,
+          {Map<String, dynamic>? body, String? accessToken}) =>
+      _request('PUT', path, body: body, accessToken: accessToken);
+
   Future<Map<String, dynamic>> delete(String path,
           {Map<String, dynamic>? body, String? accessToken}) =>
       _request('DELETE', path, body: body, accessToken: accessToken);
@@ -38,6 +42,7 @@ class ApiClient {
       final request = switch (method) {
         'GET' => _client.get(uri, headers: headers),
         'DELETE' => _client.delete(uri, headers: headers, body: body == null ? null : jsonEncode(body)),
+        'PUT' => _client.put(uri, headers: headers, body: jsonEncode(body ?? {})),
         _ => _client.post(uri, headers: headers, body: jsonEncode(body ?? {})),
       };
       final response = await request.timeout(const Duration(seconds: 20));
