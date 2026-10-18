@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: numelixa-android-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -84,6 +87,8 @@ jobs:
           }
           if "com.numelixa.app" not in package_ids:
               raise SystemExit("Firebase config must contain package com.numelixa.app; found " + str(package_ids))
+          if config.get("project_info", {}).get("project_id") != "numelixa":
+              raise SystemExit("Firebase config project_id must be numelixa to match the existing backend.")
           gradle = Path("android/app/build.gradle.kts")
           text = gradle.read_text()
           marker = '    id("com.android.application")'
