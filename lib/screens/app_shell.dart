@@ -1129,7 +1129,16 @@ class _AccountPage extends StatelessWidget {
       const SizedBox(height: 22),
       const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Secure API session'), subtitle: Text('Bearer credential verified by Numelixa.'))),
       Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
-      Card(child: ListTile(leading: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyan), title: const Text('Notification permissions'), subtitle: const Text('Manage Android notification settings'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.read<NotificationService>().openNotificationSettings())),
+      Card(child: ValueListenableBuilder<String>(
+        valueListenable: context.read<NotificationService>().registrationStatus,
+        builder: (context, status, _) => ListTile(
+          leading: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyan),
+          title: const Text('Push notifications'),
+          subtitle: Text(status),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => context.read<NotificationService>().openNotificationSettings(),
+        ),
+      )),
       const SizedBox(height: 18),
       OutlinedButton.icon(
         onPressed: () async { await context.read<AuthService>().logout(); },
