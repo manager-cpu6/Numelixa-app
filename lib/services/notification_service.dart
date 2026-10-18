@@ -10,6 +10,28 @@ import 'auth_service.dart';
 /// Route hints are consumed by the root app shell; payloads never execute URLs.
 final ValueNotifier<String?> appNotificationRoute = ValueNotifier<String?>(null);
 
+String _channelFor(Map<String, dynamic> data) {
+  final type = (data['type'] ?? '').toString().toLowerCase();
+  if (type == 'sms' || type == 'verification' || type == 'verification_code') return 'verification';
+  if (type == 'security' || type == 'login' || type == 'login_approval') return 'security';
+  if (type == 'admin' || type == 'announcement' || type == 'push_test') return 'admin';
+  return 'general';
+}
+
+String _channelNameFor(String channel) => switch (channel) {
+  'verification' => 'SMS and verification codes',
+  'security' => 'Account security',
+  'admin' => 'Numelixa announcements',
+  _ => 'Numelixa notifications',
+};
+
+String _channelDescriptionFor(String channel) => switch (channel) {
+  'verification' => 'Incoming SMS codes and verification updates',
+  'security' => 'Login and account security alerts',
+  'admin' => 'Important announcements and push tests',
+  _ => 'Account, order, and SMS updates',
+};
+
 String _routeFor(Map<String, dynamic> data) {
   final type = (data['type'] ?? '').toString().toLowerCase();
   if (data['orderId'] != null || type == 'sms' || type.contains('order')) return 'orders';
@@ -149,14 +171,15 @@ class NotificationService {
   Future<void> _showForeground(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) return;
+    final channelId = _channelFor(message.data);
     await _local.show(
       notification.hashCode,
       notification.title ?? 'Numelixa',
       notification.body ?? '',
-      const NotificationDetails(
-        android: AndroidNotificationDetails('general', 'Numelixa notifications',
-          channelDescription: 'Account, order, and SMS updates',
-          importance: Importance.max, priority: Priority.high),
+      NotificationDetails(
+        android: AndroidNotificationDetails(channelId, _channelNameFor(channelId),
+          channelDescription: _channelDescriptionFor(channelId),
+          importance: Importance.max, priority: Priority.high, playSound: true),
       ),
       payload: jsonEncode(message.data),
     );
