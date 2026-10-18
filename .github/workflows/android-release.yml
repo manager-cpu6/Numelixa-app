@@ -26,19 +26,50 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           p = Path('android/app/build.gradle.kts')
-          if p.exists():
-              s = p.read_text()
-              marker = '    id("com.android.application")'
-              if 'com.google.gms.google-services' not in s:
-                  s = s.replace(marker, marker + '\n    id("com.google.gms.google-services") version "4.4.2"')
-                  p.write_text(s)
-          else:
-              p = Path('android/app/build.gradle')
-              s = p.read_text()
-              marker = "    id 'com.android.application'"
-              if 'com.google.gms.google-services' not in s:
-                  s = s.replace(marker, marker + "\n    id 'com.google.gms.google-services' version '4.4.2'")
-                  p.write_text(s)
+          if not p.exists():
+              raise SystemExit('Expected generated android/app/build.gradle.kts')
+          s = p.read_text()
+          # Firebase plugin is added only after the secret is validated.
+          s = s.replace('    id("com.google.gms.google-services") version "4.4.2"\n', '')
+          # Keep release signing controlled by CI secrets; never store a keystore in git.
+          marker = 'android {'
+          signing = '''
+          val signingPropsFile = rootProject.file("key.properties")
+          val signingProps = java.util.Properties()
+          if (signingPropsFile.exists()) {
+              signingPropsFile.inputStream().use { signingProps.load(it) }
+          }
+
+          '''
+          if 'val signingPropsFile' not in s:
+              s = s.replace(marker, marker + signing)
+          old = '''    buildTypes {
+          release {
+              // TODO: Add your own signing config for the release build.
+              // Signing with the debug keys for now, so `flutter run --release` works.
+              signingConfig = signingConfigs.getByName("debug")
+          }
+      }'''
+          new = '''    signingConfigs {
+          create("release") {
+              if (signingPropsFile.exists()) {
+                  storeFile = file(signingProps["storeFile"] as String)
+                  storePassword = signingProps["storePassword"] as String
+                  keyAlias = signingProps["keyAlias"] as String
+                  keyPassword = signingProps["keyPassword"] as String
+              }
+          }
+      }
+      buildTypes {
+          release {
+              signingConfig = if (signingPropsFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+          }
+      }'''
+          if old in s:
+              s = s.replace(old, new)
+          elif 'signingConfig = signingConfigs.getByName("debug")' in s:
+              s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = if (signingPropsFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")')
+          p.write_text(s)
           PY
       - name: Write Firebase Android configuration
         id: firebase_config
@@ -47,21 +78,27 @@ jobs:
         run: |
           if [ -z "$FIREBASE_CONFIG_B64" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "Firebase config not set. Static analysis/tests will run, but Android release builds are skipped."
+            echo "Firebase secret is absent: building installable APK/AAB without Firebase push support."
             exit 0
           fi
           echo "$FIREBASE_CONFIG_B64" | base64 --decode > android/app/google-services.json
-          echo "configured=true" >> "$GITHUB_OUTPUT"
           python3 - <<'PY'
           import json
-          p='android/app/google-services.json'
-          data=json.load(open(p))
-          ids={c.get('client_info',{}).get('android_client_info',{}).get('package_name') for c in data.get('client',[])}
+          from pathlib import Path
+          p = Path('android/app/google-services.json')
+          data = json.loads(p.read_text())
+          ids = {c.get('client_info', {}).get('android_client_info', {}).get('package_name') for c in data.get('client', [])}
           if 'com.numelixa.app' not in ids:
-              raise SystemExit('Firebase config must include Android package com.numelixa.app; found: '+str(ids))
+              raise SystemExit('Firebase config must include Android package com.numelixa.app; found: ' + str(ids))
+          gradle = Path('android/app/build.gradle.kts')
+          s = gradle.read_text()
+          marker = '    id("com.android.application")'
+          if 'com.google.gms.google-services' not in s:
+              s = s.replace(marker, marker + '\n    id("com.google.gms.google-services") version "4.4.2"')
+          gradle.write_text(s)
           PY
+          echo "configured=true" >> "$GITHUB_OUTPUT"
       - name: Configure Android release signing (optional)
-        if: steps.firebase_config.outputs.configured == 'true'
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -69,28 +106,29 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
+            test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
             echo "$KEYSTORE_B64" | base64 --decode > android/app/release-key.jks
             cat > android/key.properties <<EOF
           storePassword=$KEYSTORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
-          storeFile=release-key.jks
+          storeFile=app/release-key.jks
           EOF
           fi
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - name: Build debug APK
+        run: flutter build apk --debug --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Build release APK
-        if: steps.firebase_config.outputs.configured == 'true'
         run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Build release AAB
-        if: steps.firebase_config.outputs.configured == 'true'
         run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - uses: actions/upload-artifact@v4
-        if: steps.firebase_config.outputs.configured == 'true'
         with:
-          name: numelixa-android-release
+          name: numelixa-android-builds
           path: |
+            build/app/outputs/flutter-apk/app-debug.apk
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
