@@ -19,16 +19,27 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Generate Android platform project
+        run: |
+          flutter create --platforms=android --org com.numelixa --project-name app /tmp/numelixa-platform
+          cp -R /tmp/numelixa-platform/android ./android
       - name: Write Firebase Android configuration
         env:
           FIREBASE_CONFIG_B64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
-          if [ -n "$FIREBASE_CONFIG_B64" ]; then
-            echo "$FIREBASE_CONFIG_B64" | base64 --decode > android/app/google-services.json
-          else
-            echo "FIREBASE_GOOGLE_SERVICES_JSON_BASE64 is not configured; Firebase-enabled release cannot be verified."
+          if [ -z "$FIREBASE_CONFIG_B64" ]; then
+            echo "Missing FIREBASE_GOOGLE_SERVICES_JSON_BASE64. Add the Firebase Android google-services.json as a base64 GitHub secret."
             exit 1
           fi
+          echo "$FIREBASE_CONFIG_B64" | base64 --decode > android/app/google-services.json
+          python3 - <<'PY'
+          import json
+          p='android/app/google-services.json'
+          data=json.load(open(p))
+          ids={c.get('client_info',{}).get('android_client_info',{}).get('package_name') for c in data.get('client',[])}
+          if 'com.numelixa.app' not in ids:
+              raise SystemExit('Firebase config must include Android package com.numelixa.app; found: '+str(ids))
+          PY
       - name: Configure Android release signing (optional)
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
