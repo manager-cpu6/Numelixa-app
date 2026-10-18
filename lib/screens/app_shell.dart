@@ -220,7 +220,7 @@ class _AuthScreenState extends State<_AuthScreen> {
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Google Sign-In could not be completed. Check Android OAuth configuration.');
+      if (mounted) setState(() => _error = 'Google Sign-In failed. Please retry, then check the Android OAuth package name and signing certificate.');
     }
   }
 
