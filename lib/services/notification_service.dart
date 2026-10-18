@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'api_client.dart';
+import '../core/config/app_config.dart';
 import 'auth_service.dart';
 
 class NotificationService {
@@ -61,7 +62,7 @@ class NotificationService {
   Future<void> _register(String token, AuthService auth) async {
     if (!auth.isSignedIn) return;
     try {
-      final result = await _api.post('/api/notifications/mobile-register',
+      final result = await _api.post(AppConfig.pushRegistrationPath,
         accessToken: auth.accessToken,
         body: {'token': token, 'platform': 'android'});
       if (result['registered'] != true) {
