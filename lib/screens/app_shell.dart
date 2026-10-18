@@ -66,7 +66,8 @@ class _AppShellState extends State<AppShell> {
     if (!auth.isReady) {
       return const _SplashScreen();
     }
-    if (!auth.isSignedIn) return const _ApiKeySignIn();
+    if (!auth.isSignedIn) return const _AuthScreen();
+    if (auth.needsEmailVerification) return const _EmailVerificationScreen();
     final pages = [
       const _HomePage(),
       const _CatalogPage(),
@@ -130,124 +131,275 @@ class _SplashScreen extends StatelessWidget {
   );
 }
 
-class _ApiKeySignIn extends StatefulWidget {
-  const _ApiKeySignIn();
+class _AuthScreen extends StatefulWidget {
+  const _AuthScreen();
   @override
-  State<_ApiKeySignIn> createState() => _ApiKeySignInState();
+  State<_AuthScreen> createState() => _AuthScreenState();
 }
 
-class _ApiKeySignInState extends State<_ApiKeySignIn> {
-  final _controller = TextEditingController();
+class _AuthScreenState extends State<_AuthScreen> {
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _apiKey = TextEditingController();
+  bool _creating = false;
+  bool _showApiKey = false;
+  bool _obscurePassword = true;
   String? _error;
-  bool _busy = false;
+
   @override
-  void dispose() { _controller.dispose(); super.dispose(); }
+  void dispose() {
+    _name.dispose(); _email.dispose(); _password.dispose(); _apiKey.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (!email.contains('@') || password.isEmpty || (_creating && _name.text.trim().length < 2)) {
+      setState(() => _error = _creating
+        ? 'Enter your name, a valid email, and a password of at least 8 characters.'
+        : 'Enter your account email and password.');
+      return;
+    }
+    if (_creating && password.length < 8) {
+      setState(() => _error = 'Your password must contain at least 8 characters.');
+      return;
+    }
+    setState(() { _error = null; });
+    try {
+      if (_creating) {
+        await context.read<AuthService>().register(name: _name.text, email: email, password: password);
+      } else {
+        await context.read<AuthService>().signInWithEmail(email: email, password: password);
+      }
+      if (!mounted) return;
+      await context.read<NotificationService>().syncToken(context.read<AuthService>());
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not connect. Please check your internet and try again.');
+    }
+  }
+
+  Future<void> _google() async {
+    setState(() => _error = null);
+    try {
+      await context.read<AuthService>().signInWithGoogle();
+      if (!mounted) return;
+      await context.read<NotificationService>().syncToken(context.read<AuthService>());
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Google Sign-In could not be completed. Check Android OAuth configuration.');
+    }
+  }
 
   Future<void> _forgotPassword() async {
-    final emailController = TextEditingController();
+    final controller = TextEditingController(text: _email.text.trim());
     final email = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset password'),
         content: TextField(
-          controller: emailController,
+          controller: controller,
           keyboardType: TextInputType.emailAddress,
-          autocorrect: false,
           decoration: const InputDecoration(labelText: 'Account email'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, emailController.text.trim()), child: const Text('Send reset link')),
+          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Send reset link')),
         ],
       ),
     );
-    emailController.dispose();
+    controller.dispose();
     if (email == null || email.isEmpty || !mounted) return;
-    setState(() { _busy = true; _error = null; });
     try {
       await NumelixaRepository().forgotPassword(email: email);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('If the account is eligible, Numelixa will send a password reset email.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('If the account exists, a password reset email will be sent.')));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not request a reset link. Check your connection.');
+      if (mounted) setState(() => _error = 'Could not request a reset email.');
+    }
+  }
+
+  Future<void> _apiKeyLogin() async {
+    try {
+      await context.read<AuthService>().signInWithApiKey(_apiKey.text);
+      if (mounted) await context.read<NotificationService>().syncToken(context.read<AuthService>());
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not validate this API key.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    return Scaffold(
+      body: SafeArea(child: Center(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(child: Container(
+              width: 78, height: 78, alignment: Alignment.center,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(26),
+                gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
+                boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))]),
+              child: const Icon(Icons.public_rounded, size: 42, color: Colors.white),
+            )),
+            const SizedBox(height: 26),
+            const Text('Welcome to Numelixa', textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.7)),
+            const SizedBox(height: 8),
+            const Text('Global virtual numbers, with a secure account and instant SMS updates.',
+              textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
+            const SizedBox(height: 24),
+            Row(children: [
+              Expanded(child: FilledButton.tonal(
+                onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _error = null; }),
+                child: const Text('Log in'))),
+              const SizedBox(width: 10),
+              Expanded(child: OutlinedButton(
+                onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _error = null; }),
+                child: const Text('Create account'))),
+            ]),
+            if (_creating) ...[
+              const SizedBox(height: 16),
+              TextField(controller: _name, textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline_rounded))),
+            ],
+            const SizedBox(height: 12),
+            TextField(controller: _email, keyboardType: TextInputType.emailAddress,
+              autocorrect: false, autofillHints: const [AutofillHints.email],
+              decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.email_outlined))),
+            const SizedBox(height: 12),
+            TextField(controller: _password, obscureText: _obscurePassword,
+              autofillHints: [_creating ? AutofillHints.newPassword : AutofillHints.password],
+              decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword))),
+              onSubmitted: (_) => auth.isValidating ? null : _submit()),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: Color(0xFFFF788C), height: 1.4)),
+            ],
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: auth.isValidating ? null : _submit,
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: auth.isValidating
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(_creating ? 'Create account' : 'Log in securely')),
+            if (!_creating) Align(alignment: Alignment.centerRight,
+              child: TextButton(onPressed: auth.isValidating ? null : _forgotPassword, child: const Text('Forgot password?'))),
+            const SizedBox(height: 6),
+            OutlinedButton.icon(
+              onPressed: auth.isValidating ? null : _google,
+              icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
+              label: const Text('Continue with Google'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+            ),
+            const SizedBox(height: 18),
+            TextButton.icon(
+              onPressed: () => setState(() { _showApiKey = !_showApiKey; _error = null; }),
+              icon: const Icon(Icons.key_rounded, size: 17),
+              label: Text(_showApiKey ? 'Hide developer API-key login' : 'Use developer API key instead')),
+            if (_showApiKey) ...[
+              TextField(controller: _apiKey, obscureText: true, autocorrect: false,
+                decoration: const InputDecoration(labelText: 'Numelixa API key', hintText: 'nx_live_…')),
+              const SizedBox(height: 8),
+              OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin, child: const Text('Connect API key')),
+            ],
+            const SizedBox(height: 12),
+            const Text('By continuing, you agree to use Numelixa responsibly. Your session is stored securely on this device.',
+              textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 11)),
+          ],
+        )),
+      ))),
+    );
+  }
+}
+
+class _EmailVerificationScreen extends StatefulWidget {
+  const _EmailVerificationScreen();
+  @override
+  State<_EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+}
+
+class _EmailVerificationScreenState extends State<_EmailVerificationScreen> {
+  final _code = TextEditingController();
+  bool _busy = false;
+  String? _error;
+  @override
+  void dispose() { _code.dispose(); super.dispose(); }
+
+  Future<void> _verify() async {
+    if (!RegExp(r'^\d{6}$').hasMatch(_code.text.trim())) {
+      setState(() => _error = 'Enter the 6-digit code sent to your email.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; });
+    try {
+      final ok = await context.read<AuthService>().verifyEmailCode(_code.text);
+      if (!ok) throw const ApiException('The verification code was not accepted.');
+      await context.read<NotificationService>().syncToken(context.read<AuthService>());
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not verify this code. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _submit() async {
+  Future<void> _resend() async {
     setState(() { _busy = true; _error = null; });
     try {
-      await context.read<AuthService>().signInWithApiKey(_controller.text);
-      if (mounted) {
-        final auth = context.read<AuthService>();
-        await context.read<NotificationService>().syncToken(auth);
-      }
+      await context.read<AuthService>().resendVerificationCode();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A verification code request was submitted. Check your inbox.')));
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not connect. Check your internet and try again.');
+      if (mounted) setState(() => _error = 'Could not send another verification code.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(child: Center(child: SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            height: 78, width: 78, alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(26),
-              gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
-              boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))],
-            ),
-            child: const Icon(Icons.public_rounded, size: 42, color: Colors.white),
-          ),
-          const SizedBox(height: 30),
-          const Text('Welcome to Numelixa', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.7)),
-          const SizedBox(height: 9),
-          const Text('Your global virtual numbers, in one secure mobile app.', style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
-          const SizedBox(height: 28),
-          const Text('Connect your account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          const Text('Use your personal API key to authenticate with the existing Numelixa API. Your key is stored only in Android secure storage.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.45, fontSize: 13)),
-          const SizedBox(height: 18),
-          TextField(
-            controller: _controller,
-            obscureText: true,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: const InputDecoration(
-              labelText: 'Numelixa API key',
-              hintText: 'nx_live_…',
-              prefixIcon: Icon(Icons.key_rounded),
-            ),
-            onSubmitted: (_) => _busy ? null : _submit(),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Color(0xFFFF788C))),
+  Widget build(BuildContext context) {
+    final email = (context.watch<AuthService>().user?['email'] ?? '').toString();
+    return Scaffold(
+      body: SafeArea(child: Center(child: SingleChildScrollView(padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Icon(Icons.mark_email_read_outlined, size: 64, color: AppTheme.cyan),
+            const SizedBox(height: 20),
+            const Text('Verify your email', textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            Text('Enter the 6-digit code sent to $email to activate purchases and your wallet.',
+              textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
+            const SizedBox(height: 22),
+            TextField(controller: _code, keyboardType: TextInputType.number, maxLength: 6,
+              textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w800),
+              decoration: const InputDecoration(labelText: 'Verification code', counterText: '')),
+            if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: const TextStyle(color: Color(0xFFFF788C)))],
+            const SizedBox(height: 14),
+            FilledButton(onPressed: _busy ? null : _verify,
+              child: _busy ? const CircularProgressIndicator(strokeWidth: 2) : const Text('Verify email')),
+            TextButton(onPressed: _busy ? null : _resend, child: const Text('Resend code')),
+            TextButton(onPressed: () async => context.read<AuthService>().logout(), child: const Text('Sign out')),
           ],
-          const SizedBox(height: 18),
-          FilledButton(
-            onPressed: _busy ? null : _submit,
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            child: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Connect securely'),
-          ),
-          const SizedBox(height: 8),
-          TextButton(onPressed: _busy ? null : _forgotPassword, child: const Text('Forgot password?')),
-          const SizedBox(height: 8),
-          const Text('Email/password login and native Google sign-in require the backend to return a mobile bearer credential. The current web login sets a browser cookie only, so this app will not reuse website cookies.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 11)),
-        ],
-      )),
-    ))),
-  );
+        )),
+      ))),
+    );
+  }
 }
 
 class _HomePage extends StatelessWidget {
