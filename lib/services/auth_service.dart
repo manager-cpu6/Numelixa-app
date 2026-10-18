@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api_client.dart';
 
@@ -12,11 +13,15 @@ class AuthService extends ChangeNotifier {
   String? _accessToken;
   bool _ready = false;
   bool _validating = false;
+  bool _biometricEnabled = false;
+  bool _biometricLocked = false;
   Map<String, dynamic>? _user;
 
   bool get isReady => _ready;
   bool get isSignedIn => _accessToken != null && _accessToken!.isNotEmpty;
   bool get isValidating => _validating;
+  bool get biometricEnabled => _biometricEnabled;
+  bool get biometricLocked => _biometricLocked;
   String? get accessToken => _accessToken;
   Map<String, dynamic>? get user => _user;
   bool get needsEmailVerification => isSignedIn && _user != null && _user!.containsKey('verified_at') && _user!['verified_at'] == null;
@@ -39,8 +44,60 @@ class AuthService extends ChangeNotifier {
         }
       }
     }
+    _biometricEnabled = (await _storage.read(key: 'numelixa_biometric_lock')) == 'true';
+    _biometricLocked = _biometricEnabled && isSignedIn;
     _ready = true;
     notifyListeners();
+  }
+
+  Future<bool> enableBiometricLock() async {
+    final auth = LocalAuthentication();
+    final supported = await auth.isDeviceSupported();
+    final canCheck = await auth.canCheckBiometrics;
+    if (!supported || !canCheck) {
+      throw const ApiException('This device does not have an available fingerprint or face unlock method.');
+    }
+    final success = await auth.authenticate(
+      localizedReason: 'Confirm your identity to protect your Numelixa account',
+      options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+    );
+    if (!success) return false;
+    await _storage.write(key: 'numelixa_biometric_lock', value: 'true');
+    _biometricEnabled = true;
+    _biometricLocked = false;
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> disableBiometricLock() async {
+    await _storage.delete(key: 'numelixa_biometric_lock');
+    _biometricEnabled = false;
+    _biometricLocked = false;
+    notifyListeners();
+  }
+
+  Future<bool> unlockBiometrics() async {
+    if (!_biometricEnabled || !isSignedIn) {
+      _biometricLocked = false;
+      notifyListeners();
+      return true;
+    }
+    final success = await LocalAuthentication().authenticate(
+      localizedReason: 'Unlock Numelixa',
+      options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+    );
+    if (success) {
+      _biometricLocked = false;
+      notifyListeners();
+    }
+    return success;
+  }
+
+  void lockBiometrics() {
+    if (_biometricEnabled && isSignedIn && !_biometricLocked) {
+      _biometricLocked = true;
+      notifyListeners();
+    }
   }
 
   Future<Map<String, dynamic>> signInWithEmail({
