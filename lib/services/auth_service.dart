@@ -144,6 +144,39 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  void updateUserFields(Map<String, dynamic> fields) {
+    _user = {...?_user, ...fields};
+    notifyListeners();
+  }
+
+  Future<void> uploadProfilePhoto(String dataUrl) async {
+    final result = await _api.put('/api/mobile/profile/avatar',
+        accessToken: _accessToken, body: {'avatar': dataUrl});
+    final avatar = (result['avatarUrl'] ?? dataUrl).toString();
+    updateUserFields({'avatarDataUrl': avatar, 'avatarUrl': avatar});
+  }
+
+  Future<Map<String, dynamic>> listDevices() =>
+      _api.get('/api/mobile/devices', accessToken: _accessToken);
+
+  Future<void> removeDevice(String deviceId) async {
+    await _api.delete('/api/mobile/devices',
+        accessToken: _accessToken, body: {'deviceId': deviceId});
+  }
+
+  Future<void> requestPasswordChangeCode() async {
+    await _api.post('/api/mobile/security/password/start', accessToken: _accessToken);
+  }
+
+  Future<void> confirmPasswordChange({
+    required String code,
+    required String newPassword,
+  }) async {
+    await _api.post('/api/mobile/security/password/confirm',
+        accessToken: _accessToken,
+        body: {'code': code.trim(), 'newPassword': newPassword});
+  }
+
   Future<bool> verifyEmailCode(String code) async {
     final result = await _api.post('/api/auth/verification/confirm',
         accessToken: _accessToken, body: {'code': code.trim()});
