@@ -9,13 +9,15 @@ import 'auth_service.dart';
 class NotificationService {
   NotificationService({required this.firebaseReady});
   final bool firebaseReady;
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _messaging;
+  FirebaseMessaging get _fcm => _messaging ??= FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
   final ApiClient _api = ApiClient();
   bool _initialized = false;
 
   Future<void> initialize({required AuthService auth}) async {
     if (!firebaseReady || _initialized) return;
+    _messaging ??= FirebaseMessaging.instance;
     _initialized = true;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     await _local.initialize(const InitializationSettings(android: android),
@@ -34,25 +36,25 @@ class NotificationService {
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       debugPrint('Push opened: ${jsonEncode(message.data)}');
     });
-    final initial = await _messaging.getInitialMessage();
+    final initial = await _fcm.getInitialMessage();
     if (initial != null) debugPrint('Cold-start push: ${jsonEncode(initial.data)}');
-    _messaging.onTokenRefresh.listen((token) => _register(token, auth));
+    _fcm.onTokenRefresh.listen((token) => _register(token, auth));
   }
 
   Future<PermissionStatus> requestPermission() async {
     if (!firebaseReady) return PermissionStatus.denied;
     final status = await Permission.notification.request();
     if (status.isGranted) {
-      await _messaging.requestPermission(alert: true, badge: true, sound: true);
+      await _fcm.requestPermission(alert: true, badge: true, sound: true);
     }
     return status;
   }
 
   Future<void> syncToken(AuthService auth) async {
     if (!firebaseReady || !auth.isSignedIn) return;
-    final settings = await _messaging.getNotificationSettings();
+    final settings = await _fcm.getNotificationSettings();
     if (settings.authorizationStatus == AuthorizationStatus.denied) return;
-    final token = await _messaging.getToken();
+    final token = await _fcm.getToken();
     if (token != null && token.isNotEmpty) await _register(token, auth);
   }
 
