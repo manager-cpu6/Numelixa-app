@@ -24,14 +24,17 @@ jobs:
           flutter create --platforms=android --org com.numelixa --project-name app /tmp/numelixa-platform
           cp -R /tmp/numelixa-platform/android ./android
       - name: Write Firebase Android configuration
+        id: firebase_config
         env:
           FIREBASE_CONFIG_B64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
           if [ -z "$FIREBASE_CONFIG_B64" ]; then
-            echo "Missing FIREBASE_GOOGLE_SERVICES_JSON_BASE64. Add the Firebase Android google-services.json as a base64 GitHub secret."
-            exit 1
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Firebase config not set. Static analysis/tests will run, but Android release builds are skipped."
+            exit 0
           fi
           echo "$FIREBASE_CONFIG_B64" | base64 --decode > android/app/google-services.json
+          echo "configured=true" >> "$GITHUB_OUTPUT"
           python3 - <<'PY'
           import json
           p='android/app/google-services.json'
@@ -41,6 +44,7 @@ jobs:
               raise SystemExit('Firebase config must include Android package com.numelixa.app; found: '+str(ids))
           PY
       - name: Configure Android release signing (optional)
+        if: steps.firebase_config.outputs.configured == 'true'
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -59,9 +63,14 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
-      - run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Build release APK
+        if: steps.firebase_config.outputs.configured == 'true'
+        run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Build release AAB
+        if: steps.firebase_config.outputs.configured == 'true'
+        run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - uses: actions/upload-artifact@v4
+        if: steps.firebase_config.outputs.configured == 'true'
         with:
           name: numelixa-android-release
           path: |
