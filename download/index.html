@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#030817"><meta name="description" content="Download the official Numelixa Android app for global virtual numbers and SMS verification.">
+<title>Download Numelixa for Android</title>
+<style>
+:root{color-scheme:dark;--bg:#030817;--panel:#081b36;--line:#18395b;--muted:#a7b7d0;--cyan:#00d9ff;--blue:#1677ff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#102d52 0,transparent 52%),var(--bg);color:#f5f8ff;font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:24px}
+main{width:min(100%,520px);text-align:center}.logo{width:84px;height:84px;border-radius:28px;margin:0 auto 24px;display:grid;place-items:center;background:linear-gradient(135deg,var(--blue),var(--cyan));box-shadow:0 18px 55px #1677ff33}.logo svg{width:49px;height:49px}h1{font-size:clamp(32px,8vw,46px);line-height:1.08;letter-spacing:-1.7px;margin:0 0 14px;font-weight:850}p{color:var(--muted);margin:0 auto;max-width:410px}.panel{margin-top:30px;padding:24px;border:1px solid var(--line);border-radius:25px;background:linear-gradient(145deg,#0c2341e8,#071329ed);box-shadow:0 25px 80px #0004}.meta{font-size:13px;color:var(--muted);margin-bottom:18px}.download{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:54px;border-radius:16px;text-decoration:none;font-weight:800;color:#04111e;background:linear-gradient(100deg,#00e5c3,#00d9ff);box-shadow:0 12px 32px #00d9ff20}.download[aria-disabled=true]{opacity:.5;pointer-events:none}.status{margin-top:15px;font-size:13px;color:var(--muted)}.note{margin-top:22px;font-size:12px;color:#7185a5}.foot{margin-top:24px;font-size:12px;color:#7185a5}a:not(.download){color:var(--cyan)}
+</style></head>
+<body><main>
+<div class="logo" aria-label="Numelixa logo"><svg viewBox="0 0 64 64" fill="none" stroke="white" stroke-width="2.5"><circle cx="32" cy="32" r="24"/><ellipse cx="32" cy="32" rx="11" ry="24"/><path d="M9 25h46M9 39h46M8 32h48"/></svg></div>
+<h1>Numbers, without<br>the noise.</h1><p>Meet the official Numelixa Android app. Manage virtual numbers and SMS verification in a fast, native mobile experience.</p>
+<section class="panel"><div class="meta" id="version">Official Android release · APK</div><a id="download" class="download" href="#" aria-disabled="true"><span>↓</span><span id="button-label">Checking latest release…</span></a><div class="status" id="status" role="status" aria-live="polite">Checking the official Numelixa release feed.</div></section>
+<div class="note">Only install APK files from official Numelixa release links. Android may ask you to confirm installation from your browser.</div><div class="foot">© Numelixa · <a href="https://numelixa.com">Visit numelixa.com</a> · <a href="https://support.numelixa.com">Support</a></div>
+</main>
+<script>
+(async()=>{const link=document.getElementById('download'),label=document.getElementById('button-label'),status=document.getElementById('status'),version=document.getElementById('version');try{const r=await fetch('https://api.github.com/repos/manager-cpu6/Numelixa-app/releases/latest',{headers:{Accept:'application/vnd.github+json'}});if(!r.ok)throw new Error('No published release yet');const release=await r.json();const apk=(release.assets||[]).find(a=>a.name.toLowerCase().endsWith('.apk'));if(!apk)throw new Error('The next verified APK is not published yet');link.href=apk.browser_download_url;link.removeAttribute('aria-disabled');label.textContent='Download Numelixa APK';version.textContent=(release.name||release.tag_name||'Latest release')+' · '+(apk.size?((apk.size/1048576).toFixed(1)+' MB'):'APK');status.textContent='Latest official release is ready to install.';}catch(e){label.textContent='Release coming soon';status.textContent='The next verified APK has not been published yet. Please check again soon.';}})();
+</script></body></html>
