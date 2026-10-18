@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/config/app_config.dart';
 
 class ApiException implements Exception {
@@ -15,6 +17,20 @@ class ApiException implements Exception {
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
   final http.Client _client;
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  static final Future<String> _deviceId = _loadDeviceId();
+  static Future<String> get deviceId => _deviceId;
+
+  static Future<String> _loadDeviceId() async {
+    final stored = await _secureStorage.read(key: 'numelixa_device_id');
+    if (stored != null && stored.isNotEmpty) return stored;
+    final random = Random.secure();
+    final suffix = List.generate(24, (_) => random.nextInt(16).toRadixString(16)).join();
+    final id = '${DateTime.now().microsecondsSinceEpoch}-$suffix';
+    await _secureStorage.write(key: 'numelixa_device_id', value: id);
+    return id;
+  }
+
   static final Future<String> _deviceLabel = DeviceInfoPlugin().androidInfo.then((info) {
     final maker = info.manufacturer.trim();
     final model = info.model.trim();
@@ -40,10 +56,12 @@ class ApiClient {
       {Map<String, dynamic>? body, String? accessToken}) async {
     final uri = Uri.parse(AppConfig.apiBase).resolve(path);
     final deviceLabel = await _deviceLabel;
+    final deviceId = await _deviceId;
     final headers = <String, String>{
       'Accept': 'application/json',
       'x-numelixa-client': 'android-app',
       'x-numelixa-device': deviceLabel.isEmpty ? 'Android device' : deviceLabel,
+      'x-numelixa-device-id': deviceId,
       'x-numelixa-platform': 'Android',
     };
     if (body != null) headers['Content-Type'] = 'application/json';
