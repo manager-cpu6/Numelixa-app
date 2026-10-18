@@ -608,9 +608,14 @@ class _CatalogPageState extends State<_CatalogPage> {
   Widget _serviceLogo(Map<String, dynamic> service) {
     final key = _serviceKey(service);
     const logos = <String, String>{
-      'whatsapp': 'whatsapp/25D366', 'telegram': 'telegram/26A5E4',
-      'facebook': 'facebook/0866FF', 'instagram': 'instagram/E4405F',
-      'tiktok': 'tiktok/FFFFFF', 'googlevoice': 'googlevoice/4285F4',
+      // Provider catalogs commonly use short activation codes rather than
+      // brand names. Map those aliases before falling back to the generic icon.
+      'wa': 'whatsapp/25D366', 'whatsapp': 'whatsapp/25D366',
+      'tg': 'telegram/26A5E4', 'telegram': 'telegram/26A5E4',
+      'fb': 'facebook/0866FF', 'facebook': 'facebook/0866FF',
+      'ig': 'instagram/E4405F', 'instagram': 'instagram/E4405F',
+      'tt': 'tiktok/FFFFFF', 'tiktok': 'tiktok/FFFFFF',
+      'googlevoice': 'googlevoice/4285F4',
       'google': 'google/4285F4', 'gmail': 'gmail/EA4335', 'youtube': 'youtube/FF0033',
       'microsoft': 'microsoft/737373', 'discord': 'discord/5865F2',
       'snapchat': 'snapchat/FFFC00', 'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
