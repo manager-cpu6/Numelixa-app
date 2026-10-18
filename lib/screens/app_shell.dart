@@ -1135,7 +1135,16 @@ class _AccountPage extends StatelessWidget {
           leading: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyan),
           title: const Text('Push notifications'),
           subtitle: Text(status),
-          trailing: const Icon(Icons.chevron_right_rounded),
+          trailing: IconButton(
+            tooltip: 'Retry notification registration',
+            onPressed: () async {
+              final auth = context.read<AuthService>();
+              final notifications = context.read<NotificationService>();
+              final permission = await notifications.requestPermission();
+              if (permission.isGranted) await notifications.syncToken(auth);
+            },
+            icon: const Icon(Icons.refresh_rounded),
+          ),
           onTap: () => context.read<NotificationService>().openNotificationSettings(),
         ),
       )),
