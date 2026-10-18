@@ -101,6 +101,10 @@ class NotificationService {
   }
 
   Future<PermissionStatus> requestPermission() async {
+    if (!firebaseReady) {
+      registrationStatus.value = 'Firebase is not configured in this app build.';
+      return Permission.notification.status;
+    }
     var status = await Permission.notification.status;
     if (status.isGranted) {
       registrationStatus.value = 'Notification permission is enabled; checking device registration.';
