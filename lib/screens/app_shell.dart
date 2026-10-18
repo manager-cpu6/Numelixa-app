@@ -224,7 +224,7 @@ class _HomePage extends StatelessWidget {
 }
 
 class _DataCard extends StatefulWidget {
-  const _DataCard({required this.title, required this.icon, required String path});
+  const _DataCard({required this.title, required this.icon});
   final String title;
   final IconData icon;
   @override
