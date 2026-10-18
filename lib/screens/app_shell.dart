@@ -27,8 +27,11 @@ class _AppShellState extends State<AppShell> {
     final route = appNotificationRoute.value;
     if (!mounted || route == null) return;
     appNotificationRoute.value = null;
-    if (route == 'orders') setState(() => _index = 2);
-    else if (route == 'wallet') setState(() => _index = 3);
+    if (route == 'orders') {
+      setState(() => _index = 2);
+    } else if (route == 'wallet') {
+      setState(() => _index = 3);
+    }
     else {
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _NotificationsPage()));
     }
@@ -49,6 +52,7 @@ class _AppShellState extends State<AppShell> {
       if (!mounted) return;
       final auth = context.read<AuthService>();
       await auth.restore();
+      if (!mounted) return;
       final notifications = context.read<NotificationService>();
       await notifications.initialize(auth: auth);
       await notifications.requestPermission();
