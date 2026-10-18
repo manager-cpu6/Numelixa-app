@@ -44,6 +44,24 @@ class AuthService extends ChangeNotifier {
         }
       }
     }
+    // If Android recreated the process while the browser was open, finish
+    // the one-time Google callback ticket from the initial deep link.
+    try {
+      final initialUri = await AppLinks().getInitialLink();
+      if (initialUri != null &&
+          initialUri.scheme == 'com.numelixa.app' &&
+          initialUri.host == 'auth' &&
+          initialUri.path == '/callback') {
+        final ticket = (initialUri.queryParameters['ticket'] ?? '').trim();
+        if (ticket.isNotEmpty) {
+          final complete = await _api.post('/api/auth/google/native/complete', body: {'ticket': ticket});
+          final token = (complete['accessToken'] ?? '').toString();
+          if (token.isNotEmpty) await _saveSession(token, complete['user']);
+        }
+      }
+    } catch (error) {
+      debugPrint('Initial Google callback could not be restored: $error');
+    }
     _biometricEnabled = (await _storage.read(key: 'numelixa_biometric_lock')) == 'true';
     _biometricLocked = _biometricEnabled && isSignedIn;
     _ready = true;
