@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
@@ -505,6 +506,7 @@ class _CatalogPage extends StatefulWidget {
 }
 class _CatalogPageState extends State<_CatalogPage> {
   late Future<Map<String, dynamic>> _future;
+  String _search = '';
   @override
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().services(token: context.read<AuthService>().accessToken); }
@@ -517,12 +519,21 @@ class _CatalogPageState extends State<_CatalogPage> {
       final raw = snapshot.data?['services'];
       final services = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
       if (services.isEmpty) return _RetryState(message: 'No live services are available right now.', onRetry: () => setState(_load));
+      final filteredServices = services.where((service) {
+        final query = _search.trim().toLowerCase();
+        if (query.isEmpty) return true;
+        return ['name','title','id','code','description','category'].any((key) => (service[key] ?? '').toString().toLowerCase().contains(query));
+      }).toList();
       return ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Choose a service', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        const Text('Live catalog from Numelixa', style: TextStyle(color: Color(0xFF91A8C4))),
+        const Text('Search WhatsApp, Telegram, Facebook and more', style: TextStyle(color: Color(0xFF91A8C4))),
         const SizedBox(height: 14),
-        for (final service in services)
+        TextField(onChanged: (value) => setState(() => _search = value),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), labelText: 'Search services', hintText: 'WhatsApp, Instagram…')),
+        const SizedBox(height: 12),
+        if (filteredServices.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No services match your search.', textAlign: TextAlign.center)),
+        for (final service in filteredServices)
           Card(child: ListTile(
             leading: const Icon(Icons.verified_user_outlined, color: AppTheme.cyan),
             title: Text((service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString()),
@@ -547,6 +558,7 @@ class _CountriesPage extends StatefulWidget {
 }
 class _CountriesPageState extends State<_CountriesPage> {
   late Future<Map<String, dynamic>> _future;
+  String _search = '';
   @override
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().countries(service: widget.service, token: context.read<AuthService>().accessToken); }
@@ -603,8 +615,17 @@ class _CountriesPageState extends State<_CountriesPage> {
         final raw = snapshot.data?['countries'];
         final countries = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
         if (countries.isEmpty) return _RetryState(message: 'No live country availability for this service.', onRetry: () => setState(_load));
+        final filteredCountries = countries.where((country) {
+          final query = _search.trim().toLowerCase();
+          if (query.isEmpty) return true;
+          return ['name','title','id','code','country','countryCode'].any((key) => (country[key] ?? '').toString().toLowerCase().contains(query));
+        }).toList();
         return ListView(padding: const EdgeInsets.all(14), children: [
-          for (final country in countries)
+          TextField(onChanged: (value) => setState(() => _search = value),
+            decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), labelText: 'Search countries', hintText: 'United States, India…')),
+          const SizedBox(height: 12),
+          if (filteredCountries.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No countries match your search.', textAlign: TextAlign.center)),
+          for (final country in filteredCountries)
             Card(child: ListTile(
               leading: Text((country['flag'] ?? '🌐').toString(), style: const TextStyle(fontSize: 25)),
               title: Text((country['name'] ?? country['title'] ?? country['id'] ?? 'Country').toString()),
@@ -719,7 +740,13 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
           Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text((order['service'] ?? 'Virtual number').toString(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700)),
+            Row(children: [
+              Expanded(child: SelectableText((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700))),
+              IconButton(tooltip: 'Copy number', icon: const Icon(Icons.copy_rounded), onPressed: () async {
+                final number = (order['phone'] ?? order['number'] ?? '').toString();
+                if (number.isNotEmpty) { await Clipboard.setData(ClipboardData(text: number)); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Number copied.'))); }
+              }),
+            ]),
             const SizedBox(height: 14),
             _DetailLine(label: 'Country', value: (order['country'] ?? '').toString()),
             _DetailLine(label: 'Status', value: status),
@@ -729,9 +756,25 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
           ]))),
           const SizedBox(height: 14),
           Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('SMS verification', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            Row(children: [
+              const Expanded(child: Text('SMS verification', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+              if (code.isNotEmpty) IconButton(tooltip: 'Copy SMS code', icon: const Icon(Icons.copy_rounded), onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: code));
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SMS code copied.')));
+              }),
+            ]),
             const SizedBox(height: 12),
-            Text(code.isEmpty ? 'No code received yet.' : code, style: TextStyle(fontSize: code.isEmpty ? 14 : 30, fontWeight: FontWeight.w800, color: code.isEmpty ? const Color(0xFF91A8C4) : AppTheme.mint)),
+            Container(width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+              decoration: BoxDecoration(color: const Color(0xFF08243A), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF1677FF).withValues(alpha: .35))),
+              child: Column(children: [
+                Text(code.isEmpty ? 'Waiting for your code' : code, textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: code.isEmpty ? 15 : 32, letterSpacing: code.isEmpty ? 0 : 5, fontWeight: FontWeight.w900, color: code.isEmpty ? const Color(0xFF91A8C4) : AppTheme.mint)),
+                if (code.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  FilledButton.icon(onPressed: () async { await Clipboard.setData(ClipboardData(text: code)); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SMS code copied.'))); }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy verification code')),
+                ],
+              ]),
+            ),
             if ((order['fullSms'] ?? '').toString().isNotEmpty) ...[
               const SizedBox(height: 10),
               Text((order['fullSms']).toString(), style: const TextStyle(color: Color(0xFFB2C7DD))),
