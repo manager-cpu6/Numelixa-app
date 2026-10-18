@@ -86,6 +86,7 @@ jobs:
           g.write_text(s)
           PY
       - name: Configure release signing (optional)
+        id: signing
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -95,6 +96,7 @@ jobs:
         run: |
           if [ -z "$KEYSTORE_B64" ]; then
             echo "No release keystore configured. Release artifact is debug-key signed and is not suitable for Play Store updates."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
@@ -105,6 +107,7 @@ jobs:
           keyAlias=$KEY_ALIAS
           storeFile=release-key.jks
           EOF
+          echo "configured=true" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
         run: flutter pub get
       - name: Static analysis
@@ -128,7 +131,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Publish GitHub release assets
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.ANDROID_KEYSTORE_BASE64 != ''
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.configured == 'true'
         uses: softprops/action-gh-release@v2
         with:
           name: Numelixa Android ${{ github.ref_name }}
