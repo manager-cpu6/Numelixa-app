@@ -6,6 +6,6 @@ class AppConfig {
   );
   static const pushRegistrationPath = String.fromEnvironment(
     'NUMELIXA_PUSH_REGISTER_PATH',
-    defaultValue: '/api/notifications/mobile-register',
+    defaultValue: '/api/notifications/register',
   );
 }
