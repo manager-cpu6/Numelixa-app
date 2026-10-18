@@ -112,7 +112,7 @@ jobs:
           storePassword=$KEYSTORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
-          storeFile=app/release-key.jks
+          storeFile=release-key.jks
           EOF
           fi
       - run: flutter pub get
