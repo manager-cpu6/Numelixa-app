@@ -22,12 +22,18 @@ class ApiClient {
   static Future<String> get deviceId => _deviceId;
 
   static Future<String> _loadDeviceId() async {
-    final stored = await _secureStorage.read(key: 'numelixa_device_id');
-    if (stored != null && stored.isNotEmpty) return stored;
+    try {
+      final stored = await _secureStorage.read(key: 'numelixa_device_id');
+      if (stored != null && stored.isNotEmpty) return stored;
+    } catch (_) {
+      // Unit tests and restricted platform contexts may not have a method-channel binding.
+    }
     final random = Random.secure();
     final suffix = List.generate(24, (_) => random.nextInt(16).toRadixString(16)).join();
     final id = '${DateTime.now().microsecondsSinceEpoch}-$suffix';
-    await _secureStorage.write(key: 'numelixa_device_id', value: id);
+    try {
+      await _secureStorage.write(key: 'numelixa_device_id', value: id);
+    } catch (_) {}
     return id;
   }
 
