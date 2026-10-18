@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
@@ -1277,20 +1279,115 @@ class _ProtectedListPageState extends State<_ProtectedListPage> {
   );
 }
 
-class _AccountPage extends StatelessWidget {
+class _AccountPage extends StatefulWidget {
   const _AccountPage();
+  @override
+  State<_AccountPage> createState() => _AccountPageState();
+}
+
+class _AccountPageState extends State<_AccountPage> {
+  final ImagePicker _picker = ImagePicker();
+  bool _photoBusy = false;
+
+  ImageProvider<Object>? _avatarProvider(Map<String, dynamic> user) {
+    final value = (user['avatarDataUrl'] ?? user['avatarUrl'] ?? '').toString();
+    if (value.startsWith('data:image/') && value.contains(',')) {
+      try { return MemoryImage(base64Decode(value.substring(value.indexOf(',') + 1))); } catch (_) { return null; }
+    }
+    if (value.startsWith('https://') || value.startsWith('http://')) return NetworkImage(value);
+    return null;
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    final file = await _picker.pickImage(source: source, maxWidth: 640, maxHeight: 640, imageQuality: 72);
+    if (file == null || !mounted) return;
+    setState(() => _photoBusy = true);
+    try {
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 450 * 1024) throw const ApiException('Profile photo must be smaller than 450 KB.');
+      final lower = file.name.toLowerCase();
+      final mime = lower.endsWith('.png') ? 'image/png' : lower.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+      await context.read<AuthService>().uploadProfilePhoto('data:$mime;base64,${base64Encode(bytes)}');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated.')));
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not update profile photo. Try again.')));
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  Future<void> _showPhotoOptions() async {
+    await showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Take a photo'), onTap: () { Navigator.pop(sheetContext); _pickPhoto(ImageSource.camera); }),
+        ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose from gallery'), onTap: () { Navigator.pop(sheetContext); _pickPhoto(ImageSource.gallery); }),
+      ],
+    )));
+  }
+
+  Future<void> _changePassword() async {
+    final auth = context.read<AuthService>();
+    try {
+      await auth.requestPasswordChangeCode();
+      if (!mounted) return;
+      final changed = await showDialog<bool>(context: context, builder: (_) => const _PasswordChangeDialog());
+      if (changed == true && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed successfully.')));
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not send the password code. Try again.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final user = auth.user ?? const <String, dynamic>{};
+    final avatar = _avatarProvider(user);
     return ListView(padding: const EdgeInsets.all(18), children: [
       const SizedBox(height: 12),
-      const CircleAvatar(radius: 34, backgroundColor: Color(0xFF123C64), child: Icon(Icons.person_outline_rounded, size: 35, color: AppTheme.cyan)),
+      Center(child: Stack(children: [
+        CircleAvatar(radius: 42, backgroundColor: const Color(0xFF123C64), backgroundImage: avatar,
+          child: avatar == null ? const Icon(Icons.person_outline_rounded, size: 40, color: AppTheme.cyan) : null),
+        Positioned(right: 0, bottom: 0, child: Material(
+          color: AppTheme.cyan, shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: 'Change profile photo',
+            onPressed: _photoBusy ? null : _showPhotoOptions,
+            icon: _photoBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Color(0xFF03121F), size: 19),
+          ),
+        )),
+      ])),
       const SizedBox(height: 12),
       Text((user['name'] ?? 'Numelixa user').toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
       Text((user['email'] ?? '').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 22),
       const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Secure API session'), subtitle: Text('Bearer credential verified by Numelixa.'))),
+      Card(child: ListTile(leading: const Icon(Icons.devices_other_rounded, color: AppTheme.cyan), title: const Text('Your devices'), subtitle: const Text('View signed-in devices, location and recent activity.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DevicesPage())))),
+      Card(child: ListTile(leading: const Icon(Icons.password_rounded, color: AppTheme.cyan), title: const Text('Change password'), subtitle: const Text('Verify a code sent to your email.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: _changePassword)),
+      Card(child: SwitchListTile(
+        secondary: const Icon(Icons.fingerprint_rounded, color: AppTheme.cyan),
+        title: const Text('Biometric app lock'),
+        subtitle: Text(auth.biometricEnabled ? 'Fingerprint or face authentication is enabled.' : 'Require fingerprint or face authentication when reopening Numelixa.'),
+        value: auth.biometricEnabled,
+        onChanged: (enabled) async {
+          try {
+            if (enabled) {
+              final ok = await auth.enableBiometricLock();
+              if (ok && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric lock enabled.')));
+            } else {
+              await auth.disableBiometricLock();
+            }
+          } on ApiException catch (error) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+          } catch (_) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric authentication could not be configured on this device.')));
+          }
+        },
+      )),
       Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
       Card(child: ValueListenableBuilder<String>(
         valueListenable: context.read<NotificationService>().registrationStatus,
@@ -1319,6 +1416,160 @@ class _AccountPage extends StatelessWidget {
       ),
     ]);
   }
+}
+
+class _DevicesPage extends StatefulWidget {
+  const _DevicesPage();
+  @override
+  State<_DevicesPage> createState() => _DevicesPageState();
+}
+
+class _DevicesPageState extends State<_DevicesPage> {
+  late Future<Map<String, dynamic>> _future;
+  @override
+  void initState() { super.initState(); _load(); }
+  void _load() { _future = context.read<AuthService>().listDevices(); }
+
+  String _date(dynamic value) {
+    if (value == null) return 'Unknown';
+    final date = DateTime.tryParse(value.toString());
+    if (date == null) return value.toString();
+    return date.toLocal().toString().split('.').first;
+  }
+
+  Future<void> _remove(Map<String, dynamic> device) async {
+    final auth = context.read<AuthService>();
+    final id = (device['sessionId'] ?? '').toString();
+    final isCurrent = device['current'] == true;
+    final yes = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Remove device?'),
+      content: Text(isCurrent ? 'This is the device you are using now. Removing it will sign you out.' : 'This device session will be revoked and must sign in again.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Remove')),
+      ],
+    ));
+    if (yes != true || !mounted) return;
+    try {
+      await auth.removeDevice(id);
+      if (isCurrent) {
+        await auth.logout();
+        if (mounted) Navigator.of(context).pop();
+      } else if (mounted) {
+        setState(_load);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Device session removed.')));
+      }
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not remove this device.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Your devices')),
+    body: FutureBuilder<Map<String, dynamic>>(future: _future, builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+      if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
+      final raw = snapshot.data?['devices'];
+      final devices = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+      if (devices.isEmpty) return _RetryState(message: 'No active device sessions were found.', onRetry: () => setState(_load), empty: true);
+      return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView(padding: const EdgeInsets.all(12), children: [
+        for (final device in devices)
+          Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.devices_rounded, color: AppTheme.cyan, size: 28),
+              const SizedBox(width: 10),
+              Expanded(child: Text((device['device'] ?? 'Device').toString(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
+              if (device['current'] == true) const Chip(label: Text('This device')),
+            ]),
+            const SizedBox(height: 8),
+            Text('Platform: ${device['platform'] ?? 'Unknown'} · ${device['browser'] ?? 'App'}'),
+            Text('Location: ${[device['city'], device['region'], device['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ')}'.trim().endsWith('Location:') ? 'Location: Not available' : 'Location: ${[device['city'], device['region'], device['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ')}'),
+            Text('Signed in: ${_date(device['createdAt'])}'),
+            Text('Last active: ${_date(device['lastSeenAt'])}'),
+            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () => _remove(device), icon: const Icon(Icons.logout_rounded), label: const Text('Remove device'))),
+          ]))),
+      ]));
+    }),
+  );
+}
+
+class _PasswordChangeDialog extends StatefulWidget {
+  const _PasswordChangeDialog();
+  @override
+  State<_PasswordChangeDialog> createState() => _PasswordChangeDialogState();
+}
+class _PasswordChangeDialogState extends State<_PasswordChangeDialog> {
+  final _code = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+  @override
+  void dispose() { _code.dispose(); _password.dispose(); super.dispose(); }
+  Future<void> _submit() async {
+    setState(() { _busy = true; _error = null; });
+    try {
+      await context.read<AuthService>().confirmPasswordChange(code: _code.text, newPassword: _password.text);
+      if (mounted) Navigator.of(context).pop(true);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not change the password. Try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Change password'),
+    content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Text('Enter the 6-digit code sent to your email, then choose a new password.'),
+      const SizedBox(height: 12),
+      TextField(controller: _code, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'Email verification code')),
+      TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'New password (8+ characters)')),
+      if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: const TextStyle(color: Color(0xFFFF788C)))),
+    ])),
+    actions: [
+      TextButton(onPressed: _busy ? null : () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Saving…' : 'Update password')),
+    ],
+  );
+}
+
+class _BiometricLockScreen extends StatefulWidget {
+  const _BiometricLockScreen();
+  @override
+  State<_BiometricLockScreen> createState() => _BiometricLockScreenState();
+}
+class _BiometricLockScreenState extends State<_BiometricLockScreen> {
+  bool _busy = false;
+  String? _error;
+  Future<void> _unlock() async {
+    setState(() { _busy = true; _error = null; });
+    try {
+      final ok = await context.read<AuthService>().unlockBiometrics();
+      if (!ok && mounted) setState(() => _error = 'Authentication was not completed. Try again.');
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Biometric authentication failed. Try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.fingerprint_rounded, size: 64, color: AppTheme.cyan),
+      const SizedBox(height: 16),
+      const Text('Numelixa is locked', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8),
+      const Text('Use your fingerprint or face authentication to continue.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4))),
+      if (_error != null) Padding(padding: const EdgeInsets.all(8), child: Text(_error!, style: const TextStyle(color: Color(0xFFFF788C)))),
+      const SizedBox(height: 18),
+      FilledButton.icon(onPressed: _busy ? null : _unlock, icon: const Icon(Icons.lock_open_rounded), label: Text(_busy ? 'Checking…' : 'Unlock with biometrics')),
+    ]))),
+  );
 }
 
 class _RetryState extends StatelessWidget {
