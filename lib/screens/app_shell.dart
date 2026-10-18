@@ -21,6 +21,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
   bool _booted = false;
   bool _wasBackgrounded = false;
+  bool _biometricUnlockInProgress = false;
 
   @override
   void initState() {
@@ -31,21 +32,28 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    // Android may emit inactive/resumed around system dialogs (including the
+    // biometric prompt itself). Only a real background pause should trigger
+    // a fresh app lock, otherwise the prompt can loop repeatedly.
+    if (state == AppLifecycleState.paused) {
       _wasBackgrounded = true;
       return;
     }
     if (state != AppLifecycleState.resumed || !mounted) return;
     final auth = context.read<AuthService>();
-    if (_wasBackgrounded && auth.biometricEnabled && auth.isSignedIn) {
+    final didBackground = _wasBackgrounded;
+    _wasBackgrounded = false;
+    if (didBackground && auth.biometricEnabled && auth.isSignedIn &&
+        !auth.biometricLocked && !_biometricUnlockInProgress) {
+      _biometricUnlockInProgress = true;
       auth.lockBiometrics();
       auth.unlockBiometrics().then((_) {
         if (mounted && !auth.biometricLocked) _syncNotifications();
-      }).catchError((_) {});
-      _wasBackgrounded = false;
+      }).catchError((_) {}).whenComplete(() {
+        _biometricUnlockInProgress = false;
+      });
       return;
     }
-    _wasBackgrounded = false;
     _syncNotifications();
   }
 
