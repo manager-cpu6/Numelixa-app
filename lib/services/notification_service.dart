@@ -151,7 +151,7 @@ class NotificationService {
       }
       await _register(token, auth);
     } catch (error) {
-      registrationStatus.value = 'Could not register this device for notifications. Retry when online.';
+      registrationStatus.value = 'FCM registration error: ' + error.toString();
       debugPrint('FCM token sync failed: $error');
     }
   }
