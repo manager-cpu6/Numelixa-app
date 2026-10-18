@@ -721,6 +721,7 @@ class _OrdersPageState extends State<_OrdersPage> {
       final code = (result['code'] ?? '').toString();
       if (code.isNotEmpty) {
         await Clipboard.setData(ClipboardData(text: code));
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Latest SMS code copied. This checks the existing activation; it does not create a new paid order.')),
         );
