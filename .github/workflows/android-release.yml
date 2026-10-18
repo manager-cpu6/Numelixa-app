@@ -57,7 +57,7 @@ jobs:
           }
 
           """
-          if "create(\\"release\\")" not in text:
+          if 'create("release")' not in text:
               text = text.replace(marker, signing + marker, 1)
           text = text.replace(
               'signingConfig = signingConfigs.getByName("debug")',
