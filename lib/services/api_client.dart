@@ -1,0 +1,61 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../core/config/app_config.dart';
+
+class ApiException implements Exception {
+  const ApiException(this.message, {this.statusCode});
+  final String message;
+  final int? statusCode;
+  @override
+  String toString() => message;
+}
+
+class ApiClient {
+  ApiClient({http.Client? client}) : _client = client ?? http.Client();
+  final http.Client _client;
+
+  Future<Map<String, dynamic>> get(String path, {String? accessToken}) =>
+      _request('GET', path, accessToken: accessToken);
+
+  Future<Map<String, dynamic>> post(String path,
+          {Map<String, dynamic>? body, String? accessToken}) =>
+      _request('POST', path, body: body, accessToken: accessToken);
+
+  Future<Map<String, dynamic>> _request(String method, String path,
+      {Map<String, dynamic>? body, String? accessToken}) async {
+    final uri = Uri.parse(AppConfig.apiBase).resolve(path);
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (body != null) headers['Content-Type'] = 'application/json';
+    if (accessToken != null && accessToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $accessToken';
+    }
+    try {
+      final request = method == 'GET'
+          ? _client.get(uri, headers: headers)
+          : _client.post(uri, headers: headers, body: jsonEncode(body ?? {}));
+      final response = await request.timeout(const Duration(seconds: 20));
+      final decoded = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(_friendlyMessage(response.statusCode, decoded),
+            statusCode: response.statusCode);
+      }
+      if (decoded is Map<String, dynamic>) return decoded;
+      throw const ApiException('The server returned an unexpected response.');
+    } on TimeoutException {
+      throw const ApiException('The request took too long. Please try again.');
+    } on FormatException {
+      throw const ApiException('The server response could not be read.');
+    } on http.ClientException {
+      throw const ApiException('Could not connect. Check your internet connection.');
+    }
+  }
+
+  String _friendlyMessage(int status, dynamic body) {
+    if (status == 401) return 'Please sign in again.';
+    if (status == 403) return 'You do not have permission to do that.';
+    if (status >= 500) return 'The service is temporarily unavailable.';
+    if (body is Map && body['message'] is String) return body['message'] as String;
+    return 'The request could not be completed.';
+  }
+}
