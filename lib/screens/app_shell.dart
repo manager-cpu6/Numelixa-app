@@ -675,17 +675,179 @@ class _CountriesPageState extends State<_CountriesPage> {
   );
 }
 
-class _OrdersPage extends StatelessWidget {
+class _OrdersPage extends StatefulWidget {
   const _OrdersPage();
   @override
-  Widget build(BuildContext context) => _ProtectedListPage(
-    title: 'Your orders',
-    load: (repo, token) => repo.orders(token: token, limit: 100),
-    listKey: 'orders',
-    empty: 'No orders found on this account.',
-    onItemTap: (item) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _OrderDetailPage(orderId: (item['id'] ?? '').toString()))),
-    itemTitle: (item) => '${item['service'] ?? 'Virtual number'} · ${item['phone'] ?? item['phoneNumber'] ?? 'Number pending'}',
-    itemSubtitle: (item) => '${item['country'] ?? item['countryCode'] ?? ''}  •  ${item['status'] ?? 'unknown'}',
+  State<_OrdersPage> createState() => _OrdersPageState();
+}
+
+class _OrdersPageState extends State<_OrdersPage> {
+  String _selected = 'successful';
+  late Future<Map<String, dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  void _load() {
+    _future = NumelixaRepository().orders(
+      token: context.read<AuthService>().accessToken!,
+      limit: 100,
+    );
+  }
+
+  bool _isSuccessful(String status) {
+    final s = status.toLowerCase().replaceAll('_', ' ').trim();
+    return ['success', 'successful', 'completed', 'complete', 'finished', 'received'].any((v) => s == v || s.contains(v));
+  }
+
+  bool _isCanceled(String status) {
+    final s = status.toLowerCase();
+    return s.contains('cancel');
+  }
+
+  Future<void> _getNewCode(Map<String, dynamic> order) async {
+    final id = (order['id'] ?? '').toString();
+    if (id.isEmpty) return;
+    try {
+      final result = await NumelixaRepository().checkSms(
+        token: context.read<AuthService>().accessToken!,
+        orderId: id,
+      );
+      if (!mounted) return;
+      final code = (result['code'] ?? '').toString();
+      if (code.isNotEmpty) {
+        await Clipboard.setData(ClipboardData(text: code));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Latest SMS code copied. This checks the existing activation; it does not create a new paid order.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No additional SMS code is available for this activation yet.')),
+        );
+      }
+      setState(_load);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not check this activation. Try again.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Your orders')),
+    body: FutureBuilder<Map<String, dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
+        }
+        final raw = snapshot.data?['orders'];
+        final orders = raw is List
+            ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+            : <Map<String, dynamic>>[];
+        final filtered = orders.where((o) {
+          final status = (o['status'] ?? '').toString();
+          return _selected == 'successful' ? _isSuccessful(status) : _isCanceled(status);
+        }).toList();
+        return Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'successful', label: Text('Successful')),
+                ButtonSegment(value: 'canceled', label: Text('Canceled')),
+              ],
+              selected: {_selected},
+              onSelectionChanged: (value) => setState(() => _selected = value.first),
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+              ? _RetryState(
+                  message: _selected == 'successful'
+                    ? 'Successful activations with received SMS will appear here.'
+                    : 'Canceled orders will appear here.',
+                  onRetry: () => setState(_load),
+                  empty: true,
+                )
+              : RefreshIndicator(
+                  onRefresh: () async => setState(_load),
+                  child: ListView(
+                    padding: const EdgeInsets.all(12),
+                    children: [
+                      for (final order in filtered)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  const CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: Color(0xFF102844),
+                                    child: Icon(Icons.apps_rounded, color: AppTheme.cyan),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text(
+                                    (order['service'] ?? 'Virtual number').toString(),
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                                  )),
+                                  Text((order['status'] ?? '').toString(),
+                                    style: TextStyle(color: _selected == 'successful' ? AppTheme.mint : const Color(0xFFFF788C), fontWeight: FontWeight.w700)),
+                                ]),
+                                const SizedBox(height: 12),
+                                SelectableText(
+                                  (order['phone'] ?? order['phoneNumber'] ?? 'Number unavailable').toString(),
+                                  style: const TextStyle(fontSize: 18, color: AppTheme.cyan, fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 5),
+                                Text('Platform: ' + (order['service'] ?? 'Virtual number').toString()),
+                                Text('Country: ' + (order['country'] ?? order['countryCode'] ?? '—').toString()),
+                                if (_selected == 'successful') ...[
+                                  const SizedBox(height: 7),
+                                  Row(children: [
+                                    const Text('SMS code: ', style: TextStyle(color: Color(0xFF91A8C4))),
+                                    Expanded(child: SelectableText((order['code'] ?? 'Code unavailable').toString(),
+                                      style: const TextStyle(fontWeight: FontWeight.w800))),
+                                    if ((order['code'] ?? '').toString().isNotEmpty)
+                                      IconButton(
+                                        tooltip: 'Copy SMS code',
+                                        onPressed: () => Clipboard.setData(ClipboardData(text: order['code'].toString())),
+                                        icon: const Icon(Icons.copy_rounded),
+                                      ),
+                                  ]),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _getNewCode(order),
+                                      icon: const Icon(Icons.sms_outlined),
+                                      label: const Text('Get New Code'),
+                                    ),
+                                  ),
+                                ],
+                                if (_selected == 'canceled')
+                                  Text('Canceled at: ' + (order['completedAt'] ?? order['createdAt'] ?? '—').toString(),
+                                    style: const TextStyle(color: Color(0xFF91A8C4))),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+          ),
+        ]);
+      },
+    ),
   );
 }
 
