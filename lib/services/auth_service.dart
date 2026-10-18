@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api_client.dart';
@@ -169,51 +170,40 @@ class AuthService extends ChangeNotifier {
   Future<void> signInWithGoogle() async {
     _validating = true;
     notifyListeners();
-    StreamSubscription<Uri>? callbackSubscription;
     try {
-      // Use the website's verified Google Identity Services flow. This avoids
-      // depending on a missing Android OAuth client/SHA-1 in Firebase config.
-      final config = await _api.get('/api/auth/google/config');
-      if ((config['clientId'] ?? '').toString().trim().isEmpty) {
-        throw const ApiException('Google Sign-In is not configured for Numelixa yet.');
-      }
-
-      final callback = Completer<Uri>();
-      final links = AppLinks();
-      callbackSubscription = links.uriLinkStream.listen((uri) {
-        if (uri.scheme == 'com.numelixa.app' &&
-            uri.host == 'auth' &&
-            uri.path == '/callback' &&
-            uri.queryParameters['ticket']?.isNotEmpty == true &&
-            !callback.isCompleted) {
-          callback.complete(uri);
-        }
-      });
-
-      final launched = await launchUrl(
-        Uri.parse('https://www.numelixa.com/auth/native/google'),
-        mode: LaunchMode.externalApplication,
+      // Native Android account chooser: no external browser is opened.
+      final google = GoogleSignIn(
+        scopes: const ['email', 'profile', 'openid'],
+        serverClientId: (await _api.get('/api/auth/google/config'))['clientId']?.toString(),
       );
-      if (!launched) {
-        throw const ApiException('Could not open the secure Google sign-in page. Check your browser and internet connection.');
+      await google.signOut();
+      final account = await google.signIn();
+      if (account == null) {
+        throw const ApiException('Google sign-in was cancelled. Choose an account to continue.');
       }
-
-      final uri = await callback.future.timeout(
-        const Duration(minutes: 3),
-        onTimeout: () => throw const ApiException('Google sign-in timed out. Return to Numelixa and try again.'),
+      final authentication = await account.authentication;
+      final idToken = (authentication.idToken ?? '').trim();
+      if (idToken.isEmpty) {
+        throw const ApiException('Google did not return an ID token. Check the Android OAuth client ID and SHA-1/SHA-256 fingerprints in Firebase/Google Cloud.');
+      }
+      final ticketResponse = await _api.post(
+        '/api/auth/google/native/credential',
+        body: {'credential': idToken},
       );
-      final ticket = (uri.queryParameters['ticket'] ?? '').trim();
+      final ticket = (ticketResponse['ticket'] ?? '').toString().trim();
       if (ticket.isEmpty) {
-        throw const ApiException('Google returned to Numelixa without a sign-in ticket. Please try again.');
+        throw const ApiException('Google verified the account but did not issue a sign-in ticket.');
       }
-      final complete = await _api.post('/api/auth/google/native/complete', body: {'ticket': ticket});
+      final complete = await _api.post(
+        '/api/auth/google/native/complete',
+        body: {'ticket': ticket},
+      );
       final token = (complete['accessToken'] ?? '').toString();
       if (token.isEmpty) {
         throw const ApiException('The server did not issue a mobile session. Please try again.');
       }
       await _saveSession(token, complete['user']);
     } finally {
-      await callbackSubscription?.cancel();
       _validating = false;
       notifyListeners();
     }
