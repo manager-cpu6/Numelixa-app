@@ -1474,6 +1474,13 @@ class _DevicesPageState extends State<_DevicesPage> {
   void initState() { super.initState(); _load(); }
   void _load() { _future = context.read<AuthService>().listDevices(); }
 
+  String _location(Map<String, dynamic> device) {
+    final parts = [device['city'], device['region'], device['country']]
+        .where((value) => value != null && value.toString().trim().isNotEmpty)
+        .map((value) => value.toString().trim()).toList();
+    return parts.isEmpty ? 'Not available' : parts.join(', ');
+  }
+
   String _date(dynamic value) {
     if (value == null) return 'Unknown';
     final date = DateTime.tryParse(value.toString());
@@ -1531,7 +1538,7 @@ class _DevicesPageState extends State<_DevicesPage> {
             ]),
             const SizedBox(height: 8),
             Text('Platform: ${device['platform'] ?? 'Unknown'} · ${device['browser'] ?? 'App'}'),
-            Text('Location: ${[device['city'], device['region'], device['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ')}'.trim().endsWith('Location:') ? 'Location: Not available' : 'Location: ${[device['city'], device['region'], device['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ')}'),
+            Text('Location: ${_location(device)}'),
             Text('Signed in: ${_date(device['createdAt'])}'),
             Text('Last active: ${_date(device['lastSeenAt'])}'),
             Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () => _remove(device), icon: const Icon(Icons.logout_rounded), label: const Text('Remove device'))),
