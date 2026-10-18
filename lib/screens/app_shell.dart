@@ -836,8 +836,7 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   ),
                                 ],
                                 if (_selected == 'canceled')
-                                  Text('Canceled at', semanticsLabel: (order['completedAt'] ?? order['createdAt'] ?? '—').toString(),
-                                    style: const TextStyle(color: Color(0xFF91A8C4))),
+                                  Row(children: [const Text('Canceled at: '), Expanded(child: Text((order['completedAt'] ?? order['createdAt'] ?? '—').toString(), style: const TextStyle(color: Color(0xFF91A8C4))))]),
                               ],
                             ),
                           ),
