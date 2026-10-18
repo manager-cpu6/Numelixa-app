@@ -30,7 +30,6 @@ jobs:
           flutter create --platforms=android --org com.numelixa --project-name app .
           python3 - <<'PY'
           from pathlib import Path
-          from java.util import Properties
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
@@ -40,6 +39,8 @@ jobs:
           p.write_text(s)
           g = Path('android/app/build.gradle.kts')
           s = g.read_text()
+          if 'import java.util.Properties' not in s:
+              s = 'import java.util.Properties\\n' + s
           if 'create("release")' not in s:
               marker = '    buildTypes {'
               signing = '''    signingConfigs {
