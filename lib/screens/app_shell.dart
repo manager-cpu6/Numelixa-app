@@ -14,14 +14,30 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
   bool _booted = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     appNotificationRoute.addListener(_handleNotificationRoute);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    _syncNotifications();
+  }
+
+  Future<void> _syncNotifications() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isReady || !auth.isSignedIn) return;
+    final notifications = context.read<NotificationService>();
+    final permission = await notifications.requestPermission();
+    if (!mounted) return;
+    if (permission.isGranted) await notifications.syncToken(auth);
   }
 
   void _handleNotificationRoute() {
@@ -40,6 +56,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     appNotificationRoute.removeListener(_handleNotificationRoute);
     super.dispose();
   }
@@ -56,8 +73,12 @@ class _AppShellState extends State<AppShell> {
       if (!mounted) return;
       final notifications = context.read<NotificationService>();
       await notifications.initialize(auth: auth);
-      await notifications.requestPermission();
-      await notifications.syncToken(auth);
+      // Ask only once a real account is signed in; registration requires that
+      // account's mobile bearer token to associate the FCM token correctly.
+      if (auth.isSignedIn) {
+        final permission = await notifications.requestPermission();
+        if (permission.isGranted) await notifications.syncToken(auth);
+      }
     });
   }
 
@@ -175,7 +196,10 @@ class _AuthScreenState extends State<_AuthScreen> {
         await context.read<AuthService>().signInWithEmail(email: email, password: password);
       }
       if (!mounted) return;
-      await context.read<NotificationService>().syncToken(context.read<AuthService>());
+      final auth = context.read<AuthService>();
+      final notifications = context.read<NotificationService>();
+      final permission = await notifications.requestPermission();
+      if (permission.isGranted) await notifications.syncToken(auth);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
