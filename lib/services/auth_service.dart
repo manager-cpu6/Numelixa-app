@@ -17,7 +17,7 @@ class AuthService extends ChangeNotifier {
   bool get isValidating => _validating;
   String? get accessToken => _accessToken;
   Map<String, dynamic>? get user => _user;
-  bool get needsEmailVerification => isSignedIn && _user?['verified_at'] == null;
+  bool get needsEmailVerification => isSignedIn && _user != null && _user!.containsKey('verified_at') && _user!['verified_at'] == null;
 
   Future<void> restore() async {
     if (_ready) return;
