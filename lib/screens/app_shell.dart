@@ -346,9 +346,12 @@ class _EmailVerificationScreenState extends State<_EmailVerificationScreen> {
     }
     setState(() { _busy = true; _error = null; });
     try {
-      final ok = await context.read<AuthService>().verifyEmailCode(_code.text);
+      final auth = context.read<AuthService>();
+      final notifications = context.read<NotificationService>();
+      final ok = await auth.verifyEmailCode(_code.text);
       if (!ok) throw const ApiException('The verification code was not accepted.');
-      await context.read<NotificationService>().syncToken(context.read<AuthService>());
+      if (!mounted) return;
+      await notifications.syncToken(auth);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
@@ -744,7 +747,12 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
               Expanded(child: SelectableText((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700))),
               IconButton(tooltip: 'Copy number', icon: const Icon(Icons.copy_rounded), onPressed: () async {
                 final number = (order['phone'] ?? order['number'] ?? '').toString();
-                if (number.isNotEmpty) { await Clipboard.setData(ClipboardData(text: number)); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Number copied.'))); }
+                final messenger = ScaffoldMessenger.of(context);
+                if (number.isNotEmpty) {
+                  await Clipboard.setData(ClipboardData(text: number));
+                  if (!mounted) return;
+                  messenger.showSnackBar(const SnackBar(content: Text('Number copied.')));
+                }
               }),
             ]),
             const SizedBox(height: 14),
@@ -759,8 +767,10 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
             Row(children: [
               const Expanded(child: Text('SMS verification', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
               if (code.isNotEmpty) IconButton(tooltip: 'Copy SMS code', icon: const Icon(Icons.copy_rounded), onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 await Clipboard.setData(ClipboardData(text: code));
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SMS code copied.')));
+                if (!mounted) return;
+                messenger.showSnackBar(const SnackBar(content: Text('SMS code copied.')));
               }),
             ]),
             const SizedBox(height: 12),
@@ -771,7 +781,12 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
                   style: TextStyle(fontSize: code.isEmpty ? 15 : 32, letterSpacing: code.isEmpty ? 0 : 5, fontWeight: FontWeight.w900, color: code.isEmpty ? const Color(0xFF91A8C4) : AppTheme.mint)),
                 if (code.isNotEmpty) ...[
                   const SizedBox(height: 14),
-                  FilledButton.icon(onPressed: () async { await Clipboard.setData(ClipboardData(text: code)); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SMS code copied.'))); }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy verification code')),
+                  FilledButton.icon(onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (!mounted) return;
+                    messenger.showSnackBar(const SnackBar(content: Text('SMS code copied.')));
+                  }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy verification code')),
                 ],
               ]),
             ),
@@ -887,19 +902,21 @@ class _WalletPageState extends State<_WalletPage> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
         FilledButton(onPressed: () async {
+          final token = context.read<AuthService>().accessToken!;
+          final messenger = ScaffoldMessenger.of(context);
+          final navigator = Navigator.of(dialogContext);
           try {
-            final status = await NumelixaRepository().depositStatus(
-              token: context.read<AuthService>().accessToken!, orderId: orderId);
+            final status = await NumelixaRepository().depositStatus(token: token, orderId: orderId);
             final state = (status['status'] ?? 'pending').toString();
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+            messenger.showSnackBar(SnackBar(content: Text(
               state == 'paid' ? 'Payment confirmed. Your wallet is being updated.' : 'Payment status: $state. Check again after sending.')));
             if (state == 'paid') {
-              Navigator.pop(dialogContext);
+              navigator.pop();
               setState(_load);
             }
           } catch (_) {
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
+            if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
           }
         }, child: const Text('Check payment')),
       ],
@@ -946,7 +963,7 @@ class _WalletPageState extends State<_WalletPage> {
           return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Text('Coin package', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            DropdownButtonFormField<int>(value: _coins, decoration: const InputDecoration(),
+            DropdownButtonFormField<int>(initialValue: _coins, decoration: const InputDecoration(),
               items: const [
                 DropdownMenuItem(value: 36, child: Text('36 coins · \$0.77')),
                 DropdownMenuItem(value: 75, child: Text('75 coins · \$1.65')),
@@ -956,7 +973,7 @@ class _WalletPageState extends State<_WalletPage> {
             const SizedBox(height: 12),
             const Text('Cryptocurrency', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            DropdownButtonFormField<String>(value: coin, decoration: const InputDecoration(),
+            DropdownButtonFormField<String>(initialValue: coin, decoration: const InputDecoration(),
               items: assets.map((a) => DropdownMenuItem<String>(
                 value: (a['coin'] ?? '').toString(),
                 child: Text('${a['name'] ?? a['coin']} (${a['coin']})'),
@@ -965,7 +982,7 @@ class _WalletPageState extends State<_WalletPage> {
             const SizedBox(height: 12),
             const Text('Network', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            DropdownButtonFormField<String>(value: networks.any((n) => n['network'] == _network) ? _network : null,
+            DropdownButtonFormField<String>(initialValue: networks.any((n) => n['network'] == _network) ? _network : null,
               decoration: const InputDecoration(),
               items: networks.map((n) => DropdownMenuItem<String>(value: (n['network'] ?? '').toString(),
                 child: Text((n['networkName'] ?? n['network'] ?? '').toString()))).toList(),
