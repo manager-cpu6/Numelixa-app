@@ -102,7 +102,7 @@ class AuthService extends ChangeNotifier {
     }
     final success = await LocalAuthentication().authenticate(
       localizedReason: 'Unlock Numelixa',
-      options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+      options: const AuthenticationOptions(biometricOnly: false, stickyAuth: true),
     );
     if (success) {
       _biometricLocked = false;
