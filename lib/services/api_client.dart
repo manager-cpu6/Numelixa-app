@@ -40,6 +40,19 @@ class ApiClient {
   static final Future<String> _deviceLabel = DeviceInfoPlugin().androidInfo.then((info) {
     final maker = info.manufacturer.trim();
     final model = info.model.trim();
+    final product = info.device.toLowerCase();
+    if (maker.toLowerCase() == 'samsung') {
+      const galaxyModels = <String, String>{
+        'a15': 'Samsung Galaxy A15', 'a16': 'Samsung Galaxy A16',
+        'a14': 'Samsung Galaxy A14', 'a05': 'Samsung Galaxy A05',
+        'a06': 'Samsung Galaxy A06', 'a25': 'Samsung Galaxy A25',
+        'a35': 'Samsung Galaxy A35', 'a55': 'Samsung Galaxy A55',
+        's24': 'Samsung Galaxy S24', 's25': 'Samsung Galaxy S25',
+      };
+      for (final entry in galaxyModels.entries) {
+        if (product.contains(entry.key) || model.toLowerCase().contains(entry.key)) return entry.value;
+      }
+    }
     return [maker, model].where((part) => part.isNotEmpty).join(' ');
   }).catchError((_) => 'Android device');
 
