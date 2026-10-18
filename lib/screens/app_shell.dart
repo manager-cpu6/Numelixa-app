@@ -5,6 +5,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/numelixa_repository.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -493,7 +494,8 @@ class _AccountPage extends StatelessWidget {
       Text((user['email'] ?? '').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 22),
       const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Secure API session'), subtitle: Text('Bearer credential verified by Numelixa.'))),
-      const Card(child: ListTile(leading: Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: Text('Help & support'), subtitle: Text('support.numelixa.com'))),
+      Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
+      Card(child: ListTile(leading: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyan), title: const Text('Notification permissions'), subtitle: const Text('Manage Android notification settings'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => context.read<NotificationService>().openNotificationSettings())),
       const SizedBox(height: 18),
       OutlinedButton.icon(
         onPressed: () async { await context.read<AuthService>().logout(); },
