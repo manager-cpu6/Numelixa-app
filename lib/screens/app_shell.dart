@@ -212,7 +212,10 @@ class _AuthScreenState extends State<_AuthScreen> {
     try {
       await context.read<AuthService>().signInWithGoogle();
       if (!mounted) return;
-      await context.read<NotificationService>().syncToken(context.read<AuthService>());
+      final auth = context.read<AuthService>();
+      final notifications = context.read<NotificationService>();
+      final permission = await notifications.requestPermission();
+      if (permission.isGranted) await notifications.syncToken(auth);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
@@ -252,7 +255,12 @@ class _AuthScreenState extends State<_AuthScreen> {
   Future<void> _apiKeyLogin() async {
     try {
       await context.read<AuthService>().signInWithApiKey(_apiKey.text);
-      if (mounted) await context.read<NotificationService>().syncToken(context.read<AuthService>());
+      if (mounted) {
+        final auth = context.read<AuthService>();
+        final notifications = context.read<NotificationService>();
+        final permission = await notifications.requestPermission();
+        if (permission.isGranted) await notifications.syncToken(auth);
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
