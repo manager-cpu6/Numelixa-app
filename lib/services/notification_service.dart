@@ -29,9 +29,14 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
   final ApiClient _api = ApiClient();
   bool _initialized = false;
+  final ValueNotifier<String> registrationStatus = ValueNotifier<String>('Notifications are not registered yet.');
 
   Future<void> initialize({required AuthService auth}) async {
-    if (!firebaseReady || _initialized) return;
+    if (!firebaseReady) {
+      registrationStatus.value = 'Firebase is not configured in this app build.';
+      return;
+    }
+    if (_initialized) return;
     _messaging ??= FirebaseMessaging.instance;
     _initialized = true;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -92,11 +97,30 @@ class NotificationService {
   Future<bool> openNotificationSettings() async => openAppSettings();
 
   Future<void> syncToken(AuthService auth) async {
-    if (!firebaseReady || !auth.isSignedIn) return;
-    final settings = await _fcm.getNotificationSettings();
-    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
-    final token = await _fcm.getToken();
-    if (token != null && token.isNotEmpty) await _register(token, auth);
+    if (!firebaseReady) {
+      registrationStatus.value = 'Firebase is not configured in this app build.';
+      return;
+    }
+    if (!auth.isSignedIn) {
+      registrationStatus.value = 'Sign in to link notifications to your account.';
+      return;
+    }
+    try {
+      final settings = await _fcm.getNotificationSettings();
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        registrationStatus.value = 'Notifications are blocked. Enable them in Android settings.';
+        return;
+      }
+      final token = await _fcm.getToken();
+      if (token == null || token.isEmpty) {
+        registrationStatus.value = 'Firebase did not provide a device token. Retry after checking your connection.';
+        return;
+      }
+      await _register(token, auth);
+    } catch (error) {
+      registrationStatus.value = 'Could not register this device for notifications. Retry when online.';
+      debugPrint('FCM token sync failed: $error');
+    }
   }
 
   Future<void> _register(String token, AuthService auth) async {
@@ -108,7 +132,9 @@ class NotificationService {
       if (result['registered'] != true || result['linked'] != true) {
         throw const ApiException('The server did not confirm device registration and user association.');
       }
+      registrationStatus.value = 'This device is linked to your Numelixa account.';
     } on ApiException catch (error) {
+      registrationStatus.value = 'Device registration failed: ${error.message}';
       debugPrint('FCM registration not linked: ${error.message}');
     }
   }
