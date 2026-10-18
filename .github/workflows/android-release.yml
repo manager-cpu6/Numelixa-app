@@ -30,6 +30,16 @@ jobs:
           flutter create --platforms=android --org com.numelixa --project-name app .
           python3 - <<'PY'
           from pathlib import Path
+          candidates = list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt')) + list(Path('android/app/src/main/java').rglob('MainActivity.java'))
+          for activity in candidates:
+              text = activity.read_text()
+              if activity.suffix == '.kt' and 'FlutterActivity' in text and 'FlutterFragmentActivity' not in text:
+                  text = text.replace('import io.flutter.embedding.android.FlutterActivity', 'import io.flutter.embedding.android.FlutterFragmentActivity')
+                  text = text.replace('FlutterActivity()', 'FlutterFragmentActivity()')
+                  activity.write_text(text)
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
