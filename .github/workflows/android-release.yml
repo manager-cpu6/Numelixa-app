@@ -109,8 +109,23 @@ jobs:
             exit 1
           fi
           test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
-          # GitHub Secrets can contain copied line breaks; remove whitespace before decoding.
-          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 --decode > android/release-key.jks
+          # Normalize whitespace and validate without ever printing secret content.
+          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' > /tmp/keystore.base64
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          import sys
+          raw = Path('/tmp/keystore.base64').read_bytes()
+          invalid = sum(c not in b'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=' for c in raw)
+          print(f'Keystore Base64 diagnostics: characters={len(raw)}, invalid_characters={invalid}, length_mod_4={len(raw) % 4}')
+          try:
+              decoded = base64.b64decode(raw, validate=True)
+          except Exception as exc:
+              raise SystemExit(f'ANDROID_KEYSTORE_BASE64 is malformed after GitHub provides it ({type(exc).__name__}). Re-copy the complete base64 file into this exact repository Actions secret.')
+          if not decoded:
+              raise SystemExit('ANDROID_KEYSTORE_BASE64 decoded to an empty file.')
+          Path('android/release-key.jks').write_bytes(decoded)
+          PY
           if ! keytool -list -keystore android/release-key.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
             rm -f android/release-key.jks
             echo "::error::Signing keystore could not be opened. Recreate ANDROID_KEYSTORE_BASE64 from the original .jks file and verify the keystore password and alias."
