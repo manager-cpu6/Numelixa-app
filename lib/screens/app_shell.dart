@@ -609,7 +609,7 @@ class _CatalogPageState extends State<_CatalogPage> {
       'am':'amazon','fb':'facebook','ig':'instagram','tt':'tiktok','tw':'x',
       'ms':'microsoft','ap':'apple','ds':'discord','sn':'snapchat','li':'linkedin',
       'pp':'paypal','rd':'reddit','sp':'spotify','nf':'netflix','vb':'viber',
-      'sg':'signal','gm':'gmail','yt':'youtube','in':'linkedin','oi':'openai',
+      'sg':'signal','gm':'gmail','yt':'youtube','in':'linkedin',
     };
     final key = aliases[rawKey] ?? rawKey;
     const logos = <String, String>{
