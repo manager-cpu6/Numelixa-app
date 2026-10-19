@@ -598,24 +598,6 @@ class _CatalogPageState extends State<_CatalogPage> {
         .join(' ');
   }
 
-  bool _hasServiceLogo(Map<String, dynamic> service) {
-    final key = _serviceKey(service);
-    if (key.isEmpty) return false;
-    const known = <String>{
-      'wa','whatsapp','tg','telegram','fb','facebook','ig','instagram','tt','tiktok',
-      'googlevoice','google','gmail','youtube','microsoft','microsoftteams','discord',
-      'snapchat','reddit','netflix','amazon','apple','x','twitter','spotify','linkedin',
-      'pinterest','twitch','steam','uber','airbnb','yahoo','signal','viber','wechat','line',
-      'kakaotalk','imo','paypal','binance','aliexpress','ebay','tinder','bumble','grab','bolt',
-      'olx','shopee','rakuten','dropbox','slack','zoom','notion','canva','figma','openai',
-      'chatgpt','tiktoklite','capcut','threads','instagramlite','facebooklite','vk','yandex',
-      'protonmail','youtubemusic','hulu','disneyplus','max','paramountplus','booking',
-      'bookingcom','expedia','agoda','steamcommunity','playstation','xbox','epicgames','roblox',
-      'coinbase','bybit','okx','kucoin','bitget','binanceus',
-    };
-    return known.any((brand) => key == brand || key.startsWith(brand));
-  }
-
   Widget _serviceLogo(Map<String, dynamic> service) {
     final key = _serviceKey(service);
     const logos = <String, String>{
