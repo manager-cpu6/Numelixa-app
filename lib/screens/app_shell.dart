@@ -570,7 +570,8 @@ class _CatalogPageState extends State<_CatalogPage> {
 
   String _serviceKey(Map<String, dynamic> service) =>
       (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? '')
-          .toString().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+          .toString().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')
+          .replaceFirst(RegExp(r'\\d+$'), '');
 
   String _serviceName(Map<String, dynamic> service) {
     final raw = (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString().trim();
@@ -595,6 +596,24 @@ class _CatalogPageState extends State<_CatalogPage> {
         .split(RegExp(r'\s+')).where((part) => part.isNotEmpty)
         .map((part) => part.length <= 2 ? part.toUpperCase() : '${part[0].toUpperCase()}${part.substring(1)}')
         .join(' ');
+  }
+
+  bool _hasServiceLogo(Map<String, dynamic> service) {
+    final key = _serviceKey(service);
+    if (key.isEmpty) return false;
+    const known = <String>{
+      'wa','whatsapp','tg','telegram','fb','facebook','ig','instagram','tt','tiktok',
+      'googlevoice','google','gmail','youtube','microsoft','microsoftteams','discord',
+      'snapchat','reddit','netflix','amazon','apple','x','twitter','spotify','linkedin',
+      'pinterest','twitch','steam','uber','airbnb','yahoo','signal','viber','wechat','line',
+      'kakaotalk','imo','paypal','binance','aliexpress','ebay','tinder','bumble','grab','bolt',
+      'olx','shopee','rakuten','dropbox','slack','zoom','notion','canva','figma','openai',
+      'chatgpt','tiktoklite','capcut','threads','instagramlite','facebooklite','vk','yandex',
+      'protonmail','youtubemusic','hulu','disneyplus','max','paramountplus','booking',
+      'bookingcom','expedia','agoda','steamcommunity','playstation','xbox','epicgames','roblox',
+      'coinbase','bybit','okx','kucoin','bitget','binanceus',
+    };
+    return known.any((brand) => key == brand || key.startsWith(brand));
   }
 
   Widget _serviceLogo(Map<String, dynamic> service) {
@@ -662,8 +681,10 @@ class _CatalogPageState extends State<_CatalogPage> {
       if (key == entry.key || key.startsWith(entry.key)) { domain = entry.value; break; }
     }
     domain ??= key.isEmpty ? 'example.com' : '$key.com';
+    // Use a branded Simple Icons asset where available, with a larger
+    // official-site favicon as fallback for supported brands.
     final imageUrl = slug == null
-        ? 'https://www.google.com/s2/favicons?domain=$domain&sz=64'
+        ? 'https://www.google.com/s2/favicons?domain=$domain&sz=128'
         : 'https://cdn.simpleicons.org/$slug';
     return CircleAvatar(
       radius: 23,
@@ -683,7 +704,13 @@ class _CatalogPageState extends State<_CatalogPage> {
       if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
       if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
       final raw = snapshot.data?['services'];
-      final services = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+      final services = raw is List
+          ? raw.whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              // Hide unknown services rather than display a broken/missing logo.
+              .where(_hasServiceLogo)
+              .toList()
+          : <Map<String, dynamic>>[];
       if (services.isEmpty) return _RetryState(message: 'No live services are available right now.', onRetry: () => setState(_load));
       final filteredServices = services.where((service) {
         final query = _search.trim().toLowerCase();
