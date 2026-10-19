@@ -657,9 +657,11 @@ class _CatalogPageState extends State<_CatalogPage> {
       'vk': 'vk.com', 'yandex': 'yandex.com', 'protonmail': 'proton.me',
       'coinbase': 'coinbase.com', 'bybit': 'bybit.com', 'okx': 'okx.com',
     };
-    final domain = knownDomains.entries
-        .where((entry) => key == entry.key || key.startsWith(entry.key))
-        .map((entry) => entry.value).firstOrNull ?? (key.isEmpty ? 'example.com' : '$key.com');
+    String? domain;
+    for (final entry in knownDomains.entries) {
+      if (key == entry.key || key.startsWith(entry.key)) { domain = entry.value; break; }
+    }
+    domain ??= key.isEmpty ? 'example.com' : '$key.com';
     final imageUrl = slug == null
         ? 'https://www.google.com/s2/favicons?domain=$domain&sz=64'
         : 'https://cdn.simpleicons.org/$slug';
@@ -895,9 +897,11 @@ class _OrdersPageState extends State<_OrdersPage> {
     for (final entry in logos.entries) {
       if (name == entry.key || name.startsWith(entry.key)) { slug = entry.value; break; }
     }
-    final domain = domains.entries
-        .where((entry) => name == entry.key || name.startsWith(entry.key))
-        .map((entry) => entry.value).firstOrNull ?? (name.isEmpty ? 'example.com' : '$name.com');
+    String? domain;
+    for (final entry in domains.entries) {
+      if (name == entry.key || name.startsWith(entry.key)) { domain = entry.value; break; }
+    }
+    domain ??= name.isEmpty ? 'example.com' : '$name.com';
     final imageUrl = slug == null
         ? 'https://www.google.com/s2/favicons?domain=$domain&sz=64'
         : 'https://cdn.simpleicons.org/$slug';
