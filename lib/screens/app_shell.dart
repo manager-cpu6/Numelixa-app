@@ -135,15 +135,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           SizedBox(width: 9),
           Text('Numelixa', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -.5)),
         ]),
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: (_) => const _NotificationsPage())),
-            icon: const Icon(Icons.notifications_none_rounded),
-            tooltip: 'Notifications',
-          ),
-          const SizedBox(width: 6),
-        ],
       ),
       body: SafeArea(child: IndexedStack(index: _index, children: pages)),
       bottomNavigationBar: NavigationBar(
@@ -609,39 +600,77 @@ class _CatalogPageState extends State<_CatalogPage> {
   Widget _serviceLogo(Map<String, dynamic> service) {
     final key = _serviceKey(service);
     const logos = <String, String>{
-      // Provider catalogs commonly use short activation codes rather than
-      // brand names. Map those aliases before falling back to the generic icon.
       'wa': 'whatsapp/25D366', 'whatsapp': 'whatsapp/25D366',
       'tg': 'telegram/26A5E4', 'telegram': 'telegram/26A5E4',
       'fb': 'facebook/0866FF', 'facebook': 'facebook/0866FF',
       'ig': 'instagram/E4405F', 'instagram': 'instagram/E4405F',
       'tt': 'tiktok/FFFFFF', 'tiktok': 'tiktok/FFFFFF',
-      'googlevoice': 'googlevoice/4285F4',
-      'google': 'google/4285F4', 'gmail': 'gmail/EA4335', 'youtube': 'youtube/FF0033',
-      'microsoft': 'microsoft/737373', 'discord': 'discord/5865F2',
-      'snapchat': 'snapchat/FFFC00', 'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
-      'amazon': 'amazon/FF9900', 'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF',
-      'twitter': 'x/FFFFFF', 'spotify': 'spotify/1DB954', 'linkedin': 'linkedin/0A66C2',
-      'pinterest': 'pinterest/BD081C', 'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF',
+      'googlevoice': 'googlevoice/4285F4', 'google': 'google/4285F4',
+      'gmail': 'gmail/EA4335', 'youtube': 'youtube/FF0033',
+      'microsoft': 'microsoft/737373', 'microsoftteams': 'microsoftteams/6264A7',
+      'discord': 'discord/5865F2', 'snapchat': 'snapchat/FFFC00',
+      'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
+      'amazon': 'amazon/FF9900', 'apple': 'apple/FFFFFF',
+      'x': 'x/FFFFFF', 'twitter': 'x/FFFFFF', 'spotify': 'spotify/1DB954',
+      'linkedin': 'linkedin/0A66C2', 'pinterest': 'pinterest/BD081C',
+      'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF',
       'uber': 'uber/FFFFFF', 'airbnb': 'airbnb/FF5A5F', 'yahoo': 'yahoo/6001D2',
       'signal': 'signal/3A76F0', 'viber': 'viber/7360F2', 'wechat': 'wechat/07C160',
       'line': 'line/00C300', 'kakaotalk': 'kakaotalk/FFCD00', 'paypal': 'paypal/003087',
-      'binance': 'binance/F0B90B', 'ebay': 'ebay/E53238', 'tinder': 'tinder/FF6B6B',
-      'bumble': 'bumble/FFC629', 'grab': 'grab/00B14F', 'bolt': 'bolt/34D186', 'olx': 'olx/6E0AD6',
+      'binance': 'binance/F0B90B', 'aliexpress': 'aliexpress/FF4747', 'ebay': 'ebay/E53238',
+      'tinder': 'tinder/FF6B6B', 'bumble': 'bumble/FFC629', 'grab': 'grab/00B14F',
+      'bolt': 'bolt/34D186', 'olx': 'olx/6E0AD6', 'shopee': 'shopee/EE4D2D',
+      'rakuten': 'rakuten/BF0000', 'dropbox': 'dropbox/0061FF', 'slack': 'slack/4A154B',
+      'zoom': 'zoom/0B5CFF', 'notion': 'notion/FFFFFF', 'canva': 'canva/00C4CC',
+      'figma': 'figma/F24E1E', 'openai': 'openai/FFFFFF', 'chatgpt': 'openai/FFFFFF',
+      'tiktoklite': 'tiktok/FFFFFF', 'capcut': 'capcut/FFFFFF', 'threads': 'threads/FFFFFF',
+      'instagramlite': 'instagram/E4405F', 'facebooklite': 'facebook/0866FF',
+      'vk': 'vk/0077FF', 'yandex': 'yandex/FF0000', 'protonmail': 'protonmail/6D4AFF',
+      'youtubemusic': 'youtubemusic/FF0033', 'hulu': 'hulu/1CE783',
+      'disneyplus': 'disneyplus/113CCF', 'max': 'max/002BE7', 'paramountplus': 'paramountplus/0064FF',
+      'booking': 'bookingdotcom/003B95', 'bookingcom': 'bookingdotcom/003B95',
+      'expedia': 'expedia/191E3B', 'agoda': 'agoda/ED1C24',
+      'steamcommunity': 'steam/FFFFFF', 'playstation': 'playstation/003791',
+      'xbox': 'xbox/107C10', 'epicgames': 'epicgames/FFFFFF', 'roblox': 'roblox/FFFFFF',
+      'coinbase': 'coinbase/0052FF', 'bybit': 'bybit/F7A600', 'okx': 'okx/FFFFFF',
+      'kucoin': 'kucoin/23AF91', 'bitget': 'bitget/00F0FF', 'binanceus': 'binance/ F0B90B',
     };
     String? slug;
     for (final entry in logos.entries) {
-      if (key == entry.key || key.startsWith(entry.key)) { slug = entry.value; break; }
+      if (key == entry.key || key.startsWith(entry.key)) { slug = entry.value.replaceAll(' ', ''); break; }
     }
+    final knownDomains = <String, String>{
+      'whatsapp': 'whatsapp.com', 'telegram': 'telegram.org', 'facebook': 'facebook.com',
+      'instagram': 'instagram.com', 'tiktok': 'tiktok.com', 'google': 'google.com',
+      'gmail': 'mail.google.com', 'youtube': 'youtube.com', 'discord': 'discord.com',
+      'snapchat': 'snapchat.com', 'reddit': 'reddit.com', 'netflix': 'netflix.com',
+      'amazon': 'amazon.com', 'apple': 'apple.com', 'spotify': 'spotify.com',
+      'linkedin': 'linkedin.com', 'pinterest': 'pinterest.com', 'twitch': 'twitch.tv',
+      'steam': 'steampowered.com', 'uber': 'uber.com', 'airbnb': 'airbnb.com',
+      'yahoo': 'yahoo.com', 'signal': 'signal.org', 'viber': 'viber.com',
+      'wechat': 'wechat.com', 'line': 'line.me', 'paypal': 'paypal.com',
+      'binance': 'binance.com', 'ebay': 'ebay.com', 'tinder': 'tinder.com',
+      'bumble': 'bumble.com', 'shopee': 'shopee.com', 'dropbox': 'dropbox.com',
+      'slack': 'slack.com', 'zoom': 'zoom.us', 'notion': 'notion.so',
+      'canva': 'canva.com', 'figma': 'figma.com', 'openai': 'openai.com',
+      'chatgpt': 'chatgpt.com', 'capcut': 'capcut.com', 'threads': 'threads.net',
+      'vk': 'vk.com', 'yandex': 'yandex.com', 'protonmail': 'proton.me',
+      'coinbase': 'coinbase.com', 'bybit': 'bybit.com', 'okx': 'okx.com',
+    };
+    final domain = knownDomains.entries
+        .where((entry) => key == entry.key || key.startsWith(entry.key))
+        .map((entry) => entry.value).firstOrNull ?? (key.isEmpty ? 'example.com' : '$key.com');
+    final imageUrl = slug == null
+        ? 'https://www.google.com/s2/favicons?domain=$domain&sz=64'
+        : 'https://cdn.simpleicons.org/$slug';
     return CircleAvatar(
-      radius: 23, backgroundColor: const Color(0xFF102844),
-      child: slug == null
-          ? const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 25)
-          : Padding(
-              padding: const EdgeInsets.all(9),
-              child: Image.network('https://cdn.simpleicons.org/$slug', fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 25)),
-            ),
+      radius: 23,
+      backgroundColor: const Color(0xFF102844),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Image.network(imageUrl, fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Icon(Icons.language_rounded, color: AppTheme.cyan, size: 25)),
+      ),
     );
   }
 
@@ -838,23 +867,48 @@ class _OrdersPageState extends State<_OrdersPage> {
       'discord': 'discord/5865F2', 'snapchat': 'snapchat/FFFC00',
       'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
       'amazon': 'amazon/FF9900', 'microsoft': 'microsoft/737373',
-      'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF',
-      'twitter': 'x/FFFFFF', 'uber': 'uber/FFFFFF',
-      'airbnb': 'airbnb/FF5A5F', 'spotify': 'spotify/1DB954',
+      'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF', 'twitter': 'x/FFFFFF',
+      'uber': 'uber/FFFFFF', 'airbnb': 'airbnb/FF5A5F', 'spotify': 'spotify/1DB954',
       'linkedin': 'linkedin/0A66C2', 'pinterest': 'pinterest/BD081C',
-      'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF',
+      'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF', 'signal': 'signal/3A76F0',
+      'viber': 'viber/7360F2', 'wechat': 'wechat/07C160', 'line': 'line/00C300',
+      'paypal': 'paypal/003087', 'binance': 'binance/F0B90B', 'ebay': 'ebay/E53238',
+      'tinder': 'tinder/FF6B6B', 'bumble': 'bumble/FFC629', 'slack': 'slack/4A154B',
+      'zoom': 'zoom/0B5CFF', 'notion': 'notion/FFFFFF', 'canva': 'canva/00C4CC',
+      'figma': 'figma/F24E1E', 'openai': 'openai/FFFFFF', 'chatgpt': 'openai/FFFFFF',
+    };
+    const domains = <String, String>{
+      'whatsapp': 'whatsapp.com', 'facebook': 'facebook.com', 'instagram': 'instagram.com',
+      'telegram': 'telegram.org', 'tiktok': 'tiktok.com', 'google': 'google.com',
+      'discord': 'discord.com', 'snapchat': 'snapchat.com', 'reddit': 'reddit.com',
+      'netflix': 'netflix.com', 'amazon': 'amazon.com', 'microsoft': 'microsoft.com',
+      'apple': 'apple.com', 'spotify': 'spotify.com', 'linkedin': 'linkedin.com',
+      'pinterest': 'pinterest.com', 'twitch': 'twitch.tv', 'steam': 'steampowered.com',
+      'signal': 'signal.org', 'viber': 'viber.com', 'wechat': 'wechat.com',
+      'line': 'line.me', 'paypal': 'paypal.com', 'binance': 'binance.com',
+      'ebay': 'ebay.com', 'tinder': 'tinder.com', 'bumble': 'bumble.com',
+      'slack': 'slack.com', 'zoom': 'zoom.us', 'notion': 'notion.so',
+      'canva': 'canva.com', 'figma': 'figma.com', 'openai': 'openai.com',
+      'chatgpt': 'chatgpt.com',
     };
     String? slug;
     for (final entry in logos.entries) {
-      if (name == entry.key || name.contains(entry.key)) { slug = entry.value; break; }
+      if (name == entry.key || name.startsWith(entry.key)) { slug = entry.value; break; }
     }
+    final domain = domains.entries
+        .where((entry) => name == entry.key || name.startsWith(entry.key))
+        .map((entry) => entry.value).firstOrNull ?? (name.isEmpty ? 'example.com' : '$name.com');
+    final imageUrl = slug == null
+        ? 'https://www.google.com/s2/favicons?domain=$domain&sz=64'
+        : 'https://cdn.simpleicons.org/$slug';
     return CircleAvatar(
       radius: 20,
       backgroundColor: const Color(0xFF102844),
-      child: slug == null
-          ? const Icon(Icons.apps_rounded, color: AppTheme.cyan)
-          : Image.network('https://cdn.simpleicons.org/$slug', width: 23, height: 23,
-              errorBuilder: (_, __, ___) => const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 22)),
+      child: Padding(
+        padding: const EdgeInsets.all(7),
+        child: Image.network(imageUrl, width: 26, height: 26, fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Icon(Icons.language_rounded, color: AppTheme.cyan, size: 22)),
+      ),
     );
   }
 
