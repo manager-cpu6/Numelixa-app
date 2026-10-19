@@ -674,10 +674,14 @@ class _CatalogPageState extends State<_CatalogPage> {
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Image.network(imageUrl, fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Center(
-            child: Text(
-              _serviceName(service).trim().isEmpty ? '?' : _serviceName(service).trim().characters.first.toUpperCase(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
+          errorBuilder: (_, __, ___) => Image.network(
+            'https://www.google.com/s2/favicons?domain=$domain&sz=128',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Center(
+              child: Text(
+                _serviceName(service).trim().isEmpty ? '?' : _serviceName(service).trim().characters.first.toUpperCase(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
+              ),
             ),
           )),
       ),
