@@ -692,7 +692,12 @@ class _CatalogPageState extends State<_CatalogPage> {
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Image.network(imageUrl, fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(Icons.language_rounded, color: AppTheme.cyan, size: 25)),
+          errorBuilder: (_, __, ___) => Center(
+            child: Text(
+              _serviceName(service).trim().isEmpty ? '?' : _serviceName(service).trim().characters.first.toUpperCase(),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+          )),
       ),
     );
   }
@@ -707,8 +712,6 @@ class _CatalogPageState extends State<_CatalogPage> {
       final services = raw is List
           ? raw.whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
-              // Hide unknown services rather than display a broken/missing logo.
-              .where(_hasServiceLogo)
               .toList()
           : <Map<String, dynamic>>[];
       if (services.isEmpty) return _RetryState(message: 'No live services are available right now.', onRetry: () => setState(_load));
