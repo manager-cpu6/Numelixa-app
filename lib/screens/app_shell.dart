@@ -603,7 +603,15 @@ class _CatalogPageState extends State<_CatalogPage> {
   }
 
   Widget _serviceLogo(Map<String, dynamic> service) {
-    final key = _serviceKey(service);
+    final rawKey = _serviceKey(service);
+    const aliases = <String, String>{
+      'wa':'whatsapp','tg':'telegram','go':'google','op':'openai','oi':'openai',
+      'am':'amazon','fb':'facebook','ig':'instagram','tt':'tiktok','tw':'x',
+      'ms':'microsoft','ap':'apple','ds':'discord','sn':'snapchat','li':'linkedin',
+      'pp':'paypal','rd':'reddit','sp':'spotify','nf':'netflix','vb':'viber',
+      'sg':'signal','gm':'gmail','yt':'youtube','in':'linkedin','oi':'openai',
+    };
+    final key = aliases[rawKey] ?? rawKey;
     const logos = <String, String>{
       'wa': 'whatsapp/25D366', 'whatsapp': 'whatsapp/25D366',
       'tg': 'telegram/26A5E4', 'telegram': 'telegram/26A5E4',
@@ -881,7 +889,14 @@ class _OrdersPageState extends State<_OrdersPage> {
   }
 
   Widget _platformLogo(String service) {
-    final name = service.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final rawName = service.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    const aliases = <String, String>{
+      'wa':'whatsapp','tg':'telegram','go':'google','op':'openai','oi':'openai',
+      'am':'amazon','fb':'facebook','ig':'instagram','tt':'tiktok','tw':'x',
+      'ms':'microsoft','ap':'apple','ds':'discord','sn':'snapchat','li':'linkedin',
+      'pp':'paypal','rd':'reddit','sp':'spotify','nf':'netflix','vb':'viber','sg':'signal',
+    };
+    final name = aliases[rawName] ?? rawName;
     const logos = <String, String>{
       'whatsapp': 'whatsapp/25D366', 'facebook': 'facebook/0866FF',
       'instagram': 'instagram/E4405F', 'telegram': 'telegram/26A5E4',
