@@ -71,12 +71,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     final route = appNotificationRoute.value;
     if (!mounted || route == null) return;
     appNotificationRoute.value = null;
-    if (route == 'orders') {
+    if (route.startsWith('login_approval:')) {
+      final approvalId = route.substring('login_approval:'.length).trim();
+      if (approvalId.isNotEmpty) {
+        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _LoginApprovalPage(approvalId: approvalId)));
+      }
+    } else if (route == 'orders') {
       setState(() => _index = 2);
     } else if (route == 'wallet') {
       setState(() => _index = 3);
-    }
-    else {
+    } else {
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _NotificationsPage()));
     }
   }
@@ -1944,4 +1948,80 @@ class _RetryState extends StatelessWidget {
       OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Try again')),
     ]),
   ));
+}
+
+
+class _LoginApprovalPage extends StatefulWidget {
+  const _LoginApprovalPage({required this.approvalId});
+  final String approvalId;
+  @override
+  State<_LoginApprovalPage> createState() => _LoginApprovalPageState();
+}
+
+class _LoginApprovalPageState extends State<_LoginApprovalPage> {
+  late Future<Map<String, dynamic>> _future;
+  bool _busy = false;
+  String? _message;
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+  Future<Map<String, dynamic>> _load() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isSignedIn || auth.accessToken == null) throw const ApiException('Sign in on this device to review this request.');
+    final response = await ApiClient().get('/api/auth/login/approval?id=${Uri.encodeQueryComponent(widget.approvalId)}', accessToken: auth.accessToken);
+    if (response['ok'] != true || response['approval'] is! Map) throw ApiException((response['error'] ?? 'This login request is unavailable.').toString());
+    return Map<String, dynamic>.from(response['approval'] as Map);
+  }
+  Future<void> _answer(bool approve) async {
+    if (_busy) return;
+    setState(() { _busy = true; _message = null; });
+    try {
+      final auth = context.read<AuthService>();
+      final response = await ApiClient().post('/api/auth/login/approval', accessToken: auth.accessToken, body: {'approvalId': widget.approvalId, 'approve': approve});
+      if (response['ok'] != true) throw ApiException((response['error'] ?? 'Unable to submit your decision.').toString());
+      if (!mounted) return;
+      setState(() { _message = approve ? 'Approved. If this was your sign-in, return to the browser to continue.' : 'Denied. The browser sign-in request has been blocked.'; _future = _load(); });
+    } catch (e) {
+      if (mounted) setState(() => _message = e is ApiException ? e.message : 'Unable to submit your decision. Please try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Extra Security')),
+    body: SafeArea(child: FutureBuilder<Map<String, dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(snapshot.error.toString(), textAlign: TextAlign.center)));
+        final approval = snapshot.data!;
+        final pending = approval['status'] == 'pending';
+        return ListView(padding: const EdgeInsets.all(20), children: [
+          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: const Color(0xFF0B1C33), border: Border.all(color: const Color(0xFF23415F))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.shield_outlined, color: Color(0xFF00D9FF), size: 36),
+            const SizedBox(height: 14),
+            const Text('Is this you?', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            const Text('A browser is requesting access to your Numelixa account. Only approve if you started this sign-in.', style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
+            const SizedBox(height: 18),
+            _securityDetail('DEVICE', (approval['device'] ?? 'Browser').toString()),
+            _securityDetail('BROWSER', (approval['browser'] ?? 'Browser').toString()),
+            _securityDetail('LOCATION', [approval['city'], approval['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ').isEmpty ? 'Location unavailable' : [approval['city'], approval['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ')),
+            _securityDetail('STATUS', (approval['status'] ?? 'unknown').toString().toUpperCase()),
+          ]),
+          if (_message != null) Padding(padding: const EdgeInsets.only(top: 14), child: Text(_message!, style: const TextStyle(color: Color(0xFF00D9FF)))),
+          const SizedBox(height: 16),
+          FilledButton.icon(onPressed: _busy || !pending ? null : () => _answer(true), icon: const Icon(Icons.check_circle_outline), label: Text(_busy ? 'Please wait…' : "Yes, it's me"), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00D9FF), foregroundColor: const Color(0xFF031022), padding: const EdgeInsets.symmetric(vertical: 16))),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(onPressed: _busy || !pending ? null : () => _answer(false), icon: const Icon(Icons.cancel_outlined), label: const Text('No, deny login'), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFFF7D91), padding: const EdgeInsets.symmetric(vertical: 16))),
+          const SizedBox(height: 12),
+          const Text('If you did not start this login, choose “No, deny login”.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.4)),
+        ]);
+      },
+    )),
+  );
+  Widget _securityDetail(String label, String value) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 88, child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF7185A5), fontWeight: FontWeight.w700))), Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)))]));
 }
