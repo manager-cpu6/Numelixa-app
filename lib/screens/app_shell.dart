@@ -669,9 +669,9 @@ class _CatalogPageState extends State<_CatalogPage> {
     domain ??= key.isEmpty ? 'example.com' : '$key.com';
     // Use a branded Simple Icons asset where available, with a larger
     // official-site favicon as fallback for supported brands.
-    final imageUrl = slug == null
-        ? 'https://www.google.com/s2/favicons?domain=$domain&sz=128'
-        : 'https://cdn.simpleicons.org/$slug';
+    // Prefer the resolved official brand site's favicon: it avoids mismatched third-party
+    // icon slugs for short provider IDs (wa, go, am, op, etc.).
+    final imageUrl = 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
     return CircleAvatar(
       radius: 23,
       backgroundColor: const Color(0xFF102844),
@@ -679,7 +679,7 @@ class _CatalogPageState extends State<_CatalogPage> {
         padding: const EdgeInsets.all(8),
         child: Image.network(imageUrl, fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => Image.network(
-            'https://www.google.com/s2/favicons?domain=$domain&sz=128',
+            slug == null ? 'https://cdn.simpleicons.org/${key.isEmpty ? 'app' : key}' : 'https://cdn.simpleicons.org/$slug',
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Center(
               child: Text(
@@ -922,16 +922,18 @@ class _OrdersPageState extends State<_OrdersPage> {
       if (name == entry.key || name.startsWith(entry.key)) { domain = entry.value; break; }
     }
     domain ??= name.isEmpty ? 'example.com' : '$name.com';
-    final imageUrl = slug == null
-        ? 'https://www.google.com/s2/favicons?domain=$domain&sz=64'
-        : 'https://cdn.simpleicons.org/$slug';
+    final imageUrl = 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
     return CircleAvatar(
       radius: 20,
       backgroundColor: const Color(0xFF102844),
       child: Padding(
         padding: const EdgeInsets.all(7),
         child: Image.network(imageUrl, width: 26, height: 26, fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(Icons.language_rounded, color: AppTheme.cyan, size: 22)),
+          errorBuilder: (_, __, ___) => Image.network(
+            slug == null ? 'https://cdn.simpleicons.org/$name' : 'https://cdn.simpleicons.org/$slug',
+            width: 26, height: 26, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Center(child: Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16))),
+          )),
       ),
     );
   }
