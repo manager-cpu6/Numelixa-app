@@ -2011,7 +2011,7 @@ class _LoginApprovalPageState extends State<_LoginApprovalPage> {
             _securityDetail('BROWSER', (approval['browser'] ?? 'Browser').toString()),
             _securityDetail('LOCATION', [approval['city'], approval['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ').isEmpty ? 'Location unavailable' : [approval['city'], approval['country']].where((v) => v != null && v.toString().isNotEmpty).join(', ')),
             _securityDetail('STATUS', (approval['status'] ?? 'unknown').toString().toUpperCase()),
-          ]),
+          ])),
           Padding(padding: const EdgeInsets.only(top: 14), child: Text(_message ?? '', style: const TextStyle(color: Color(0xFF00D9FF)))),
           const SizedBox(height: 16),
           FilledButton.icon(onPressed: _busy || !pending ? null : () => _answer(true), icon: const Icon(Icons.check_circle_outline), label: Text(_busy ? 'Please wait…' : "Yes, it's me"), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00D9FF), foregroundColor: const Color(0xFF031022), padding: const EdgeInsets.symmetric(vertical: 16))),
