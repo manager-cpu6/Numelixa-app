@@ -71,18 +71,20 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     final route = appNotificationRoute.value;
     if (!mounted || route == null) return;
     appNotificationRoute.value = null;
+
+    // Normal push notifications should open the regular app dashboard, not
+    // the in-app Notifications screen or an unrelated tab. Keep the explicit
+    // security approval flow intact for login-approval notifications.
     if (route.startsWith('login_approval:')) {
       final approvalId = route.substring('login_approval:'.length).trim();
       if (approvalId.isNotEmpty) {
-        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _LoginApprovalPage(approvalId: approvalId)));
+        Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => _LoginApprovalPage(approvalId: approvalId),
+        ));
+        return;
       }
-    } else if (route == 'orders') {
-      setState(() => _index = 2);
-    } else if (route == 'wallet') {
-      setState(() => _index = 3);
-    } else {
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _NotificationsPage()));
     }
+    setState(() => _index = 0);
   }
 
   @override
