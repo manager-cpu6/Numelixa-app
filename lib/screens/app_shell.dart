@@ -15,6 +15,7 @@ import '../services/notification_service.dart';
 import '../services/numelixa_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
+import 'help_team_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -1903,7 +1904,7 @@ class _AccountPageState extends State<_AccountPage> {
           }
         },
       )),
-      Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
+      Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help Team'), subtitle: const Text('Chat with Numelixa support'), trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16), onTap: () { final token = context.read<AuthService>().accessToken; Navigator.of(context).push(MaterialPageRoute(builder: (_) => HelpTeamScreen(accessToken: token))); })),
       Card(child: ValueListenableBuilder<String>(
         valueListenable: context.read<NotificationService>().registrationStatus,
         builder: (context, status, _) => ListTile(
