@@ -98,7 +98,7 @@ class AppUpdateService {
 
   Future<void> downloadAndOpen(AppUpdateInfo update, void Function(int received, int total) onProgress) async {
     final dir = await getTemporaryDirectory();
-    final file = File('\${dir.path}/numelixa-update-\${update.versionCode}.apk');
+    final file = File('${dir.path}/numelixa-update-${update.versionCode}.apk');
     await _dio.download(update.apkUrl, file.path, deleteOnError: true,
       onReceiveProgress: onProgress,
       options: Options(receiveTimeout: const Duration(minutes: 5),
