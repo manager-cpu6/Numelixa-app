@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -63,6 +64,51 @@ String _cleanReleaseNotes(dynamic raw) {
 class AppUpdateService {
   AppUpdateService({Dio? dio}) : _dio = dio ?? Dio();
   final Dio _dio;
+  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  bool _notificationsReady = false;
+
+  Future<void> _ensureUpdateNotifications() async {
+    if (_notificationsReady) return;
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await _notifications.initialize(const InitializationSettings(android: android));
+    const channel = AndroidNotificationChannel('app_updates', 'Numelixa app updates', description: 'APK download progress and installation status', importance: Importance.low, playSound: false, enableVibration: false);
+    await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
+    _notificationsReady = true;
+  }
+
+  Future<void> _showProgress(int received, int total, {String title = 'Downloading Numelixa update', bool completed = false}) async {
+    try {
+      await _ensureUpdateNotifications();
+      final determinate = total > 0;
+      final percent = determinate ? ((received / total) * 100).round().clamp(0, 100) : 0;
+      await _notifications.show(7106, completed ? 'Numelixa update downloaded' : title,
+        completed ? 'Tap to return to Numelixa and install the update.' : (determinate ? '$percent% · ${(received / 1048576).toStringAsFixed(1)} / ${(total / 1048576).toStringAsFixed(1)} MB' : 'Download in progress…'),
+        NotificationDetails(android: AndroidNotificationDetails('app_updates', 'Numelixa app updates', channelDescription: 'APK download progress and installation status', importance: Importance.low, priority: Priority.low, onlyAlertOnce: true, showProgress: !completed && determinate, maxProgress: 100, progress: percent, ongoing: !completed, indeterminate: !determinate && !completed, autoCancel: completed)));
+    } catch (_) {
+      // Download/install must still work if the user disabled notifications.
+    }
+  }
+
+  Future<File> _pendingFile() async {
+    final dir = await getApplicationSupportDirectory();
+    return File('${dir.path}/numelixa-update.pending');
+  }
+
+  Future<bool> resumePendingInstall() async {
+    final marker = await _pendingFile();
+    if (!await marker.exists()) return false;
+    final path = (await marker.readAsString()).trim();
+    if (path.isEmpty) { await marker.delete(); return false; }
+    final file = File(path);
+    if (!await file.exists() || await file.length() < 1024) { await marker.delete(); return false; }
+    final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
+    if (result.type == ResultType.done) {
+      await marker.delete();
+      try { await _notifications.cancel(7106); } catch (_) {}
+      return true;
+    }
+    return false;
+  }
 
   Future<AppUpdateInfo?> check() async {
     final package = await PackageInfo.fromPlatform();
@@ -130,22 +176,42 @@ class AppUpdateService {
   }
 
   Future<void> downloadAndOpen(AppUpdateInfo update, void Function(int received, int total) onProgress) async {
-    final dir = await getTemporaryDirectory();
+    final dir = await getApplicationSupportDirectory();
     final file = File('${dir.path}/numelixa-update-${update.versionCode}.apk');
-    await _dio.download(update.apkUrl, file.path, deleteOnError: true,
-      onReceiveProgress: onProgress,
-      options: Options(receiveTimeout: const Duration(minutes: 5),
-        sendTimeout: const Duration(seconds: 30)));
-    if (!await file.exists() || await file.length() < 1024) throw Exception('The downloaded APK is incomplete.');
-    final expected = update.sha256?.trim().toLowerCase();
-    if (expected != null && expected.isNotEmpty) {
-      final actual = (await sha256.bind(file.openRead()).first).toString();
-      if (actual != expected) {
-        await file.delete();
-        throw Exception('The downloaded file failed its SHA-256 integrity check.');
+    await _ensureUpdateNotifications();
+    await _showProgress(0, update.apkSizeBytes ?? 0);
+    try {
+      await _dio.download(update.apkUrl, file.path, deleteOnError: true,
+        onReceiveProgress: (received, total) {
+          onProgress(received, total);
+          _showProgress(received, total);
+        },
+        options: Options(receiveTimeout: const Duration(minutes: 20),
+          sendTimeout: const Duration(seconds: 30)));
+      if (!await file.exists() || await file.length() < 1024) throw Exception('The downloaded APK is incomplete.');
+      final expected = update.sha256?.trim().toLowerCase();
+      if (expected != null && expected.isNotEmpty) {
+        final actual = (await sha256.bind(file.openRead()).first).toString();
+        if (actual != expected) {
+          await file.delete();
+          throw Exception('The downloaded file failed its SHA-256 integrity check.');
+        }
       }
+      final marker = await _pendingFile();
+      await marker.writeAsString(file.path, flush: true);
+      await _showProgress(await file.length(), await file.length(), completed: true);
+      final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
+      if (result.type == ResultType.done) {
+        await marker.delete();
+        try { await _notifications.cancel(7106); } catch (_) {}
+        return;
+      }
+      // Keep the completed APK and pending marker. On app resume, the shell
+      // retries the installer handoff instead of silently losing the update.
+      throw Exception(result.message.isEmpty ? 'Android could not open the installer. Return to Numelixa and tap the update notification to retry.' : result.message);
+    } catch (_) {
+      await _showProgress(0, 0, title: 'Numelixa update needs attention');
+      rethrow;
     }
-    final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
-    if (result.type != ResultType.done) throw Exception(result.message.isEmpty ? 'Android could not open the installer.' : result.message);
   }
 }
