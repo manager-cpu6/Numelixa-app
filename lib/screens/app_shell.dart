@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:gal/gal.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
@@ -1454,6 +1457,12 @@ class _WalletPageState extends State<_WalletPage> {
   String? _currency;
   String? _network;
   bool _creating = false;
+  final ScreenshotController _qrScreenshot = ScreenshotController();
+  Timer? _depositTimer;
+  int _depositSecondsLeft = 0;
+
+  @override
+  void dispose() { _depositTimer?.cancel(); super.dispose(); }
 
   @override
   void initState() { super.initState(); _load(); }
@@ -1493,57 +1502,87 @@ class _WalletPageState extends State<_WalletPage> {
   Future<void> _showDeposit(Map<String, dynamic> payment) async {
     final address = (payment['address'] ?? '').toString();
     final amount = (payment['amount'] ?? '').toString();
-    final currency = (payment['currency'] ?? _currency ?? '').toString();
+    final currency = (payment['currency'] ?? _currency ?? '').toString().toUpperCase();
     final network = (payment['networkName'] ?? payment['network'] ?? _network ?? '').toString();
     final orderId = (payment['orderId'] ?? '').toString();
-    await showDialog<void>(context: context, barrierDismissible: false, builder: (dialogContext) => AlertDialog(
-      title: const Text('Complete your deposit'),
-      content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-        Text('Send exactly $amount $currency on $network. Sending a different amount or network may delay crediting.', style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.45)),
-        const SizedBox(height: 14),
-        const Text('Exact amount', style: TextStyle(fontWeight: FontWeight.w700)),
-        SelectableText('$amount $currency', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.mint)),
-        Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
-          await Clipboard.setData(ClipboardData(text: amount));
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exact amount copied.')));
-        }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy amount'))),
-        const SizedBox(height: 8),
-        const Text('Deposit address', style: TextStyle(fontWeight: FontWeight.w700)),
-        SelectableText(address, style: const TextStyle(color: AppTheme.cyan, height: 1.4)),
-        Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
-          await Clipboard.setData(ClipboardData(text: address));
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deposit address copied.')));
-        }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy address'))),
-        if ((payment['memo'] ?? '').toString().isNotEmpty) ...[
-          const Text('Memo / tag', style: TextStyle(fontWeight: FontWeight.w700)),
-          SelectableText((payment['memo']).toString()),
-        ],
-        const SizedBox(height: 8),
-        Text('Request: $orderId', style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
-        const Text('The wallet is credited only after the payment is confirmed.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
-      ])),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
-        FilledButton(onPressed: () async {
-          final token = context.read<AuthService>().accessToken!;
-          final messenger = ScaffoldMessenger.of(context);
-          final navigator = Navigator.of(dialogContext);
-          try {
-            final status = await NumelixaRepository().depositStatus(token: token, orderId: orderId);
-            final state = (status['status'] ?? 'pending').toString();
-            if (!mounted) return;
-            messenger.showSnackBar(SnackBar(content: Text(
-              state == 'paid' ? 'Payment confirmed. Your wallet is being updated.' : 'Payment status: $state. Check again after sending.')));
-            if (state == 'paid') {
-              navigator.pop();
-              setState(_load);
+    final expiresAt = DateTime.tryParse((payment['expiresAt'] ?? '').toString());
+    _depositTimer?.cancel();
+    void refreshTimer() {
+      final left = expiresAt == null ? 0 : expiresAt.difference(DateTime.now()).inSeconds;
+      if (mounted) setState(() => _depositSecondsLeft = left.clamp(0, 86400));
+    }
+    refreshTimer();
+    _depositTimer = Timer.periodic(const Duration(seconds: 1), (_) => refreshTimer());
+    String amountText() => amount;
+    String timerText() => '${(_depositSecondsLeft ~/ 60).toString().padLeft(2, '0')}:${(_depositSecondsLeft % 60).toString().padLeft(2, '0')}';
+    await showDialog<void>(context: context, barrierDismissible: false, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) {
+      return AlertDialog(
+        backgroundColor: const Color(0xFF081B36),
+        title: const Text('Complete your deposit'),
+        content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+          Text('Send exactly $amount $currency on $network. Sending a different amount or network may delay crediting.', style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.45)),
+          const SizedBox(height: 12),
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFF101D32), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF263B5A))), child: Column(children: [
+            const Text('TIME LEFT TO PAY', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 11, letterSpacing: 1.2)),
+            const SizedBox(height: 4),
+            Text(expiresAt == null ? 'Check expiry in payment details' : timerText(), style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, color: _depositSecondsLeft <= 120 ? const Color(0xFFFFBA72) : AppTheme.mint)),
+            if (expiresAt != null && _depositSecondsLeft == 0) const Text('This request may have expired. Check its status before creating another.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFFFBA72), fontSize: 12)),
+          ])),
+          const SizedBox(height: 14),
+          const Text('Exact amount', style: TextStyle(fontWeight: FontWeight.w700)),
+          SelectableText('${amountText()} $currency', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.mint)),
+          Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: amountText()));
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exact amount copied.')));
+          }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy exact amount'))),
+          const SizedBox(height: 8),
+          const Text('Scan to copy deposit address', style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Center(child: Screenshot(controller: _qrScreenshot, child: Container(color: Colors.white, padding: const EdgeInsets.all(12), child: QrImageView(data: address, size: 210, backgroundColor: Colors.white, errorCorrectionLevel: QrErrorCorrectLevel.H)))),
+          Center(child: TextButton.icon(onPressed: () async {
+            try {
+              final bytes = await _qrScreenshot.capture(pixelRatio: 3);
+              if (bytes == null) throw Exception('QR image unavailable');
+              await Gal.putImageBytes(bytes, name: 'numelixa-deposit-${orderId.isEmpty ? 'qr' : orderId}.png');
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('QR code saved to your gallery.')));
+            } catch (_) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not save QR code. Please allow photo access and try again.')));
             }
-          } catch (_) {
-            if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
-          }
-        }, child: const Text('Check payment')),
-      ],
-    ));
+          }, icon: const Icon(Icons.download_rounded), label: const Text('Download QR code'))),
+          const Text('Deposit address', style: TextStyle(fontWeight: FontWeight.w700)),
+          SelectableText(address, style: const TextStyle(color: AppTheme.cyan, height: 1.4)),
+          Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: address));
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deposit address copied.')));
+          }, icon: const Icon(Icons.copy_rounded), label: const Text('Copy address'))),
+          if ((payment['memo'] ?? '').toString().isNotEmpty) ...[
+            const Text('Memo / tag', style: TextStyle(fontWeight: FontWeight.w700)),
+            SelectableText((payment['memo']).toString()),
+          ],
+          const SizedBox(height: 8),
+          Text('Request: $orderId', style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
+          const Text('The wallet is credited only after the payment is confirmed.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          FilledButton(onPressed: () async {
+            final token = context.read<AuthService>().accessToken!;
+            final messenger = ScaffoldMessenger.of(context);
+            final navigator = Navigator.of(dialogContext);
+            try {
+              final status = await NumelixaRepository().depositStatus(token: token, orderId: orderId);
+              final state = (status['status'] ?? 'pending').toString();
+              if (!mounted) return;
+              messenger.showSnackBar(SnackBar(content: Text(state == 'paid' ? 'Payment confirmed. Your wallet is being updated.' : 'Payment status: $state. Check again after sending.')));
+              if (state == 'paid') { navigator.pop(); setState(_load); }
+            } catch (_) {
+              if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
+            }
+          }, child: const Text('Check payment')),
+        ],
+      );
+    }));
+    _depositTimer?.cancel();
   }
 
   @override
