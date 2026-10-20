@@ -58,6 +58,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       return;
     }
     _syncNotifications();
+    // Re-check after the user returns to Numelixa. This makes a deferred
+    // update reminder appear again later, and refreshes release metadata.
+    if (didBackground) {
+      _checkForAppUpdate();
+    }
   }
 
 
@@ -66,7 +71,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _updateCheckStarted = true;
     final updates = AppUpdateService();
     final update = await updates.check();
-    if (!mounted || update == null) return;
+    if (!mounted || update == null) {
+      _updateCheckStarted = false;
+      return;
+    }
     var downloading = false;
     var received = 0;
     var total = update.apkSizeBytes ?? 0;
@@ -84,7 +92,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               if (error.isNotEmpty) ...[const SizedBox(height: 12), Text(error, style: const TextStyle(color: Color(0xFFFF7D91)))],
             ]),
             actions: [
-              if (!update.mandatory && update.allowSkip && !downloading) TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Not now')),
+              if (!update.mandatory && update.allowSkip && !downloading) TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Remind me later')),
               FilledButton(onPressed: downloading ? null : () async {
                 setDialogState(() { downloading = true; error = ''; });
                 try {
@@ -96,6 +104,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               }, child: Text(downloading ? 'Downloading…' : 'Download update')),
             ]));
       }));
+    // Allow another check after the dialog closes (including when the user
+    // chooses “Remind me later” or returns from Android's package installer).
+    _updateCheckStarted = false;
   }
 
   Future<void> _syncNotifications() async {
