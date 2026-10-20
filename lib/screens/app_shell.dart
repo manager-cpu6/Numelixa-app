@@ -74,41 +74,82 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _updateCheckStarted = true;
     final updates = AppUpdateService();
     final update = await updates.check();
-    if (!mounted || update == null) {
-      _updateCheckStarted = false;
-      return;
-    }
+    if (!mounted || update == null) { _updateCheckStarted = false; return; }
     var downloading = false;
     var received = 0;
     var total = update.apkSizeBytes ?? 0;
     var error = '';
-    await showDialog<void>(context: context, barrierDismissible: !update.mandatory && update.allowSkip,
-      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) {
+    String sizeLabel(int bytes) => bytes >= 1048576 ? '${(bytes / 1048576).toStringAsFixed(1)} MB' : '${(bytes / 1024).toStringAsFixed(0)} KB';
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !update.mandatory && update.allowSkip,
+      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) {
         final progress = total > 0 ? (received / total).clamp(0.0, 1.0) : 0.0;
-        return PopScope(canPop: !update.mandatory && update.allowSkip && !downloading,
-          child: AlertDialog(backgroundColor: const Color(0xFF081B36), title: Text('Numelixa update ${update.version}'),
-            content: SizedBox(width: double.maxFinite, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(update.releaseNotes.isEmpty ? 'A new version of Numelixa is ready.' : update.releaseNotes, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.4)),
-              if (downloading) ...[const SizedBox(height: 18), Row(children: [const Icon(Icons.downloading_rounded, color: AppTheme.cyan, size: 20), const SizedBox(width: 8), Expanded(child: Text(total > 0 ? 'Downloading update · ${(total / 1048576).toStringAsFixed(1)} MB' : 'Downloading update', style: const TextStyle(fontWeight: FontWeight.w800))) ]), const SizedBox(height: 12), ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: total > 0 ? progress : null, minHeight: 8, backgroundColor: const Color(0xFF203553), color: AppTheme.cyan)), const SizedBox(height: 8),
-                Text(total > 0 ? '${(progress * 100).round()}%  ·  ${(received / 1048576).toStringAsFixed(1)} MB of ${(total / 1048576).toStringAsFixed(1)} MB' : '${(received / 1048576).toStringAsFixed(1)} MB downloaded', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                const SizedBox(height: 5), const Text('After download, Android will open its installer. Your existing app and data stay in place.', style: TextStyle(fontSize: 12, color: Color(0xFFA7B7D0)))],
-              if (error.isNotEmpty) ...[const SizedBox(height: 12), Text(error, style: const TextStyle(color: Color(0xFFFF7D91)))],
-            ]))),
-            actions: [
-              if (!update.mandatory && update.allowSkip && !downloading) TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Remind me later')),
-              FilledButton(onPressed: downloading ? null : () async {
-                setDialogState(() { downloading = true; error = ''; });
-                try {
-                  await updates.downloadAndOpen(update, (r, t) { if (dialogContext.mounted) setDialogState(() { received = r; if (t > 0) total = t; }); });
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                } catch (e) {
-                  if (dialogContext.mounted) setDialogState(() { downloading = false; error = 'Download or installer failed. Check internet and try again. (${e.toString()})'; });
-                }
-              }, child: Text(downloading ? 'Downloading…' : 'Download update')),
-            ]));
-      }));
-    // Allow another check after the dialog closes (including when the user
-    // chooses “Remind me later” or returns from Android's package installer).
+        final percent = (progress * 100).round();
+        return PopScope(
+          canPop: !update.mandatory && update.allowSkip && !downloading,
+          child: Dialog(
+            backgroundColor: const Color(0xFF071329),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26), side: const BorderSide(color: Color(0xFF1B4770))),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Container(
+                  width: 68, height: 68, alignment: Alignment.center,
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(21), gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF713BFF)])),
+                  child: const Icon(Icons.system_update_rounded, size: 36, color: Colors.white),
+                ),
+                const SizedBox(height: 18),
+                const Text('NUMELIXA UPDATE', style: TextStyle(color: AppTheme.cyan, fontSize: 11, letterSpacing: 2.2, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 6),
+                Text('Version ${update.version}', style: const TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                const Text('A better Numelixa experience is ready.', style: TextStyle(color: Color(0xFFA7B7D0), height: 1.4)),
+                if (!downloading) ...[
+                  const SizedBox(height: 18),
+                  Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF0D2345), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF1B4770))),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Row(children: [Icon(Icons.auto_awesome_rounded, color: AppTheme.cyan, size: 18), SizedBox(width: 8), Text('What’s new', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))]),
+                      const SizedBox(height: 9),
+                      Text(update.releaseNotes.trim().isEmpty ? 'Improvements, stability updates and bug fixes.' : update.releaseNotes.trim(), maxLines: 5, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.5, fontSize: 13)),
+                      if (update.apkSizeBytes != null && update.apkSizeBytes! > 0) ...[const SizedBox(height: 10), Row(children: [const Icon(Icons.download_rounded, size: 16, color: AppTheme.cyan), const SizedBox(width: 7), Text('Update size · ${sizeLabel(update.apkSizeBytes!)}', style: const TextStyle(color: Color(0xFFDAE9FF), fontSize: 12, fontWeight: FontWeight.w700))])],
+                    ]),
+                  ),
+                ],
+                if (downloading) ...[
+                  const SizedBox(height: 22),
+                  Row(children: [const Icon(Icons.downloading_rounded, color: AppTheme.cyan, size: 22), const SizedBox(width: 9), Expanded(child: Text(total > 0 ? 'Downloading update · ${sizeLabel(total)}' : 'Connecting to download…', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))), if (total > 0) Text('$percent%', style: const TextStyle(color: AppTheme.cyan, fontSize: 18, fontWeight: FontWeight.w900))]),
+                  const SizedBox(height: 14),
+                  ClipRRect(borderRadius: BorderRadius.circular(20), child: LinearProgressIndicator(value: total > 0 ? progress : null, minHeight: 10, backgroundColor: const Color(0xFF203553), color: AppTheme.cyan)),
+                  const SizedBox(height: 10),
+                  Text(total > 0 ? '${sizeLabel(received)} of ${sizeLabel(total)} downloaded' : '${sizeLabel(received)} downloaded', textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFDAE9FF), fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 10),
+                  const Text('Keep Numelixa open while the update downloads. Your account and app data will remain on this device.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFFA7B7D0), height: 1.4)),
+                ],
+                if (error.isNotEmpty) ...[const SizedBox(height: 14), Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFF3B1827), borderRadius: BorderRadius.circular(12)), child: Text(error, style: const TextStyle(color: Color(0xFFFFA5B5), fontSize: 12)))],
+                const SizedBox(height: 22),
+                if (!downloading) FilledButton.icon(
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), backgroundColor: AppTheme.cyan, foregroundColor: const Color(0xFF031021), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                  onPressed: () async {
+                    setDialogState(() { downloading = true; received = 0; error = ''; });
+                    try {
+                      await updates.downloadAndOpen(update, (r, t) { if (dialogContext.mounted) setDialogState(() { received = r; if (t > 0) total = t; }); });
+                      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                    } catch (e) {
+                      if (dialogContext.mounted) setDialogState(() { downloading = false; error = 'Could not download or open the installer. Check your connection and try again. Details: ${e.toString()}'; });
+                    }
+                  },
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Download and install', style: TextStyle(fontWeight: FontWeight.w900)),
+                ),
+                if (!update.mandatory && update.allowSkip && !downloading) ...[const SizedBox(height: 8), Center(child: TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Remind me later', style: TextStyle(color: Color(0xFFA7B7D0)))))],
+              ])),
+            ),
+          ),
+        );
+      }),
+    );
     _updateCheckStarted = false;
   }
 
