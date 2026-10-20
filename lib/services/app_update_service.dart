@@ -30,22 +30,22 @@ class AppUpdateInfo {
 String _cleanReleaseNotes(dynamic raw) {
   final seen = <String>{};
   final lines = <String>[];
-  final text = (raw ?? '').toString().replaceAll('\\r\\n', '\\n').replaceAll('\\r', '\\n');
-  for (var line in text.split('\\n')) {
+  final text = (raw ?? '').toString().replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  for (var line in text.split('\n')) {
     line = line.trim();
     if (line.isEmpty) continue;
-    if (RegExp(r'^\\*{0,2}\\s*Full Changelog\\s*\\*{0,2}', caseSensitive: false).hasMatch(line)) continue;
-    if (RegExp(r'^https?://github\\.com/.+/(commits|compare)/', caseSensitive: false).hasMatch(line)) continue;
-    line = line.replaceAll(RegExp(r'^[-*•]+\\s*'), '');
-    line = line.replaceAll(RegExp(r'[\\x60*_]{1,3}'), '');
-    line = line.replaceAll(RegExp(r'\\s+'), ' ').trim();
+    if (RegExp(r'^\*{0,2}\s*Full Changelog\s*\*{0,2}', caseSensitive: false).hasMatch(line)) continue;
+    if (RegExp(r'^https?://github\.com/.+/(commits|compare)/', caseSensitive: false).hasMatch(line)) continue;
+    line = line.replaceAll(RegExp(r'^[-*•]+\s*'), '');
+    line = line.replaceAll(RegExp(r'[\x60*_]{1,3}'), '');
+    line = line.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (line.isEmpty) continue;
     final normalized = line.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
     if (normalized.isEmpty || !seen.add(normalized)) continue;
     lines.add(line);
     if (lines.length >= 4) break;
   }
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 
 class AppUpdateService {
