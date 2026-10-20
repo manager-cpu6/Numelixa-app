@@ -254,6 +254,8 @@ jobs:
         run: flutter build apk --debug --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Build release APK
         run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Rename release APK for public downloads and updates
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Numelixa.apk
       - name: Build AAB
         run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Upload build artifacts
@@ -262,7 +264,7 @@ jobs:
           name: numelixa-android-builds
           path: |
             build/app/outputs/flutter-apk/app-debug.apk
-            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/Numelixa.apk
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
@@ -280,7 +282,14 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Numelixa Android ${{ steps.app_version.outputs.version }}
           make_latest: true
-          generate_release_notes: true
+          generate_release_notes: false
+          overwrite_files: true
+          body: |
+            Numelixa — Global Virtual Numbers
+
+            This release includes the Help Team Chat experience, improved automatic update discovery, and a more reliable mobile experience.
+
+            Download Numelixa.apk to install or update the Android app. Push notification delivery remains enabled.
           files: |
-            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/Numelixa.apk
             build/app/outputs/bundle/release/app-release.aab
