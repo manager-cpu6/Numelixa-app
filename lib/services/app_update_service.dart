@@ -19,7 +19,7 @@ class AppUpdateInfo {
     version: (j['versionName'] ?? j['version'] ?? '').toString(),
     versionCode: int.tryParse((j['versionCode'] ?? 0).toString()) ?? 0,
     apkUrl: (j['apkUrl'] ?? j['downloadUrl'] ?? '').toString(),
-    releaseNotes: (j['releaseNotes'] ?? '').toString(),
+    releaseNotes: _cleanReleaseNotes(j['releaseNotes']),
     mandatory: j['isMandatory'] == true || j['mandatory'] == true || j['force'] == true,
     allowSkip: j['allowSkip'] != false && j['force'] != true,
     apkSizeBytes: int.tryParse((j['apkSizeBytes'] ?? j['sizeBytes'] ?? '').toString()),
@@ -28,24 +28,36 @@ class AppUpdateInfo {
 }
 
 String _cleanReleaseNotes(dynamic raw) {
+  var text = (raw ?? '').toString()
+      .replaceAll('\\r\\n', '\\n')
+      .replaceAll('\\r', '\\n');
+  // Release notes may be copied from GitHub markdown, including duplicated
+  // compare links, repeated "Full Changelog" blocks, and wrapped URLs.
+  text = text.replaceAll(RegExp(r'\\*\\*Full Changelog\\*\\*:?[^\\n]*', caseSensitive: false), '');
+  text = text.replaceAll(RegExp(r'Full Changelog:?[^\\n]*', caseSensitive: false), '');
+  text = text.replaceAll(RegExp(r'https?://\\S+', caseSensitive: false), '');
+  text = text.replaceAll(RegExp(r'github\\.com/[^\\s]*', caseSensitive: false), '');
   final seen = <String>{};
   final lines = <String>[];
-  final text = (raw ?? '').toString().replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-  for (var line in text.split('\n')) {
-    line = line.trim();
+  for (var line in text.split('\\n')) {
+    line = line
+        .replaceAll(RegExp(r'^\\s*[-*•>]+\\s*'), '')
+        .replaceAll(RegExp(r'[\\x60*_]{1,3}'), '')
+        .replaceAll(RegExp(r'\\s+'), ' ')
+        .trim();
     if (line.isEmpty) continue;
-    if (RegExp(r'^\*{0,2}\s*Full Changelog\s*\*{0,2}', caseSensitive: false).hasMatch(line)) continue;
-    if (RegExp(r'^https?://github\.com/.+/(commits|compare)/', caseSensitive: false).hasMatch(line)) continue;
-    line = line.replaceAll(RegExp(r'^[-*•]+\s*'), '');
-    line = line.replaceAll(RegExp(r'[\x60*_]{1,3}'), '');
-    line = line.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (line.isEmpty) continue;
-    final normalized = line.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+    final lower = line.toLowerCase();
+    if (lower.contains('full changelog') ||
+        lower.contains('commits/android-latest') ||
+        lower.contains('github.com/manager-cpu6') ||
+        lower == 'yo' || lower == 'infc' || lower == 'una' || lower == 'hom') continue;
+    if (line.length < 8) continue;
+    final normalized = lower.replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
     if (normalized.isEmpty || !seen.add(normalized)) continue;
     lines.add(line);
     if (lines.length >= 4) break;
   }
-  return lines.join('\n');
+  return lines.join('\\n');
 }
 
 class AppUpdateService {
@@ -107,7 +119,7 @@ class AppUpdateService {
         version: versionMatch?.group(1) ?? name,
         versionCode: versionCode,
         apkUrl: url,
-        releaseNotes: _cleanReleaseNotes(release['body']).isEmpty ? 'Performance improvements and fixes are ready to install.' : _cleanReleaseNotes(release['body']),
+        releaseNotes: _cleanReleaseNotes(release['body']).isEmpty ? 'A smoother, more reliable Numelixa experience with performance improvements and bug fixes.' : _cleanReleaseNotes(release['body']),
         mandatory: false,
         allowSkip: true,
         apkSizeBytes: int.tryParse((apk['size'] ?? '').toString()),
