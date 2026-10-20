@@ -87,13 +87,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         final progress = total > 0 ? (received / total).clamp(0.0, 1.0) : 0.0;
         return PopScope(canPop: !update.mandatory && update.allowSkip && !downloading,
           child: AlertDialog(backgroundColor: const Color(0xFF081B36), title: Text('Numelixa update ${update.version}'),
-            content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(update.releaseNotes.isEmpty ? 'A new version of Numelixa is ready.' : update.releaseNotes),
-              if (downloading) ...[const SizedBox(height: 20), LinearProgressIndicator(value: total > 0 ? progress : null), const SizedBox(height: 8),
-                Text(total > 0 ? '${(progress * 100).round()}% · ${(received / 1048576).toStringAsFixed(1)} / ${(total / 1048576).toStringAsFixed(1)} MB' : '${(received / 1048576).toStringAsFixed(1)} MB downloaded'),
+            content: SizedBox(width: double.maxFinite, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(update.releaseNotes.isEmpty ? 'A new version of Numelixa is ready.' : update.releaseNotes, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.4)),
+              if (downloading) ...[const SizedBox(height: 18), Row(children: [const Icon(Icons.downloading_rounded, color: AppTheme.cyan, size: 20), const SizedBox(width: 8), Expanded(child: Text(total > 0 ? 'Downloading update · ${(total / 1048576).toStringAsFixed(1)} MB' : 'Downloading update', style: const TextStyle(fontWeight: FontWeight.w800))) ]), const SizedBox(height: 12), ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: total > 0 ? progress : null, minHeight: 8, backgroundColor: const Color(0xFF203553), color: AppTheme.cyan)), const SizedBox(height: 8),
+                Text(total > 0 ? '${(progress * 100).round()}%  ·  ${(received / 1048576).toStringAsFixed(1)} MB of ${(total / 1048576).toStringAsFixed(1)} MB' : '${(received / 1048576).toStringAsFixed(1)} MB downloaded', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                 const SizedBox(height: 5), const Text('After download, Android will open its installer. Your existing app and data stay in place.', style: TextStyle(fontSize: 12, color: Color(0xFFA7B7D0)))],
               if (error.isNotEmpty) ...[const SizedBox(height: 12), Text(error, style: const TextStyle(color: Color(0xFFFF7D91)))],
-            ]),
+            ]))),
             actions: [
               if (!update.mandatory && update.allowSkip && !downloading) TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Remind me later')),
               FilledButton(onPressed: downloading ? null : () async {
