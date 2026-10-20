@@ -29,21 +29,21 @@ class AppUpdateInfo {
 
 String _cleanReleaseNotes(dynamic raw) {
   var text = (raw ?? '').toString()
-      .replaceAll('\\r\\n', '\\n')
-      .replaceAll('\\r', '\\n');
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n');
   // Release notes may be copied from GitHub markdown, including duplicated
   // compare links, repeated "Full Changelog" blocks, and wrapped URLs.
-  text = text.replaceAll(RegExp(r'\\*\\*Full Changelog\\*\\*:?[^\\n]*', caseSensitive: false), '');
-  text = text.replaceAll(RegExp(r'Full Changelog:?[^\\n]*', caseSensitive: false), '');
-  text = text.replaceAll(RegExp(r'https?://\\S+', caseSensitive: false), '');
-  text = text.replaceAll(RegExp(r'github\\.com/[^\\s]*', caseSensitive: false), '');
+  text = text.replaceAll(RegExp(r'\*\*Full Changelog\*\*:?[^\n]*', caseSensitive: false), '');
+  text = text.replaceAll(RegExp(r'Full Changelog:?[^\n]*', caseSensitive: false), '');
+  text = text.replaceAll(RegExp(r'https?://\S+', caseSensitive: false), '');
+  text = text.replaceAll(RegExp(r'github\.com/[^\s]*', caseSensitive: false), '');
   final seen = <String>{};
   final lines = <String>[];
-  for (var line in text.split('\\n')) {
+  for (var line in text.split('\n')) {
     line = line
-        .replaceAll(RegExp(r'^\\s*[-*•>]+\\s*'), '')
-        .replaceAll(RegExp(r'[\\x60*_]{1,3}'), '')
-        .replaceAll(RegExp(r'\\s+'), ' ')
+        .replaceAll(RegExp(r'^\s*[-*•>]+\s*'), '')
+        .replaceAll(RegExp(r'[\x60*_]{1,3}'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     if (line.isEmpty) continue;
     final lower = line.toLowerCase();
@@ -57,7 +57,7 @@ String _cleanReleaseNotes(dynamic raw) {
     lines.add(line);
     if (lines.length >= 4) break;
   }
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 
 class AppUpdateService {
