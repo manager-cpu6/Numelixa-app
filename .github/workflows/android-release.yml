@@ -90,6 +90,36 @@ jobs:
           if 'android.newDsl=false' not in properties:
               gp.write_text(properties + '\nandroid.newDsl=false\n')
           PY
+      - name: Install Numelixa launcher icon
+        shell: bash
+        run: |
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          cp android/numelixa_icon.xml android/app/src/main/res/drawable/numelixa_launcher.xml
+          python3 - <<'PY'
+          from pathlib import Path
+          res = Path('android/app/src/main/res')
+          vector = (res / 'drawable/numelixa_launcher.xml').read_text()
+          for density in ('mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi','nodpi'):
+              folder = res / ('mipmap-' + density)
+              folder.mkdir(parents=True, exist_ok=True)
+              (folder / 'ic_launcher.xml').write_text(vector)
+          adaptive = '''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/numelixa_icon_background"/>
+              <foreground android:drawable="@drawable/numelixa_launcher"/>
+          </adaptive-icon>'''
+          (res / 'mipmap-anydpi-v26/ic_launcher.xml').write_text(adaptive)
+          colors = res / 'values'
+          colors.mkdir(parents=True, exist_ok=True)
+          (colors / 'numelixa_icon_colors.xml').write_text(
+              '<resources><color name="numelixa_icon_background">#030817</color></resources>')
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          content = manifest.read_text()
+          if 'android:icon="@mipmap/ic_launcher"' not in content:
+              content = content.replace('<application', '<application android:icon="@mipmap/ic_launcher"', 1)
+          content = content.replace('android:label="app"', 'android:label="Numelixa"')
+          manifest.write_text(content)
+          PY
       - name: Configure Firebase (optional)
         env:
           FIREBASE_CONFIG_B64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
@@ -235,13 +265,19 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
+      - name: Read app version for release metadata
+        id: app_version
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^version: *//p' pubspec.yaml | tr -d '"' | head -n 1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Publish GitHub release assets
         if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && steps.signing.outputs.configured == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'android-latest' }}
           target_commitish: ${{ github.sha }}
-          name: Numelixa Android ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Latest verified build' }}
+          name: Numelixa Android ${{ steps.app_version.outputs.version }}
           make_latest: true
           generate_release_notes: true
           files: |
