@@ -81,10 +81,9 @@ class AppUpdateService {
           sendTimeout: const Duration(seconds: 12)),
       );
       final body = response.data;
-      if (body != null &&
-          (body['enabled'] == false || body['isActive'] == false || body['updateAvailable'] == false)) {
-        return null;
-      }
+      // If the admin-controlled update endpoint has no update configured,
+      // continue to the published android-latest release as a fallback. This
+      // ensures older installs can still discover a newer signed APK release.
       if (body != null) {
         final data = body['update'] is Map
             ? Map<String,dynamic>.from(body['update'] as Map)
