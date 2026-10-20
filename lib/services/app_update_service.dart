@@ -27,6 +27,22 @@ class AppUpdateInfo {
   );
 }
 
+String _cleanReleaseNotes(dynamic raw) {
+  final seen = <String>{};
+  final lines = <String>[];
+  for (var line in (raw ?? '').toString().split(RegExp(r'\\r?\\n'))) {
+    line = line.trim();
+    if (line.isEmpty) continue;
+    if (RegExp(r'^\\*\\*Full Changelog\\*\\*', caseSensitive: false).hasMatch(line)) continue;
+    if (RegExp(r'^https?://github\\.com/.+/(commits|compare)/', caseSensitive: false).hasMatch(line)) continue;
+    line = line.replaceAll(RegExp(r'[`*_]{1,3}'), '').replaceAll(RegExp(r'\\s+'), ' ').trim();
+    if (line.isEmpty) continue;
+    if (seen.add(line.toLowerCase())) lines.add(line);
+    if (lines.length >= 5) break;
+  }
+  return lines.join('\\n');
+}
+
 class AppUpdateService {
   AppUpdateService({Dio? dio}) : _dio = dio ?? Dio();
   final Dio _dio;
@@ -86,7 +102,7 @@ class AppUpdateService {
         version: versionMatch?.group(1) ?? name,
         versionCode: versionCode,
         apkUrl: url,
-        releaseNotes: (release['body'] ?? 'A new version of Numelixa is available.').toString(),
+        releaseNotes: _cleanReleaseNotes(release['body']).isEmpty ? 'Performance improvements and fixes are ready to install.' : _cleanReleaseNotes(release['body']),
         mandatory: false,
         allowSkip: true,
         apkSizeBytes: int.tryParse((apk['size'] ?? '').toString()),
