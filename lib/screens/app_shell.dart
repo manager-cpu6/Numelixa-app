@@ -1460,6 +1460,7 @@ class _WalletPageState extends State<_WalletPage> {
   final ScreenshotController _qrScreenshot = ScreenshotController();
   Timer? _depositTimer;
   int _depositSecondsLeft = 0;
+  StateSetter? _updateDepositDialog;
 
   @override
   void dispose() { _depositTimer?.cancel(); super.dispose(); }
@@ -1509,13 +1510,18 @@ class _WalletPageState extends State<_WalletPage> {
     _depositTimer?.cancel();
     void refreshTimer() {
       final left = expiresAt == null ? 0 : expiresAt.difference(DateTime.now()).inSeconds;
-      if (mounted) setState(() => _depositSecondsLeft = left.clamp(0, 86400));
+      final next = left.clamp(0, 86400);
+      if (mounted && next != _depositSecondsLeft) {
+        setState(() => _depositSecondsLeft = next);
+        _updateDepositDialog?.call(() {});
+      }
     }
     refreshTimer();
     _depositTimer = Timer.periodic(const Duration(seconds: 1), (_) => refreshTimer());
     String amountText() => amount;
     String timerText() => '${(_depositSecondsLeft ~/ 60).toString().padLeft(2, '0')}:${(_depositSecondsLeft % 60).toString().padLeft(2, '0')}';
     await showDialog<void>(context: context, barrierDismissible: false, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) {
+      _updateDepositDialog = setDialogState;
       return AlertDialog(
         backgroundColor: const Color(0xFF081B36),
         title: const Text('Complete your deposit'),
@@ -1583,6 +1589,7 @@ class _WalletPageState extends State<_WalletPage> {
       );
     }));
     _depositTimer?.cancel();
+    _updateDepositDialog = null;
   }
 
   @override
@@ -1652,7 +1659,10 @@ class _WalletPageState extends State<_WalletPage> {
             DropdownButtonFormField<String>(initialValue: coin, decoration: const InputDecoration(),
               items: assets.map((a) => DropdownMenuItem<String>(
                 value: (a['coin'] ?? '').toString(),
-                child: Text('${a['name'] ?? a['coin']} (${a['coin']})'),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.network('https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${(a['coin'] ?? '').toString().toLowerCase()}.png', width: 25, height: 25, fit: BoxFit.contain, errorBuilder: (_, __, ___) => CircleAvatar(radius: 12, backgroundColor: const Color(0xFF123C64), child: Text((a['coin'] ?? '?').toString().characters.first.toUpperCase(), style: const TextStyle(fontSize: 11, color: AppTheme.cyan))))),
+                  const SizedBox(width: 9), Flexible(child: Text('${a['name'] ?? a['coin']} (${a['coin']})', overflow: TextOverflow.ellipsis)),
+                ]),
               )).toList(),
               onChanged: (value) => setState(() { _currency = value; _network = null; })),
             const SizedBox(height: 12),
