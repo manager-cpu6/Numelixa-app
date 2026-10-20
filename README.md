@@ -67,3 +67,7 @@ flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.nu
 ```
 
 Artifacts are uploaded by the workflow as `numelixa-android-builds`.
+
+## In-app APK updates
+
+The app checks `GET /api/app-update` without blocking launch, downloads a published APK with actual byte progress and optional SHA-256 validation, then opens Android's package installer. Android requires the user to approve installation. The update API/admin publishing controls must be implemented in the website/backend repository; see `docs/MOBILE_API_CONTRACT.md`. Preserve package ID `com.numelixa.app` and the same release signing keystore.

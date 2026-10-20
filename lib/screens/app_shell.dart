@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/numelixa_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/app_update_service.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -23,6 +24,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _booted = false;
   bool _wasBackgrounded = false;
   bool _biometricUnlockInProgress = false;
+  bool _updateCheckStarted = false;
 
   @override
   void initState() {
@@ -56,6 +58,44 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       return;
     }
     _syncNotifications();
+  }
+
+
+  Future<void> _checkForAppUpdate() async {
+    if (_updateCheckStarted || !mounted) return;
+    _updateCheckStarted = true;
+    final updates = AppUpdateService();
+    final update = await updates.check();
+    if (!mounted || update == null) return;
+    var downloading = false;
+    var received = 0;
+    var total = update.apkSizeBytes ?? 0;
+    var error = '';
+    await showDialog<void>(context: context, barrierDismissible: !update.mandatory && update.allowSkip,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) {
+        final progress = total > 0 ? (received / total).clamp(0.0, 1.0) : 0.0;
+        return PopScope(canPop: !update.mandatory && update.allowSkip && !downloading,
+          child: AlertDialog(backgroundColor: const Color(0xFF081B36), title: Text('Numelixa update ${update.version}'),
+            content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(update.releaseNotes.isEmpty ? 'A new version of Numelixa is ready.' : update.releaseNotes),
+              if (downloading) ...[const SizedBox(height: 20), LinearProgressIndicator(value: total > 0 ? progress : null), const SizedBox(height: 8),
+                Text(total > 0 ? '${(progress * 100).round()}% · ${(received / 1048576).toStringAsFixed(1)} / ${(total / 1048576).toStringAsFixed(1)} MB' : '${(received / 1048576).toStringAsFixed(1)} MB downloaded'),
+                const SizedBox(height: 5), const Text('After download, Android will open its installer. Your existing app and data stay in place.', style: TextStyle(fontSize: 12, color: Color(0xFFA7B7D0)))],
+              if (error.isNotEmpty) ...[const SizedBox(height: 12), Text(error, style: const TextStyle(color: Color(0xFFFF7D91)))],
+            ]),
+            actions: [
+              if (!update.mandatory && update.allowSkip && !downloading) TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Not now')),
+              FilledButton(onPressed: downloading ? null : () async {
+                setDialogState(() { downloading = true; error = ''; });
+                try {
+                  await updates.downloadAndOpen(update, (r, t) { if (dialogContext.mounted) setDialogState(() { received = r; if (t > 0) total = t; }); });
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                } catch (e) {
+                  if (dialogContext.mounted) setDialogState(() { downloading = false; error = 'Download or installer failed. Check internet and try again. (${e.toString()})'; });
+                }
+              }, child: Text(downloading ? 'Downloading…' : 'Download update')),
+            ]));
+      }));
   }
 
   Future<void> _syncNotifications() async {
@@ -104,6 +144,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       final auth = context.read<AuthService>();
       await auth.restore();
       if (!mounted) return;
+      _checkForAppUpdate();
       final notifications = context.read<NotificationService>();
       await notifications.initialize(auth: auth);
       // Ask only once a real account is signed in; registration requires that

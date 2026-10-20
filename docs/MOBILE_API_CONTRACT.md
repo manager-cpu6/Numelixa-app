@@ -48,3 +48,12 @@ Therefore, email/password sign-in, mobile registration, and native refresh-token
 5. **Native registration result:** signup currently does not return a native token/key; mobile signup should be connected after the native auth exchange exists.
 
 No backend changes were made as part of this audit.
+
+
+## Android app-update endpoint required by the standalone app
+
+The app performs a best-effort, non-blocking check against `GET /api/app-update?platform=android&packageId=com.numelixa.app&version=<versionName>&versionCode=<buildNumber>`. If the route is absent or the request fails, app startup continues normally. Response may be the update object directly or `{ "enabled": true, "updateAvailable": true, "update": { ... } }`.
+
+Fields: `versionName`, `versionCode`, `apkUrl` (direct HTTPS APK URL), `apkSizeBytes`, `sha256`, `releaseNotes`, `isActive`, `isMandatory`, `allowSkip`. The app downloads with byte progress, verifies SHA-256 when provided, and opens Android's package installer. Android still requires user confirmation and may ask permission to install unknown apps.
+
+**Backend/admin work still required:** the website/backend repository must implement authenticated admin publish/withdraw/mandatory/optional controls, persist release metadata, host the APK at a stable HTTPS URL, and send FCM notifications when requested. This mobile-only repository cannot create those server endpoints/admin controls. Keep package ID `com.numelixa.app` and sign every update with the exact same release keystore.
