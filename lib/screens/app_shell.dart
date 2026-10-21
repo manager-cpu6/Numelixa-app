@@ -16,6 +16,7 @@ import '../services/numelixa_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
 import 'help_team_screen.dart';
+import 'support_admin_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -224,6 +225,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (!auth.isSignedIn) return const _AuthScreen();
     if (auth.biometricLocked) return const _BiometricLockScreen();
     if (auth.needsEmailVerification) return const _EmailVerificationScreen();
+    final role = (auth.user?['role'] ?? 'user').toString();
+    if (role == 'support_admin' || role == 'support_agent') {
+      return SupportAdminScreen(accessToken: auth.accessToken!, role: role);
+    }
     final pages = [
       const _HomePage(),
       const _CatalogPage(),

@@ -1,7 +1,7 @@
 name: Numelixa Android CI
 'on':
   push:
-    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account]
+    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade]
     tags: ['v*']
   workflow_dispatch:
 permissions:

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:video_player/video_player.dart';
 
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
@@ -34,6 +35,8 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
   bool sending = false;
   bool recording = false;
   String? error;
+  int? rating;
+  String? reaction;
 
   @override
   void initState() {
@@ -56,6 +59,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
     if (!silent && mounted) setState(() => loading = true);
     try {
       final d = await api.get('/api/support/chat', accessToken: widget.accessToken);
+      final conversation = d['conversation'];
       final rows = (d['messages'] as List? ?? const [])
           .whereType<Map>()
           .map((x) => Map<String, dynamic>.from(x))
@@ -67,6 +71,10 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
             ..addAll(rows);
           error = null;
           loading = false;
+          if (conversation is Map) {
+            rating = conversation['rating'] is num ? (conversation['rating'] as num).toInt() : null;
+            reaction = conversation['reaction']?.toString();
+          }
         });
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -135,6 +143,43 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
     ]);
   }
 
+  Future<void> videoMessage() async {
+    final x = await picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(minutes: 1));
+    if (x == null) return;
+    final bytes = await x.readAsBytes();
+    if (bytes.length > 3 * 1024 * 1024) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a video smaller than 3 MB.')),
+      );
+      return;
+    }
+    final mime = x.mimeType ?? 'video/mp4';
+    await send(attachments: [{
+      'name': x.name, 'mime': mime, 'kind': 'video',
+      'data': 'data:$mime;base64,${base64Encode(bytes)}',
+    }]);
+  }
+
+  Future<void> rateChat(int stars, String vote) async {
+    try {
+      await api.post('/api/support/chat', accessToken: widget.accessToken,
+          body: {'action': 'rate', 'rating': stars, 'reaction': vote});
+      if (mounted) setState(() { rating = stars; reaction = vote; });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thank you for rating Help Team.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> deleteVoice(Map<String, dynamic> message) async {
+    try {
+      await api.delete('/api/support/chat?messageId=${Uri.encodeQueryComponent((message['id'] ?? '').toString())}', accessToken: widget.accessToken);
+      if (mounted) setState(() => messages.removeWhere((m) => m['id'] == message['id']));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   Future<void> voiceMessage() async {
     if (recording) {
       final path = await recorder.stop();
@@ -187,33 +232,38 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
     }
   }
 
-  Widget _attachmentWidget(Map a) {
+  Widget _attachmentWidget(Map<String, dynamic> a, Map<String, dynamic> message) {
     final kind = (a['kind'] ?? '').toString();
     final data = (a['data'] ?? '').toString();
     if (kind == 'image' && data.contains(',')) {
       try {
+        final bytes = base64Decode(data.split(',').last);
         return Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.memory(
-              base64Decode(data.split(',').last),
-              width: 220,
-              fit: BoxFit.cover,
-            ),
+          child: GestureDetector(
+            onTap: () => showDialog<void>(context: context, barrierColor: Colors.black.withOpacity(.96),
+              builder: (_) => Dialog.fullscreen(backgroundColor: Colors.black,
+                child: Stack(children: [
+                  Center(child: InteractiveViewer(minScale: .5, maxScale: 6,
+                    child: Image.memory(bytes, fit: BoxFit.contain))),
+                  Positioned(top: 18, right: 18, child: IconButton.filled(
+                    onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close))),
+                ]))),
+            child: ClipRRect(borderRadius: BorderRadius.circular(10),
+              child: Image.memory(bytes, width: 240, fit: BoxFit.contain)),
           ),
         );
-      } catch (_) {
-        return const SizedBox.shrink();
-      }
+      } catch (_) { return const SizedBox.shrink(); }
     }
     if (kind == 'audio' && data.contains(',')) {
-      return TextButton.icon(
-        onPressed: () => playVoice(data),
-        icon: const Icon(Icons.play_circle, color: AppTheme.cyan),
-        label: const Text('Play voice message'),
-      );
+      return Wrap(spacing: 6, children: [
+        TextButton.icon(onPressed: () => playVoice(data),
+          icon: const Icon(Icons.play_circle, color: AppTheme.cyan), label: const Text('Play voice')),
+        TextButton.icon(onPressed: () => deleteVoice(message),
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent), label: const Text('Delete')),
+      ]);
     }
+    if (kind == 'video' && data.contains(',')) return _UserChatVideo(dataUrl: data);
     return Text('Attachment: ${a['name'] ?? 'file'}');
   }
 
@@ -329,7 +379,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
                                         style: const TextStyle(height: 1.35),
                                       ),
                                     ),
-                                  ...attachments.whereType<Map>().map(_attachmentWidget),
+                                  ...attachments.whereType<Map>().map((a) => _attachmentWidget(Map<String, dynamic>.from(a), m)),
                                 ],
                               ),
                             ),
@@ -337,6 +387,13 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
                         },
                       ),
           ),
+          if (messages.isNotEmpty)
+            Padding(padding: const EdgeInsets.fromLTRB(10, 4, 10, 4), child: Wrap(alignment: WrapAlignment.center, spacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              const Text('Rate support', style: TextStyle(color: Colors.white60, fontSize: 11)),
+              for (var star = 1; star <= 5; star++) IconButton(visualDensity: VisualDensity.compact, constraints: const BoxConstraints(minWidth: 30, minHeight: 30), padding: EdgeInsets.zero, onPressed: () => rateChat(star, reaction ?? 'like'), icon: Icon(star <= (rating ?? 0) ? Icons.star_rounded : Icons.star_outline_rounded, size: 20, color: Colors.amber)),
+              IconButton(visualDensity: VisualDensity.compact, onPressed: () => rateChat(rating ?? 5, 'like'), icon: Icon(Icons.thumb_up_alt_outlined, size: 19, color: reaction == 'like' ? AppTheme.cyan : Colors.white54)),
+              IconButton(visualDensity: VisualDensity.compact, onPressed: () => rateChat(rating ?? 1, 'dislike'), icon: Icon(Icons.thumb_down_alt_outlined, size: 19, color: reaction == 'dislike' ? Colors.redAccent : Colors.white54)),
+            ])),
           SafeArea(
             top: false,
             child: Container(
@@ -350,6 +407,11 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
                     onPressed: sending ? null : imageMessage,
                     tooltip: 'Attach image',
                     icon: const Icon(Icons.image_outlined, color: AppTheme.cyan),
+                  ),
+                  IconButton(
+                    onPressed: sending ? null : videoMessage,
+                    tooltip: 'Attach video',
+                    icon: const Icon(Icons.video_library_outlined, color: AppTheme.cyan),
                   ),
                   IconButton(
                     onPressed: sending ? null : voiceMessage,
@@ -402,5 +464,42 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
         ],
       ),
     );
+  }
+}
+
+class _UserChatVideo extends StatefulWidget {
+  const _UserChatVideo({required this.dataUrl});
+  final String dataUrl;
+  @override
+  State<_UserChatVideo> createState() => _UserChatVideoState();
+}
+class _UserChatVideoState extends State<_UserChatVideo> {
+  VideoPlayerController? controller;
+  @override
+  void initState() { super.initState(); _load(); }
+  Future<void> _load() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/numelixa-chat-video-${DateTime.now().microsecondsSinceEpoch}.mp4');
+      await file.writeAsBytes(base64Decode(widget.dataUrl.split(',').last), flush: true);
+      final value = VideoPlayerController.file(file);
+      await value.initialize();
+      if (!mounted) { await value.dispose(); return; }
+      setState(() => controller = value);
+    } catch (_) {}
+  }
+  @override
+  void dispose() { controller?.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    final value = controller;
+    if (value == null || !value.value.isInitialized) {
+      return const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+    return SizedBox(width: 260, child: Column(children: [
+      AspectRatio(aspectRatio: value.value.aspectRatio, child: VideoPlayer(value)),
+      IconButton(onPressed: () => setState(() => value.value.isPlaying ? value.pause() : value.play()),
+        icon: Icon(value.value.isPlaying ? Icons.pause_circle : Icons.play_circle, color: AppTheme.cyan, size: 32)),
+    ]));
   }
 }
