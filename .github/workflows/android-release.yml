@@ -158,13 +158,6 @@ jobs:
                   '".apps.googleusercontent.com". Found invalid client ID(s): ' + ', '.join(map(str, malformed)) +
                   '. Download a fresh google-services.json from Firebase Console and update FIREBASE_GOOGLE_SERVICES_JSON_BASE64.'
               )
-          expected_sha1 = '69ce75089a191ac41ff96b0498bdfa002a00a910'
-          if not any(str(o.get('android_info', {}).get('certificate_hash', '')).replace(':', '').lower() == expected_sha1
-                     for o in android_clients):
-              raise SystemExit(
-                  'Firebase config Android OAuth client does not contain the release signing SHA-1 used by this repository. '
-                  'Register the release SHA-1 shown in the Diagnose Android OAuth signing configuration step and download a fresh google-services.json.'
-              )
           g = Path('android/app/build.gradle.kts')
           s = g.read_text()
           marker = '    id("com.android.application")'
@@ -232,17 +225,29 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         shell: bash
         run: |
-          echo "Release signing certificate SHA-1 (add this to the Android OAuth client if missing):"
+          echo "Release signing certificate SHA-1 (must be registered in Firebase Android OAuth):"
           keytool -list -v -keystore android/release-key.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E 'SHA1:|SHA-1:'
-          python3 - <<'PY'
+          RELEASE_SHA1="$(keytool -list -v -keystore android/release-key.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | awk '/SHA1:|SHA-1:/ {print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          RELEASE_SHA1="$RELEASE_SHA1" python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
           data=json.loads(Path('android/app/google-services.json').read_text())
+          release_sha1=os.environ['RELEASE_SHA1']
+          matching=[c for c in data.get('client', [])
+                    if c.get('client_info', {}).get('android_client_info', {}).get('package_name') == 'com.numelixa.app']
+          android_clients=[o for c in matching for o in c.get('oauth_client', []) if str(o.get('client_type')) == '1']
           print('OAuth clients bundled in Firebase config:')
-          for client in data.get('client', []):
-              package=client.get('client_info', {}).get('android_client_info', {}).get('package_name', '')
+          for client in matching:
               for oauth in client.get('oauth_client', []):
-                  print('package=' + str(package) + ' client_type=' + str(oauth.get('client_type')) + ' client_id=' + str(oauth.get('client_id', '')))
+                  print('package=com.numelixa.app client_type=' + str(oauth.get('client_type')) + ' client_id=' + str(oauth.get('client_id', '')))
+          configured={str(o.get('android_info', {}).get('certificate_hash', '')).replace(':', '').lower() for o in android_clients}
+          if release_sha1 not in configured:
+              raise SystemExit(
+                  'Firebase google-services.json SHA-1 does not match the actual release keystore. '
+                  'Actual release SHA-1: ' + release_sha1 + '. Register this SHA-1 in Firebase for com.numelixa.app, then download and update FIREBASE_GOOGLE_SERVICES_JSON_BASE64.'
+              )
+          print('Firebase Android OAuth SHA-1 matches the configured release signing key.')
           PY
       - name: Install dependencies
         run: flutter pub get
