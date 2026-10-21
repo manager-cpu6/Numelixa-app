@@ -34,7 +34,130 @@ class _SupportAdminScreenState extends State<SupportAdminScreen> {
   Future<void> clearChat() async {if(active==null)return;final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Delete entire conversation?'),content:const Text('All messages and attachments will be permanently removed from the database.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Delete all'))]));if(ok!=true)return;try{await api.delete('/api/support/chat?conversationId=${Uri.encodeQueryComponent(active!)}&clear=true',accessToken:widget.accessToken);setState((){chats.removeWhere((x)=>x['id']==active);active=chats.isEmpty?null:(chats.first['id']??'').toString();messages.clear();});if(active!=null)await loadMessages(active!);}catch(e){setState(()=>error=e.toString());}}
   Future<void> removeVoice(Map<String,dynamic> m) async {try{await api.delete('/api/support/chat?messageId=${Uri.encodeQueryComponent((m['id']??'').toString())}',accessToken:widget.accessToken);setState(()=>messages.removeWhere((x)=>x['id']==m['id']));}catch(e){setState(()=>error=e.toString());}}
   Widget mediaWidget(Map a,Map<String,dynamic> m){final kind=a['kind']?.toString()??'',data=a['data']?.toString()??'';if(kind=='image'&&data.contains(',')){final b=base64Decode(data.split(',').last);return GestureDetector(onTap:()=>showDialog<void>(context:context,builder:(_)=>Dialog.fullscreen(backgroundColor:Colors.black,child:InteractiveViewer(child:Center(child:Image.memory(b,fit:BoxFit.contain))))),child:Padding(padding:const EdgeInsets.only(top:8),child:Image.memory(b,width:230,fit:BoxFit.contain)));}if(kind=='audio'&&data.contains(','))return Wrap(spacing:6,children:[TextButton.icon(onPressed:()=>player.play(BytesSource(base64Decode(data.split(',').last))),icon:const Icon(Icons.play_circle),label:const Text('Play voice')),TextButton.icon(onPressed:()=>removeVoice(m),icon:const Icon(Icons.delete_outline),label:const Text('Delete'))]);if(kind=='video'&&data.contains(','))return _SupportVideo(data:data);return Text('Attachment: ${a['name']??'file'}');}
-  @override Widget build(BuildContext context){final manager=widget.role=='admin'||widget.role=='support_admin';return Scaffold(backgroundColor:const Color(0xff030817),appBar:AppBar(title:const Text('Support Center'),actions:[IconButton(onPressed:()=>context.read<AuthService>().logout(),icon:const Icon(Icons.logout))]),body:Column(children:[Padding(padding:const EdgeInsets.all(10),child:Text(manager?'Support manager · all chats':'Support agent · assigned chats',style:const TextStyle(color:AppTheme.cyan))),if(error!=null)Text(error!,style:const TextStyle(color:Colors.orangeAccent)),SizedBox(height:115,child:ListView(scrollDirection:Axis.horizontal,children:chats.map((c){final id=(c['id']??'').toString();return SizedBox(width:210,child:Card(color:active==id?const Color(0xff123651):const Color(0xff081a2c),child:InkWell(onTap:(){setState(()=>active=id);loadMessages(id);},child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((c['userName']??'Customer').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.bold)),Text((c['userEmail']??'').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:Colors.white60)),Text((c['lastMessage']?['text']??'Media message').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)),if(c['rating']!=null)Text('★ ${c['rating']}/5 · ${c['reaction']??''}',style:const TextStyle(color:Colors.amber,fontSize:10))]))));}).toList())),Expanded(child:ListView(padding:const EdgeInsets.all(12),children:messages.map((m){final att=(m['attachments'] as List? ?? []).whereType<Map>().map((a)=>Map<String,dynamic>.from(a));return Align(alignment:m['senderRole']=='admin'?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(11),constraints:const BoxConstraints(maxWidth:420),decoration:BoxDecoration(color:m['senderRole']=='admin'?const Color(0xff10384b):const Color(0xff1b2740),borderRadius:BorderRadius.circular(14)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((m['senderName']??'Customer').toString(),style:const TextStyle(color:AppTheme.cyan,fontSize:10)),if((m['text']??'').toString().isNotEmpty)Text(m['text'].toString()),...att.map((a)=>mediaWidget(a,m))])));}).toList())),if(attachment!=null)ListTile(title:Text('Attached: ${attachment!['name']}'),trailing:IconButton(onPressed:()=>setState(()=>attachment=null),icon:const Icon(Icons.close))),SafeArea(top:false,child:Row(children:[IconButton(onPressed:()=>media(false),icon:const Icon(Icons.image,color:AppTheme.cyan)),IconButton(onPressed:()=>media(true),icon:const Icon(Icons.video_library,color:AppTheme.cyan)),IconButton(onPressed:voice,icon:Icon(recording?Icons.stop_circle:Icons.mic,color:AppTheme.cyan)),Expanded(child:TextField(controller:reply,minLines:1,maxLines:4,decoration:const InputDecoration(hintText:'Write a reply…'))),IconButton(onPressed:busy?null:send,icon:const Icon(Icons.send,color:AppTheme.cyan)),IconButton(onPressed:clearChat,icon:const Icon(Icons.delete_sweep,color:Colors.redAccent))]))]));}
+  @override
+  Widget build(BuildContext context) {
+    final manager = widget.role == 'admin' || widget.role == 'support_admin';
+    return Scaffold(
+      backgroundColor: const Color(0xff030817),
+      appBar: AppBar(
+        title: const Text('Support Center'),
+        actions: [IconButton(
+          onPressed: () => context.read<AuthService>().logout(),
+          icon: const Icon(Icons.logout),
+        )],
+      ),
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.all(10),
+          child: Text(
+            manager ? 'Support manager · all chats' : 'Support agent · assigned chats',
+            style: const TextStyle(color: AppTheme.cyan),
+          ),
+        ),
+        if (error != null) Text(error!, style: const TextStyle(color: Colors.orangeAccent)),
+        SizedBox(
+          height: 115,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: chats.map((chat) {
+              final id = (chat['id'] ?? '').toString();
+              return SizedBox(
+                width: 210,
+                child: Card(
+                  color: active == id ? const Color(0xff123651) : const Color(0xff081a2c),
+                  child: InkWell(
+                    onTap: () { setState(() => active = id); loadMessages(id); },
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text((chat['userName'] ?? 'Customer').toString(),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text((chat['userEmail'] ?? '').toString(),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 10, color: Colors.white60)),
+                          Text((chat['lastMessage']?['text'] ?? 'Media message').toString(),
+                            maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11)),
+                          if (chat['rating'] != null)
+                            Text('★ ${chat['rating']}/5 · ${chat['reaction'] ?? ''}',
+                              style: const TextStyle(color: Colors.amber, fontSize: 10)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: messages.map((message) {
+              final attachments = (message['attachments'] as List? ?? const [])
+                  .whereType<Map>()
+                  .map((a) => Map<String, dynamic>.from(a));
+              final mine = message['senderRole'] == 'admin';
+              return Align(
+                alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 5),
+                  padding: const EdgeInsets.all(11),
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  decoration: BoxDecoration(
+                    color: mine ? const Color(0xff10384b) : const Color(0xff1b2740),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text((message['senderName'] ?? 'Customer').toString(),
+                        style: const TextStyle(color: AppTheme.cyan, fontSize: 10)),
+                      if ((message['text'] ?? '').toString().isNotEmpty)
+                        Text(message['text'].toString()),
+                      ...attachments.map((a) => mediaWidget(a, message)),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        if (attachment != null)
+          ListTile(
+            title: Text('Attached: ${attachment!['name']}'),
+            trailing: IconButton(
+              onPressed: () => setState(() => attachment = null),
+              icon: const Icon(Icons.close),
+            ),
+          ),
+        SafeArea(
+          top: false,
+          child: Row(children: [
+            IconButton(onPressed: () => media(false),
+              icon: const Icon(Icons.image, color: AppTheme.cyan)),
+            IconButton(onPressed: () => media(true),
+              icon: const Icon(Icons.video_library, color: AppTheme.cyan)),
+            IconButton(onPressed: voice,
+              icon: Icon(recording ? Icons.stop_circle : Icons.mic, color: AppTheme.cyan)),
+            Expanded(child: TextField(
+              controller: reply,
+              minLines: 1,
+              maxLines: 4,
+              decoration: const InputDecoration(hintText: 'Write a reply…'),
+            )),
+            IconButton(onPressed: busy ? null : send,
+              icon: const Icon(Icons.send, color: AppTheme.cyan)),
+            IconButton(onPressed: clearChat,
+              icon: const Icon(Icons.delete_sweep, color: Colors.redAccent)),
+          ]),
+        ),
+      ]),
+    );
+  }
 }
 
 class _SupportVideo extends StatefulWidget{const _SupportVideo({required this.data});final String data;@override State<_SupportVideo> createState()=>_SupportVideoState();}
