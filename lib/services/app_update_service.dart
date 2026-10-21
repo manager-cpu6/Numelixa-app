@@ -27,6 +27,19 @@ class AppUpdateInfo {
   );
 }
 
+String _preferCanonicalApkUrl(String rawUrl) {
+  final uri = Uri.tryParse(rawUrl);
+  if (uri == null || uri.host.toLowerCase() != 'github.com') return rawUrl;
+  if (uri.path.contains('/releases/download/') &&
+      uri.path.endsWith('/app-release.apk')) {
+    return uri.replace(
+      path: uri.path.substring(0, uri.path.length - 'app-release.apk'.length) +
+          'Numelixa.apk',
+    ).toString();
+  }
+  return rawUrl;
+}
+
 String _cleanReleaseNotes(dynamic raw) {
   var text = (raw ?? '').toString()
       .replaceAll('\r\n', '\n')
@@ -89,7 +102,20 @@ class AppUpdateService {
             ? Map<String,dynamic>.from(body['update'] as Map)
             : body;
         final update = AppUpdateInfo.fromJson(data);
-        if (update.versionCode > currentCode && update.apkUrl.startsWith('https://')) return update;
+        final canonicalUrl = _preferCanonicalApkUrl(update.apkUrl);
+        if (update.versionCode > currentCode &&
+            canonicalUrl.startsWith('https://')) {
+          return AppUpdateInfo(
+            version: update.version,
+            versionCode: update.versionCode,
+            apkUrl: canonicalUrl,
+            releaseNotes: update.releaseNotes,
+            mandatory: update.mandatory,
+            allowSkip: update.allowSkip,
+            apkSizeBytes: update.apkSizeBytes,
+            sha256: update.sha256,
+          );
+        }
       }
     } catch (_) {}
 
@@ -108,9 +134,15 @@ class AppUpdateService {
       final versionCode = int.tryParse(codeMatch?.group(1) ?? '') ?? 0;
       final assets = release['assets'];
       if (versionCode <= currentCode || assets is! List) return null;
-      final apk = assets.whereType<Map>().cast<Map<String,dynamic>>()
-          .where((asset) => (asset['name'] ?? '').toString().endsWith('.apk'))
-          .firstOrNull;
+      final apkAssets = assets.whereType<Map>().cast<Map<String,dynamic>>()
+          .where((asset) => (asset['name'] ?? '').toString().toLowerCase().endsWith('.apk'))
+          .toList();
+      // Prefer the canonical APK created by the current workflow. Older
+      // releases may still contain a stale app-release.apk asset.
+      final apk = apkAssets.where((asset) =>
+          (asset['name'] ?? '').toString().toLowerCase() == 'numelixa.apk')
+          .firstOrNull ??
+          apkAssets.firstOrNull;
       if (apk == null) return null;
       final url = (apk['browser_download_url'] ?? '').toString();
       if (!url.startsWith('https://')) return null;
