@@ -279,6 +279,22 @@ jobs:
         run: |
           VERSION=$(sed -n 's/^version: *//p' pubspec.yaml | tr -d '"' | head -n 1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Remove stale legacy APK from rolling release
+        if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && steps.signing.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'android-latest' }}"
+          RELEASE_ID="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.id' 2>/dev/null || true)"
+          if [ -n "$RELEASE_ID" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --jq '.[] | select(.name == "app-release.apk") | .id' |
+            while read -r ASSET_ID; do
+              [ -n "$ASSET_ID" ] || continue
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID"
+              echo "Removed stale legacy APK asset $ASSET_ID"
+            done
+          fi
       - name: Publish GitHub release assets
         if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && steps.signing.outputs.configured == 'true'
         uses: softprops/action-gh-release@v2
