@@ -466,3 +466,40 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
     );
   }
 }
+
+class _UserChatVideo extends StatefulWidget {
+  const _UserChatVideo({required this.dataUrl});
+  final String dataUrl;
+  @override
+  State<_UserChatVideo> createState() => _UserChatVideoState();
+}
+class _UserChatVideoState extends State<_UserChatVideo> {
+  VideoPlayerController? controller;
+  @override
+  void initState() { super.initState(); _load(); }
+  Future<void> _load() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/numelixa-chat-video-${DateTime.now().microsecondsSinceEpoch}.mp4');
+      await file.writeAsBytes(base64Decode(widget.dataUrl.split(',').last), flush: true);
+      final value = VideoPlayerController.file(file);
+      await value.initialize();
+      if (!mounted) { await value.dispose(); return; }
+      setState(() => controller = value);
+    } catch (_) {}
+  }
+  @override
+  void dispose() { controller?.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    final value = controller;
+    if (value == null || !value.value.isInitialized) {
+      return const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+    return SizedBox(width: 260, child: Column(children: [
+      AspectRatio(aspectRatio: value.value.aspectRatio, child: VideoPlayer(value)),
+      IconButton(onPressed: () => setState(() => value.value.isPlaying ? value.pause() : value.play()),
+        icon: Icon(value.value.isPlaying ? Icons.pause_circle : Icons.play_circle, color: AppTheme.cyan, size: 32)),
+    ]));
+  }
+}
