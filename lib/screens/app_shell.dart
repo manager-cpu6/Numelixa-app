@@ -1575,7 +1575,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
       final packages = _asMaps(rawPackages).where((p) => (int.tryParse((p['coins'] ?? '').toString()) ?? 0) > 0 && (double.tryParse((p['priceUsd'] ?? '').toString()) ?? 0) > 0).toList();
       if (!mounted || packages.isEmpty) return;
       setState(() {
-        _walletPackages = packages.take(8).toList();
+        _walletPackages = packages.take(6).toList();
         if (!_walletPackages.any((p) => int.tryParse((p['coins'] ?? '').toString()) == _coins)) {
           _coins = int.tryParse((_walletPackages.first['coins'] ?? 36).toString()) ?? 36;
         }
