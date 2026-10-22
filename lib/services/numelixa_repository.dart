@@ -72,6 +72,9 @@ class NumelixaRepository {
   Future<Map<String, dynamic>> createLocalPayment({required String token, required int coins}) =>
       _api.post('/api/payments/sifalo/create', accessToken: token, body: {'coins': coins});
 
+  Future<Map<String, dynamic>> verifyLocalPayment({required String token, required String orderId}) =>
+      _api.get('/api/payments/sifalo/verify?orderId=${Uri.encodeQueryComponent(orderId)}', accessToken: token);
+
   Future<Map<String, dynamic>> depositAssets({required String token}) =>
       _api.get('/api/payments/binance/networks', accessToken: token);
 
