@@ -1527,6 +1527,8 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   late Future<Map<String, dynamic>> _balance;
   late Future<Map<String, dynamic>> _assets;
   int _coins = 36;
+  final TextEditingController _localPhone = TextEditingController();
+  String _localMethod = 'waafi';
   String? _currency;
   String? _network;
   bool _creating = false;
@@ -1541,7 +1543,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   StateSetter? _updateDepositDialog;
 
   @override
-  void dispose() { _depositTimer?.cancel(); _localPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
+  void dispose() { _localPhone.dispose(); _depositTimer?.cancel(); _localPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
 
   @override
   void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _load(); }
@@ -1565,27 +1567,51 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _asMaps(dynamic value) =>
       value is List ? value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
 
+  double get _selectedUsd => switch (_coins) {
+    36 => 0.77,
+    75 => 1.65,
+    250 => 5.49,
+    499 => 10.99,
+    _ => 0.77,
+  };
+
   Future<void> _createLocalPayment() async {
     if (_creating) return;
+    if (_localPhone.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter the phone number linked to your mobile wallet.')));
+      return;
+    }
     setState(() => _creating = true);
     try {
       final auth = context.read<AuthService>();
-      final result = await NumelixaRepository().createLocalPayment(token: auth.accessToken!, coins: _coins);
-      final url = Uri.tryParse((result['url'] ?? '').toString());
-      if (result['ok'] != true || url == null || !url.isAbsolute || url.scheme != 'https') throw ApiException((result['error'] ?? 'Unable to open local checkout.').toString());
-      final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-      if (!opened) throw const ApiException('Could not open secure checkout. Please try again.');
-      final orderId = (result['orderId'] ?? '').toString();
-      if (orderId.isNotEmpty) {
-        _pendingLocalOrderId = orderId;
-        _localPaymentTimer?.cancel();
-        _localPaymentTimer = Timer.periodic(const Duration(seconds: 30), (_) => _verifyLocalPayment());
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('After paying, return to Numelixa to refresh your wallet automatically.')));
+      final result = await NumelixaRepository().createLocalPayment(
+        token: auth.accessToken!,
+        amountUsd: _selectedUsd,
+        method: _localMethod,
+        phone: _localPhone.text.trim(),
+      );
+      if (result['ok'] != true || (result['orderId'] ?? '').toString().isEmpty) {
+        throw ApiException((result['error'] ?? 'Unable to send the payment request.').toString());
       }
+      final orderId = result['orderId'].toString();
+      final status = (result['status'] ?? 'pending').toString();
+      if (status == 'paid') {
+        if (mounted) {
+          setState(() { _balance = NumelixaRepository().balance(token: auth.accessToken!); _transactions = NumelixaRepository().transactions(token: auth.accessToken!); });
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment confirmed. Your USD wallet has been updated.')));
+        }
+        return;
+      }
+      if (status == 'failed') throw ApiException((result['message'] ?? 'Payment was declined. Check your mobile wallet and try again.').toString());
+      _pendingLocalOrderId = orderId;
+      _localPaymentTimer?.cancel();
+      _localPaymentTimer = Timer.periodic(const Duration(seconds: 7), (_) => _verifyLocalPayment());
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment request sent. Approve it on your phone; Numelixa will check the result automatically.')));
+      await _verifyLocalPayment();
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open local payment. Please retry.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to start payment. Check your connection and try again.')));
     } finally { if (mounted) setState(() => _creating = false); }
   }
 
@@ -1830,15 +1856,31 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               ]),
               if (_paymentMethod == 'local') ...[
                 const SizedBox(height: 12),
-                Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF081B36), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF1A4770))), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Secure local checkout', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.cyan)),
-                  SizedBox(height: 6),
-                  Text('Card · Premier Wallet · eDahab · Waafi', style: TextStyle(color: Color(0xFFA7B7D0))),
-                  SizedBox(height: 5),
-                  Text('Coins are added only after Sifalo confirms your payment.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
+                Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF081B36), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF1A4770))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Pay without leaving Numelixa', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.cyan)),
+                  const SizedBox(height: 6),
+                  Text('Amount: \$\${_selectedUsd.toStringAsFixed(2)} USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 10),
+                  const Text('Payment method', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: _localMethod,
+                    decoration: const InputDecoration(),
+                    items: const [
+                      DropdownMenuItem(value: 'waafi', child: Text('Waafi · EVC Plus · ZAAD · SAHAL')),
+                      DropdownMenuItem(value: 'edahab', child: Text('eDahab')),
+                      DropdownMenuItem(value: 'premier', child: Text('Premier Wallet')),
+                    ],
+                    onChanged: _creating ? null : (value) { if (value != null) setState(() => _localMethod = value); },
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(controller: _localPhone, enabled: !_creating, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile wallet phone number', hintText: '+252 6X XXX XXXX', prefixIcon: Icon(Icons.phone_android_rounded))),
+                  const SizedBox(height: 8),
+                  const Text('A payment request will be sent to your phone. Approve it there, then this screen checks the payment automatically.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4), height: 1.45)),
                 ])),
                 const SizedBox(height: 12),
-                FilledButton.icon(onPressed: _creating ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Opening secure checkout…' : 'Continue to local payment')),
+                FilledButton.icon(onPressed: _creating ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Sending payment request…' : 'Pay \$\${_selectedUsd.toStringAsFixed(2)} USD')),
+                if (_pendingLocalOrderId != null) Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(onPressed: _checkingLocalPayment ? null : _verifyLocalPayment, icon: const Icon(Icons.refresh_rounded), label: Text(_checkingLocalPayment ? 'Checking payment…' : 'Check payment status'))),
               ],
             ],
             if (_paymentMethod == 'crypto' || !_localPaymentsOpen) ...[
