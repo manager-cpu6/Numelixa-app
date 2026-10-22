@@ -632,7 +632,7 @@ class _DataCardState extends State<_DataCard> {
           else if (snapshot.hasError)
             const Text('Balance unavailable', style: TextStyle(color: Color(0xFFFF788C)))
           else
-            Text(value == null ? 'Balance unavailable' : '\${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+            Text(value == null ? 'Balance unavailable' : '\$${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
         ])),
         IconButton(onPressed: () => setState(_load), icon: const Icon(Icons.refresh_rounded), tooltip: 'Refresh'),
       ]);
@@ -1792,7 +1792,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           return Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Available balance', style: TextStyle(color: Color(0xFFA7B7D0))),
             const SizedBox(height: 6),
-            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD',
+            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\$${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD',
               style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.mint)),
             if (snapshot.hasError) Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
           ])));
@@ -1859,7 +1859,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF081B36), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF1A4770))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('Pay without leaving Numelixa', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.cyan)),
                   const SizedBox(height: 6),
-                  Text('Amount: \$\${_selectedUsd.toStringAsFixed(2)} USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontWeight: FontWeight.w800)),
+                  Text('Amount: \$${_selectedUsd.toStringAsFixed(2)} USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontWeight: FontWeight.w800)),
                   const SizedBox(height: 10),
                   const Text('Payment method', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
@@ -1879,7 +1879,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                   const Text('A payment request will be sent to your phone. Approve it there, then this screen checks the payment automatically.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4), height: 1.45)),
                 ])),
                 const SizedBox(height: 12),
-                FilledButton.icon(onPressed: _creating ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Sending payment request…' : 'Pay \$\${_selectedUsd.toStringAsFixed(2)} USD')),
+                FilledButton.icon(onPressed: _creating ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Sending payment request…' : 'Pay \$${_selectedUsd.toStringAsFixed(2)} USD')),
                 if (_pendingLocalOrderId != null) Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(onPressed: _checkingLocalPayment ? null : _verifyLocalPayment, icon: const Icon(Icons.refresh_rounded), label: Text(_checkingLocalPayment ? 'Checking payment…' : 'Check payment status'))),
               ],
             ],
