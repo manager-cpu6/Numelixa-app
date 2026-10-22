@@ -1670,7 +1670,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     try {
       final auth = context.read<AuthService>();
       final result = await NumelixaRepository().createDeposit(
-        token: auth.accessToken!, coins: _coins, currency: _currency!, network: _network!);
+        token: auth.accessToken!, amountUsd: _selectedUsd, currency: _currency!, network: _network!);
       if (!mounted) return;
       if (result['ok'] != true || (result['address'] ?? '').toString().isEmpty) {
         throw ApiException((result['error'] ?? 'Unable to create a deposit request.').toString());
