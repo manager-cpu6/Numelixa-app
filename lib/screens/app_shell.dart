@@ -1777,6 +1777,22 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     _updateDepositDialog = null;
   }
 
+  Widget _coinLogo(Map<String, dynamic> asset) {
+    final coin = (asset['coin'] ?? '').toString().toLowerCase();
+    final primary = 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/$coin.png';
+    final fallback = 'https://assets.coincap.io/assets/icons/$coin@2x.png';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Image.network(
+        primary, width: 25, height: 25, fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Image.network(
+          fallback, width: 25, height: 25, fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Icon(Icons.currency_bitcoin_rounded, size: 23, color: AppTheme.cyan),
+        ),
+      ),
+    );
+  }
+
   Widget _networkLogo(String network) {
     final key = network.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     const aliases = <String, String>{
@@ -1912,7 +1928,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               items: assets.map((a) => DropdownMenuItem<String>(
                 value: (a['coin'] ?? '').toString(),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.network('https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${(a['coin'] ?? '').toString().toLowerCase()}.png', width: 25, height: 25, fit: BoxFit.contain, errorBuilder: (_, __, ___) => CircleAvatar(radius: 12, backgroundColor: const Color(0xFF123C64), child: Text(((a['coin'] ?? '?').toString().isEmpty ? '?' : (a['coin'] ?? '?').toString().substring(0, 1).toUpperCase()), style: const TextStyle(fontSize: 11, color: AppTheme.cyan))))),
+                  _coinLogo(a),
                   const SizedBox(width: 9), Flexible(child: Text('${a['name'] ?? a['coin']} (${a['coin']})', overflow: TextOverflow.ellipsis)),
                 ]),
               )).toList(),
