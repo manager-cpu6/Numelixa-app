@@ -632,7 +632,7 @@ class _DataCardState extends State<_DataCard> {
           else if (snapshot.hasError)
             const Text('Balance unavailable', style: TextStyle(color: Color(0xFFFF788C)))
           else
-            Text(value == null ? 'Balance unavailable' : '$value coins', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+            Text(value == null ? 'Balance unavailable' : '\${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
         ])),
         IconButton(onPressed: () => setState(_load), icon: const Icon(Icons.refresh_rounded), tooltip: 'Refresh'),
       ]);
@@ -1489,6 +1489,33 @@ class _DetailLine extends StatelessWidget {
   ]));
 }
 
+class _WalletAmountOption extends StatelessWidget {
+  const _WalletAmountOption({required this.selected, required this.label, required this.onTap});
+  final bool selected;
+  final String label;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(14),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      constraints: const BoxConstraints(minWidth: 104),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: selected ? const Color(0xFF12345A) : const Color(0xFF071329),
+        border: Border.all(color: selected ? const Color(0xFF00D9FF) : const Color(0xFF23415F), width: selected ? 1.5 : 1),
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(label, style: TextStyle(fontWeight: FontWeight.w900, color: selected ? const Color(0xFF00D9FF) : Colors.white, fontSize: 17)),
+        const SizedBox(height: 3),
+        const Text('USD', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
+      ]),
+    ),
+  );
+}
+
 class _WalletPage extends StatefulWidget {
   const _WalletPage();
   @override
@@ -1707,6 +1734,28 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     _updateDepositDialog = null;
   }
 
+  Widget _networkLogo(String network) {
+    final key = network.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    const aliases = <String, String>{
+      'eth':'ethereum','erc20':'ethereum','ethereum':'ethereum',
+      'trc20':'tron','tron':'tron','bep20':'binance','bsc':'binance','bnbsmartchain':'binance',
+      'polygon':'polygon','matic':'polygon','sol':'solana','solana':'solana',
+      'avaxc':'avalanche','avalanchec':'avalanche','arbitrum':'arbitrum','arb':'arbitrum',
+      'optimism':'optimism','op':'optimism','ton':'ton','bitcoin':'bitcoin','btc':'bitcoin',
+      'litecoin':'litecoin','ltc':'litecoin','doge':'dogecoin','dogecoin':'dogecoin',
+      'base':'coinbase','xrp':'xrpl','ripple':'xrpl','aptos':'aptos','sui':'sui',
+    };
+    final slug = aliases[key] ?? aliases.entries.firstWhere((e) => key.contains(e.key), orElse: () => const MapEntry('', '')).value;
+    final url = slug.isEmpty ? '' : 'https://cdn.simpleicons.org/$slug';
+    return Container(
+      width: 27, height: 27, padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: const Color(0xFF102844), borderRadius: BorderRadius.circular(9), border: Border.all(color: const Color(0xFF23415F))),
+      child: url.isEmpty
+        ? const Icon(Icons.hub_rounded, size: 17, color: AppTheme.cyan)
+        : Image.network(url, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.hub_rounded, size: 17, color: AppTheme.cyan)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Wallet')),
@@ -1717,15 +1766,15 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           return Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Available balance', style: TextStyle(color: Color(0xFFA7B7D0))),
             const SizedBox(height: 6),
-            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '$value coins',
+            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD',
               style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.mint)),
             if (snapshot.hasError) Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
           ])));
         }),
         const SizedBox(height: 8),
-        const Text('Add coins', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+        const Text('Add funds', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
         const SizedBox(height: 5),
-        const Text('Choose a package, asset and network. Always copy the exact amount.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.4)),
+        const Text('1. Choose how much to add.  2. Choose how to pay.  3. Follow the payment instructions.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.5)),
         const SizedBox(height: 12),
         FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1759,15 +1808,17 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             });
           }
           return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('Coin package', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<int>(initialValue: _coins, decoration: const InputDecoration(),
-              items: const [
-                DropdownMenuItem(value: 36, child: Text('36 coins · \$0.77')),
-                DropdownMenuItem(value: 75, child: Text('75 coins · \$1.65')),
-                DropdownMenuItem(value: 250, child: Text('250 coins · \$5.49')),
-                DropdownMenuItem(value: 499, child: Text('499 coins · \$10.99')),
-              ], onChanged: (value) { if (value != null) setState(() => _coins = value); }),
+            const Text('1. Choose top-up amount', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              _WalletAmountOption(selected: _coins == 36, label: '\$0.77', onTap: () => setState(() => _coins = 36)),
+              _WalletAmountOption(selected: _coins == 75, label: '\$1.65', onTap: () => setState(() => _coins = 75)),
+              _WalletAmountOption(selected: _coins == 250, label: '\$5.49', onTap: () => setState(() => _coins = 250)),
+              _WalletAmountOption(selected: _coins == 499, label: '\$10.99', onTap: () => setState(() => _coins = 499)),
+            ]),
+            const SizedBox(height: 8),
+            Text('Selected amount: \${_coins == 36 ? '\$0.77' : _coins == 75 ? '\$1.65' : _coins == 250 ? '\$5.49' : '\$10.99'} USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
+            const SizedBox(height: 8),
             if (_localPaymentsOpen) ...[
               const SizedBox(height: 14),
               const Text('Payment method', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -1792,7 +1843,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             ],
             if (_paymentMethod == 'crypto' || !_localPaymentsOpen) ...[
             const SizedBox(height: 12),
-            const Text('Cryptocurrency', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text('2. Choose cryptocurrency', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(initialValue: coin, decoration: const InputDecoration(),
               items: assets.map((a) => DropdownMenuItem<String>(
@@ -1804,12 +1855,16 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               )).toList(),
               onChanged: (value) => setState(() { _currency = value; _network = null; })),
             const SizedBox(height: 12),
-            const Text('Network', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text('3. Choose network', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(initialValue: networks.any((n) => n['network'] == _network) ? _network : null,
               decoration: const InputDecoration(),
               items: networks.map((n) => DropdownMenuItem<String>(value: (n['network'] ?? '').toString(),
-                child: Text((n['networkName'] ?? n['network'] ?? '').toString()))).toList(),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  _networkLogo((n['networkName'] ?? n['network'] ?? '').toString()),
+                  const SizedBox(width: 9),
+                  Flexible(child: Text((n['networkName'] ?? n['network'] ?? '').toString(), overflow: TextOverflow.ellipsis)),
+                ]))).toList(),
               onChanged: (value) => setState(() => _network = value)),
             const SizedBox(height: 14),
             FilledButton.icon(onPressed: _creating || _network == null ? null : () => _createDeposit(selectedAsset),
@@ -1830,7 +1885,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
             title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
             subtitle: Text('${item['createdAt'] ?? ''}'),
-            trailing: Text('${item['amount'] ?? 0} coins', style: const TextStyle(fontWeight: FontWeight.w800)),
+            trailing: Text('\${((double.tryParse((item['amount'] ?? 0).toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
           ))).toList());
         }),
       ],
@@ -2026,6 +2081,7 @@ class _AccountPageState extends State<_AccountPage> {
       )),
       Card(child: ListTile(leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan), title: const Text('Help Team Chat'), subtitle: const Text('Chat with Numelixa support'), trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16), onTap: () { final token = context.read<AuthService>().accessToken; Navigator.of(context).push(MaterialPageRoute(builder: (_) => HelpTeamScreen(accessToken: token))); })),
       Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
+      Card(child: ListTile(leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)), title: const Text('WhatsApp support'), subtitle: const Text('Chat with us · +252 907 868526'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication))),
       Card(child: ValueListenableBuilder<String>(
         valueListenable: context.read<NotificationService>().registrationStatus,
         builder: (context, status, _) => ListTile(
