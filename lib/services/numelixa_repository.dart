@@ -66,6 +66,12 @@ class NumelixaRepository {
   Future<Map<String, dynamic>> transactions({required String token}) =>
       _api.get('/api/v1/transactions', accessToken: token);
 
+  Future<Map<String, dynamic>> localPaymentStatus() =>
+      _api.get('/api/payments/sifalo/status');
+
+  Future<Map<String, dynamic>> createLocalPayment({required String token, required int coins}) =>
+      _api.post('/api/payments/sifalo/create', accessToken: token, body: {'coins': coins});
+
   Future<Map<String, dynamic>> depositAssets({required String token}) =>
       _api.get('/api/payments/binance/networks', accessToken: token);
 
