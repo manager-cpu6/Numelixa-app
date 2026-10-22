@@ -1495,7 +1495,7 @@ class _WalletPage extends StatefulWidget {
   State<_WalletPage> createState() => _WalletPageState();
 }
 
-class _WalletPageState extends State<_WalletPage> {
+class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   late Future<Map<String, dynamic>> _transactions;
   late Future<Map<String, dynamic>> _balance;
   late Future<Map<String, dynamic>> _assets;
@@ -1505,16 +1505,26 @@ class _WalletPageState extends State<_WalletPage> {
   bool _creating = false;
   bool _localPaymentsOpen = false;
   String _paymentMethod = 'crypto';
+  String? _pendingLocalOrderId;
+  bool _checkingLocalPayment = false;
+  Timer? _localPaymentTimer;
   final ScreenshotController _qrScreenshot = ScreenshotController();
   Timer? _depositTimer;
   int _depositSecondsLeft = 0;
   StateSetter? _updateDepositDialog;
 
   @override
-  void dispose() { _depositTimer?.cancel(); super.dispose(); }
+  void dispose() { _depositTimer?.cancel(); _localPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _load(); }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _pendingLocalOrderId != null) {
+      _verifyLocalPayment();
+    }
+  }
 
   void _load() {
     final token = context.read<AuthService>().accessToken!;
@@ -1538,11 +1548,50 @@ class _WalletPageState extends State<_WalletPage> {
       if (result['ok'] != true || url == null || !url.isAbsolute || url.scheme != 'https') throw ApiException((result['error'] ?? 'Unable to open local checkout.').toString());
       final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
       if (!opened) throw const ApiException('Could not open secure checkout. Please try again.');
+      final orderId = (result['orderId'] ?? '').toString();
+      if (orderId.isNotEmpty) {
+        _pendingLocalOrderId = orderId;
+        _localPaymentTimer?.cancel();
+        _localPaymentTimer = Timer.periodic(const Duration(seconds: 30), (_) => _verifyLocalPayment());
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('After paying, return to Numelixa to refresh your wallet automatically.')));
+      }
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open local payment. Please retry.')));
     } finally { if (mounted) setState(() => _creating = false); }
+  }
+
+  Future<void> _verifyLocalPayment() async {
+    final orderId = _pendingLocalOrderId;
+    final token = context.read<AuthService>().accessToken;
+    if (orderId == null || orderId.isEmpty || token == null || _checkingLocalPayment) return;
+    _checkingLocalPayment = true;
+    try {
+      final repo = NumelixaRepository();
+      final result = await repo.verifyLocalPayment(token: token, orderId: orderId);
+      if (result['ok'] == true && result['status'] == 'paid') {
+        _localPaymentTimer?.cancel();
+        _localPaymentTimer = null;
+        _pendingLocalOrderId = null;
+        if (mounted) {
+          setState(() {
+            _balance = repo.balance(token: token);
+            _transactions = repo.transactions(token: token);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local payment confirmed. Your wallet has been refreshed.')));
+        }
+      } else if (result['ok'] == true && result['status'] == 'failed') {
+        _localPaymentTimer?.cancel();
+        _localPaymentTimer = null;
+        _pendingLocalOrderId = null;
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('The local payment was not completed. You can try again.')));
+      }
+    } catch (_) {
+      // Keep the order pending and retry on the next timer tick or app resume.
+    } finally {
+      _checkingLocalPayment = false;
+    }
   }
 
   Future<void> _createDeposit(Map<String, dynamic> asset) async {
@@ -1726,7 +1775,7 @@ class _WalletPageState extends State<_WalletPage> {
               Row(children: [
                 Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto', subtitle: 'USDT and more', onTap: () => setState(() => _paymentMethod = 'crypto'))),
                 const SizedBox(width: 10),
-                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local', subtitle: 'Card · eDahab · Waafi', onTap: () => setState(() => _paymentMethod = 'local'))),
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local', subtitle: 'Card · Premier Wallet · eDahab · Waafi', onTap: () => setState(() => _paymentMethod = 'local'))),
               ]),
               if (_paymentMethod == 'local') ...[
                 const SizedBox(height: 12),
