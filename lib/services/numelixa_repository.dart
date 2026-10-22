@@ -83,11 +83,11 @@ class NumelixaRepository {
 
   Future<Map<String, dynamic>> createDeposit({
     required String token,
-    required int coins,
+    required double amountUsd,
     required String currency,
     required String network,
   }) => _api.post('/api/payments/binance/create', accessToken: token,
-      body: {'coins': coins, 'currency': currency, 'network': network});
+      body: {'amountUsd': amountUsd, 'currency': currency, 'network': network});
 
   Future<Map<String, dynamic>> depositStatus({
     required String token,
