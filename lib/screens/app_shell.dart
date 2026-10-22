@@ -1858,7 +1858,13 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               final price = double.tryParse((pack['priceUsd'] ?? '').toString()) ?? 0;
               return _WalletAmountOption(
                 selected: _coins == units,
-                label: '\
+                label: String.fromCharCode(36) + price.toStringAsFixed(2),
+                popular: pack['popular'] == true,
+                onTap: () => setState(() => _coins = units),
+              );
+            }).toList()),
+            const SizedBox(height: 8),
+            Text('Selected amount: ' + String.fromCharCode(36) + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
             const SizedBox(height: 8),
             if (_localPaymentsOpen) ...[
               const SizedBox(height: 14),
