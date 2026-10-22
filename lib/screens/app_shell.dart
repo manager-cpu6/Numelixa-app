@@ -1503,6 +1503,8 @@ class _WalletPageState extends State<_WalletPage> {
   String? _currency;
   String? _network;
   bool _creating = false;
+  bool _localPaymentsOpen = false;
+  String _paymentMethod = 'crypto';
   final ScreenshotController _qrScreenshot = ScreenshotController();
   Timer? _depositTimer;
   int _depositSecondsLeft = 0;
@@ -1516,6 +1518,7 @@ class _WalletPageState extends State<_WalletPage> {
 
   void _load() {
     final token = context.read<AuthService>().accessToken!;
+    NumelixaRepository().localPaymentStatus().then((data) { if (mounted) setState(() => _localPaymentsOpen = data['ok'] == true && data['open'] == true && data['configured'] == true); }).catchError((_) { if (mounted) setState(() => _localPaymentsOpen = false); });
     final repo = NumelixaRepository();
     _transactions = repo.transactions(token: token);
     _balance = repo.balance(token: token);
@@ -1524,6 +1527,23 @@ class _WalletPageState extends State<_WalletPage> {
 
   List<Map<String, dynamic>> _asMaps(dynamic value) =>
       value is List ? value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+
+  Future<void> _createLocalPayment() async {
+    if (_creating) return;
+    setState(() => _creating = true);
+    try {
+      final auth = context.read<AuthService>();
+      final result = await NumelixaRepository().createLocalPayment(token: auth.accessToken!, coins: _coins);
+      final url = Uri.tryParse((result['url'] ?? '').toString());
+      if (result['ok'] != true || url == null || !url.isAbsolute || url.scheme != 'https') throw ApiException((result['error'] ?? 'Unable to open local checkout.').toString());
+      final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!opened) throw const ApiException('Could not open secure checkout. Please try again.');
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open local payment. Please retry.')));
+    } finally { if (mounted) setState(() => _creating = false); }
+  }
 
   Future<void> _createDeposit(Map<String, dynamic> asset) async {
     if (_currency == null || _network == null || _creating) return;
@@ -1699,6 +1719,29 @@ class _WalletPageState extends State<_WalletPage> {
                 DropdownMenuItem(value: 250, child: Text('250 coins · \$5.49')),
                 DropdownMenuItem(value: 499, child: Text('499 coins · \$10.99')),
               ], onChanged: (value) { if (value != null) setState(() => _coins = value); }),
+            if (_localPaymentsOpen) ...[
+              const SizedBox(height: 14),
+              const Text('Payment method', style: TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto', subtitle: 'USDT and more', onTap: () => setState(() => _paymentMethod = 'crypto'))),
+                const SizedBox(width: 10),
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local', subtitle: 'Card · eDahab · Waafi', onTap: () => setState(() => _paymentMethod = 'local'))),
+              ]),
+              if (_paymentMethod == 'local') ...[
+                const SizedBox(height: 12),
+                Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF081B36), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF1A4770))), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Secure local checkout', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.cyan)),
+                  SizedBox(height: 6),
+                  Text('Card · Premier Wallet · eDahab · Waafi', style: TextStyle(color: Color(0xFFA7B7D0))),
+                  SizedBox(height: 5),
+                  Text('Coins are added only after Sifalo confirms your payment.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
+                ])),
+                const SizedBox(height: 12),
+                FilledButton.icon(onPressed: _creating ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Opening secure checkout…' : 'Continue to local payment · \\${_priceForCoins(_coins)}')),
+              ],
+            ],
+            if (_paymentMethod == 'crypto' || !_localPaymentsOpen) ...[
             const SizedBox(height: 12),
             const Text('Cryptocurrency', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
@@ -1723,6 +1766,7 @@ class _WalletPageState extends State<_WalletPage> {
             FilledButton.icon(onPressed: _creating || _network == null ? null : () => _createDeposit(selectedAsset),
               icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_card_rounded),
               label: Text(_creating ? 'Creating deposit…' : 'Create deposit request')),
+            ],
           ])));
         }),
         const SizedBox(height: 20),
