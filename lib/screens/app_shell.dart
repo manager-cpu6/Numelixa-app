@@ -632,7 +632,7 @@ class _DataCardState extends State<_DataCard> {
           else if (snapshot.hasError)
             const Text('Balance unavailable', style: TextStyle(color: Color(0xFFFF788C)))
           else
-            Text(value == null ? 'Balance unavailable' : '\$${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+            Text(value == null ? 'Balance unavailable' : '\$${(double.tryParse(value.toString()) ?? 0).toStringAsFixed(2)} USD', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
         ])),
         IconButton(onPressed: () => setState(_load), icon: const Icon(Icons.refresh_rounded), tooltip: 'Refresh'),
       ]);
@@ -1825,7 +1825,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           return Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Available balance', style: TextStyle(color: Color(0xFFA7B7D0))),
             const SizedBox(height: 6),
-            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\$${((double.tryParse(value.toString()) ?? 0) / 100).toStringAsFixed(2)} USD',
+            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\$${(double.tryParse(value.toString()) ?? 0).toStringAsFixed(2)} USD',
               style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.mint)),
             if (snapshot.hasError) Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
           ])));
@@ -1964,7 +1964,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
             title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
             subtitle: Text('${item['createdAt'] ?? ''}'),
-            trailing: Text('\$${((double.tryParse((item['amount'] ?? 0).toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
+            trailing: Text('\$${(double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
           ))).toList());
         }),
       ],
@@ -2533,7 +2533,7 @@ class _LoginApprovalPageState extends State<_LoginApprovalPage> {
             leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
             title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
             subtitle: Text('${item['createdAt'] ?? ''}'),
-            trailing: Text('\$${((double.tryParse((item['amount'] ?? 0).toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
+            trailing: Text('\$${(double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
           ))).toList());
         }),
       ],
@@ -3096,7 +3096,7 @@ class _LoginApprovalPageState extends State<_LoginApprovalPage> {
             leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
             title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
             subtitle: Text('${item['createdAt'] ?? ''}'),
-            trailing: Text('\$${((double.tryParse((item['amount'] ?? 0).toString()) ?? 0) / 100).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
+            trailing: Text('\$${(double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
           ))).toList());
         }),
       ],
