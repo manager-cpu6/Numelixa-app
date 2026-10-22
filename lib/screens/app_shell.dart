@@ -1738,7 +1738,7 @@ class _WalletPageState extends State<_WalletPage> {
                   Text('Coins are added only after Sifalo confirms your payment.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
                 ])),
                 const SizedBox(height: 12),
-                FilledButton.icon(onPressed: _creating ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Opening secure checkout…' : 'Continue to local payment · \\${_priceForCoins(_coins)}')),
+                FilledButton.icon(onPressed: _creating ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Opening secure checkout…' : 'Continue to local payment')),
               ],
             ],
             if (_paymentMethod == 'crypto' || !_localPaymentsOpen) ...[
@@ -1785,6 +1785,29 @@ class _WalletPageState extends State<_WalletPage> {
           ))).toList());
         }),
       ],
+    )),
+  );
+}
+
+class _PaymentChoiceCard extends StatelessWidget {
+  const _PaymentChoiceCard({required this.selected, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final bool selected;
+  final IconData icon;
+  final String title, subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Card(
+    color: selected ? const Color(0xFF0D2345) : const Color(0xFF071329),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: selected ? AppTheme.cyan : const Color(0xFF1A3658), width: selected ? 1.5 : 1)),
+    child: InkWell(borderRadius: BorderRadius.circular(15), onTap: onTap, child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, color: selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 23),
+        const SizedBox(height: 8),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 3),
+        Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
+      ]),
     )),
   );
 }
