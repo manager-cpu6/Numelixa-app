@@ -1778,6 +1778,16 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     _updateDepositDialog = null;
   }
 
+  Widget _localPaymentBadge(String label, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withOpacity(.14),
+      borderRadius: BorderRadius.circular(7),
+      border: Border.all(color: color.withOpacity(.35)),
+    ),
+    child: Text(label, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .15)),
+  );
+
   Widget _localPaymentLogo(String method) {
     final normalized = method.toLowerCase();
     final label = normalized == 'waafi' ? 'W' : normalized == 'edahab' ? 'eD' : 'P';
@@ -1953,6 +1963,15 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                     ],
                     onChanged: _creating ? null : (value) { if (value != null) setState(() => _localMethod = value); },
                   ),
+                  if (_localMethod == 'waafi') ...[
+                    const SizedBox(height: 9),
+                    Wrap(spacing: 6, runSpacing: 6, children: [
+                      _localPaymentBadge('WAAFI', const Color(0xFF42DCC7)),
+                      _localPaymentBadge('EVC PLUS', const Color(0xFF6DB5FF)),
+                      _localPaymentBadge('ZAAD', const Color(0xFFC3A2FF)),
+                      _localPaymentBadge('SAHAL', const Color(0xFFFFD18A)),
+                    ]),
+                  ],
                   const SizedBox(height: 10),
                   TextField(controller: _localPhone, enabled: !_creating, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile wallet phone number', hintText: '+252 6X XXX XXXX', prefixIcon: Icon(Icons.phone_android_rounded))),
                   const SizedBox(height: 8),
