@@ -1777,6 +1777,27 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     _updateDepositDialog = null;
   }
 
+  Widget _localPaymentLogo(String method) {
+    final normalized = method.toLowerCase();
+    final label = normalized == 'waafi' ? 'W' : normalized == 'edahab' ? 'eD' : 'P';
+    final colors = normalized == 'waafi'
+        ? const [Color(0xFF10B8A5), Color(0xFF087183)]
+        : normalized == 'edahab'
+            ? const [Color(0xFFFFD95B), Color(0xFFF29B25)]
+            : const [Color(0xFF2C7BFF), Color(0xFF663CFF)];
+    return Container(
+      width: 28, height: 28, alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9),
+        gradient: LinearGradient(colors: colors),
+      ),
+      child: Text(label, style: TextStyle(
+        color: normalized == 'edahab' ? const Color(0xFF17213A) : Colors.white,
+        fontSize: 10, fontWeight: FontWeight.w900,
+      )),
+    );
+  }
+
   Widget _coinLogo(Map<String, dynamic> asset) {
     final coin = (asset['coin'] ?? '').toString().toLowerCase();
     final primary = 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/$coin.png';
@@ -1891,6 +1912,26 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 const SizedBox(width: 10),
                 Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local', subtitle: 'Mobile wallets · Premier Wallet · eDahab · Waafi', onTap: () => setState(() => _paymentMethod = 'local'))),
               ]),
+              const SizedBox(height: 10),
+              Card(
+                color: const Color(0xFF091A30),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: const BorderSide(color: Color(0xFF243A56))),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+                  child: Row(children: [
+                    Image.network('https://cdn.simpleicons.org/visa/1A1F71', width: 34, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('VISA', style: TextStyle(fontWeight: FontWeight.w900))),
+                    const SizedBox(width: 8),
+                    Image.network('https://cdn.simpleicons.org/mastercard/EB001B', width: 30, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('MC', style: TextStyle(fontWeight: FontWeight.w900))),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Visa / Mastercard', style: TextStyle(fontWeight: FontWeight.w800)),
+                      SizedBox(height: 3),
+                      Text('Card payments are coming soon', style: TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
+                    ])),
+                    const Text('COMING SOON', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFFFCF83))),
+                  ]),
+                ),
+              ),
               if (_paymentMethod == 'local') ...[
                 const SizedBox(height: 12),
                 Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF081B36), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF1A4770))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
