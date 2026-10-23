@@ -4,8 +4,11 @@ import 'api_client.dart';
 /// Protected methods require a real server-issued Numelixa API key as bearer token.
 /// No endpoint in this class fabricates business data.
 class NumelixaRepository {
-  NumelixaRepository({ApiClient? client}) : _api = client ?? ApiClient();
+  NumelixaRepository({ApiClient? client, ApiClient? paymentClient})
+      : _api = client ?? ApiClient(),
+        _paymentApi = paymentClient ?? (client ?? ApiClient(baseUrl: 'https://payment.numelixa.com'));
   final ApiClient _api;
+  final ApiClient _paymentApi;
 
   Future<Map<String, dynamic>> me({String? token}) =>
       _api.get('/api/me', accessToken: token);
@@ -70,29 +73,29 @@ class NumelixaRepository {
       _api.get('/api/me', accessToken: token);
 
   Future<Map<String, dynamic>> localPaymentStatus() =>
-      _api.get('/api/payments/sifalo/status');
+      _paymentApi.get('/api/payments/sifalo/status');
 
   Future<Map<String, dynamic>> createLocalPayment({required String token, required double amountUsd, required String method, required String phone}) =>
-      _api.post('/api/payments/sifalo/create', accessToken: token, body: {'amountUsd': amountUsd, 'method': method, 'phone': phone});
+      _paymentApi.post('/api/payments/sifalo/create', accessToken: token, body: {'amountUsd': amountUsd, 'method': method, 'phone': phone});
 
   Future<Map<String, dynamic>> verifyLocalPayment({required String token, required String orderId}) =>
-      _api.get('/api/payments/sifalo/verify?orderId=${Uri.encodeQueryComponent(orderId)}', accessToken: token);
+      _paymentApi.get('/api/payments/sifalo/verify?orderId=${Uri.encodeQueryComponent(orderId)}', accessToken: token);
 
   Future<Map<String, dynamic>> depositAssets({required String token}) =>
-      _api.get('/api/payments/binance/networks', accessToken: token);
+      _paymentApi.get('/api/payments/binance/networks', accessToken: token);
 
   Future<Map<String, dynamic>> createDeposit({
     required String token,
     required double amountUsd,
     required String currency,
     required String network,
-  }) => _api.post('/api/payments/binance/create', accessToken: token,
+  }) => _paymentApi.post('/api/payments/binance/create', accessToken: token,
       body: {'amountUsd': amountUsd, 'currency': currency, 'network': network});
 
   Future<Map<String, dynamic>> depositStatus({
     required String token,
     required String orderId,
-  }) => _api.get('/api/payments/binance/status?orderId=${Uri.encodeQueryComponent(orderId)}',
+  }) => _paymentApi.get('/api/payments/binance/status?orderId=${Uri.encodeQueryComponent(orderId)}',
       accessToken: token);
 
   Future<Map<String, dynamic>> notifications({required String token}) =>
