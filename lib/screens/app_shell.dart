@@ -1956,10 +1956,10 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                   DropdownButtonFormField<String>(
                     initialValue: _localMethod,
                     decoration: const InputDecoration(),
-                    items: const [
-                      DropdownMenuItem(value: 'waafi', child: Text('Waafi · EVC Plus · ZAAD · SAHAL')),
-                      DropdownMenuItem(value: 'edahab', child: Text('eDahab')),
-                      DropdownMenuItem(value: 'premier', child: Text('Premier Wallet')),
+                    items: [
+                      DropdownMenuItem(value: 'waafi', child: Row(children: [_localPaymentLogo('waafi'), const SizedBox(width: 8), const Expanded(child: Text('Waafi · EVC Plus · ZAAD · SAHAL'))])),
+                      DropdownMenuItem(value: 'edahab', child: Row(children: [_localPaymentLogo('edahab'), const SizedBox(width: 8), const Expanded(child: Text('eDahab'))])),
+                      DropdownMenuItem(value: 'premier', child: Row(children: [_localPaymentLogo('premier'), const SizedBox(width: 8), const Expanded(child: Text('Premier Wallet'))])),
                     ],
                     onChanged: _creating ? null : (value) { if (value != null) setState(() => _localMethod = value); },
                   ),
