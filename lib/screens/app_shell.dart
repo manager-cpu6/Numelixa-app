@@ -1535,6 +1535,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     {'coins': 499, 'priceUsd': 10.99, 'popular': false},
   ];
   final TextEditingController _localPhone = TextEditingController();
+  final TextEditingController _cryptoSearch = TextEditingController();
   String _localMethod = 'waafi';
   String? _currency;
   String? _network;
@@ -1550,7 +1551,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   StateSetter? _updateDepositDialog;
 
   @override
-  void dispose() { _localPhone.dispose(); _depositTimer?.cancel(); _localPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
+  void dispose() { _localPhone.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _localPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
 
   @override
   void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _load(); }
@@ -1867,6 +1868,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             ])));
           }
           final assets = _asMaps(snapshot.data?['assets']);
+          final visibleAssets = assets.where((a) => ('${a['coin'] ?? ''} ${a['name'] ?? ''}').toLowerCase().contains(_cryptoSearch.text.trim().toLowerCase())).toList();
           if (assets.isEmpty) {
             return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
           }
@@ -1965,15 +1967,12 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             const SizedBox(height: 12),
             const Text('2. Choose cryptocurrency', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
-            DropdownButtonFormField<String>(initialValue: coin, decoration: const InputDecoration(),
-              items: assets.map((a) => DropdownMenuItem<String>(
-                value: (a['coin'] ?? '').toString(),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  _coinLogo(a),
-                  const SizedBox(width: 9), Flexible(child: Text('${a['name'] ?? a['coin']} (${a['coin']})', overflow: TextOverflow.ellipsis)),
-                ]),
-              )).toList(),
-              onChanged: (value) => setState(() { _currency = value; _network = null; })),
+            TextField(controller: _cryptoSearch, decoration: InputDecoration(prefixIcon: const Icon(Icons.search_rounded), hintText: 'Search Bitcoin, USDT, Ethereum…', suffixIcon: _cryptoSearch.text.isEmpty ? null : IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => setState(() => _cryptoSearch.clear()))), onChanged: (_) => setState(() {})),
+            const SizedBox(height: 10),
+            if (visibleAssets.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('No matching cryptocurrency. Try another name or symbol.', style: TextStyle(color: Color(0xFF91A8C4)))) else Wrap(spacing: 8, runSpacing: 8, children: visibleAssets.map((a) {
+              final symbol = (a['coin'] ?? '').toString();
+              return ChoiceChip(selected: coin == symbol, label: Row(mainAxisSize: MainAxisSize.min, children: [_coinLogo(a), const SizedBox(width: 7), Text(symbol, style: const TextStyle(fontWeight: FontWeight.w800))]), onSelected: (_) => setState(() { _currency = symbol; _network = null; }));
+            }).toList()),
             const SizedBox(height: 12),
             const Text('3. Choose network', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
