@@ -15,8 +15,9 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient({http.Client? client}) : _client = client ?? http.Client();
+  ApiClient({http.Client? client, String? baseUrl}) : _client = client ?? http.Client(), _baseUrl = baseUrl;
   final http.Client _client;
+  final String? _baseUrl;
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   static final Future<String> _deviceId = _loadDeviceId();
   static Future<String> get deviceId => _deviceId;
@@ -73,7 +74,7 @@ class ApiClient {
 
   Future<Map<String, dynamic>> _request(String method, String path,
       {Map<String, dynamic>? body, String? accessToken}) async {
-    final uri = Uri.parse(AppConfig.apiBase).resolve(path);
+    final uri = Uri.parse(_baseUrl ?? AppConfig.apiBase).resolve(path);
     final deviceLabel = await _deviceLabel;
     final deviceId = await _deviceId;
     final headers = <String, String>{
