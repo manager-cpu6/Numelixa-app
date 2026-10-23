@@ -66,7 +66,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // Re-check after the user returns to Numelixa. This makes a deferred
     // update reminder appear again later, and refreshes release metadata.
     if (didBackground) {
-      _checkForAppUpdate();
+      // If an APK finished downloading while the app was backgrounded, retry
+      // the Android installer handoff when the user returns to Numelixa.
+      AppUpdateService().resumePendingInstall().then((opened) {
+        if (!mounted) return;
+        if (!opened) _checkForAppUpdate();
+      }).catchError((_) {
+        if (mounted) _checkForAppUpdate();
+      });
     }
   }
 
