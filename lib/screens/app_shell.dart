@@ -518,7 +518,7 @@ class _AuthScreenState extends State<_AuthScreen> {
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(26),
                 gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
                 boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))]),
-              child: const Text('N', style: TextStyle(fontSize: 47, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -5)),
+              child: const _NumelixaMark(size: 52),
             )),
             const SizedBox(height: 26),
             const Text('Welcome to Numelixa', textAlign: TextAlign.center,
