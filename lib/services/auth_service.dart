@@ -118,6 +118,33 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  Future<void> requestPhoneCode({required String phone, String? name, required bool signup}) async {
+    await _api.post('/api/auth/phone/request', body: {
+      'phone': phone.trim(),
+      if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      'purpose': signup ? 'signup' : 'login',
+    });
+  }
+
+  Future<Map<String, dynamic>> verifyPhoneCode({required String phone, required String code, String? name}) async {
+    _validating = true;
+    notifyListeners();
+    try {
+      final response = await _api.post('/api/auth/phone/verify', body: {
+        'phone': phone.trim(),
+        'code': code.trim(),
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      }, headers: const {'X-Numelixa-Client': 'android-app'});
+      final token = (response['accessToken'] ?? '').toString();
+      if (token.isEmpty) throw const ApiException('The server did not issue a secure mobile session. Please try again.');
+      await _saveSession(token, response['user']);
+      return response;
+    } finally {
+      _validating = false;
+      notifyListeners();
+    }
+  }
+
   Future<Map<String, dynamic>> signInWithEmail({
     required String email,
     required String password,
