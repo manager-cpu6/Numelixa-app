@@ -82,6 +82,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     var received = 0;
     var total = update.apkSizeBytes ?? 0;
     var error = '';
+    var installerLaunched = false;
     String sizeLabel(int bytes) => bytes >= 1048576 ? '${(bytes / 1048576).toStringAsFixed(1)} MB' : '${(bytes / 1024).toStringAsFixed(0)} KB';
     await showDialog<void>(
       context: context,
@@ -131,6 +132,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   const Text('Keep Numelixa open while the update downloads. Your account and app data will remain on this device.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFFA7B7D0), height: 1.4)),
                 ],
                 if (error.isNotEmpty) ...[const SizedBox(height: 14), Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFF3B1827), borderRadius: BorderRadius.circular(12)), child: Text(error, style: const TextStyle(color: Color(0xFFFFA5B5), fontSize: 12)))],
+                if (installerLaunched && update.mandatory) ...[
+                  const SizedBox(height: 14),
+                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFF12334A), borderRadius: BorderRadius.circular(12)), child: const Text('Complete the Android installation to continue using Numelixa. If you cancelled it, tap Install update again.', style: TextStyle(color: Color(0xFFBFEAFF), fontSize: 12, height: 1.45))),
+                ],
                 const SizedBox(height: 22),
                 if (!downloading) FilledButton.icon(
                   style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), backgroundColor: AppTheme.cyan, foregroundColor: const Color(0xFF031021), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
@@ -138,13 +143,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                     setDialogState(() { downloading = true; received = 0; error = ''; });
                     try {
                       await updates.downloadAndOpen(update, (r, t) { if (dialogContext.mounted) setDialogState(() { received = r; if (t > 0) total = t; }); });
-                      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                      if (dialogContext.mounted) {
+                        // Keep mandatory updates blocking if the user returns
+                        // from Android's installer without completing install.
+                        setDialogState(() { downloading = false; installerLaunched = true; });
+                      }
                     } catch (e) {
                       if (dialogContext.mounted) setDialogState(() { downloading = false; error = 'Could not download or open the installer. Check your connection and try again. Details: ${e.toString()}'; });
                     }
                   },
                   icon: const Icon(Icons.download_rounded),
-                  label: const Text('Download and install', style: TextStyle(fontWeight: FontWeight.w900)),
+                  label: Text(installerLaunched && update.mandatory ? 'Install update again' : 'Download and install', style: const TextStyle(fontWeight: FontWeight.w900)),
                 ),
                 if (!update.mandatory && update.allowSkip && !downloading) ...[const SizedBox(height: 8), Center(child: TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Remind me later', style: TextStyle(color: Color(0xFFA7B7D0)))))],
               ])),
