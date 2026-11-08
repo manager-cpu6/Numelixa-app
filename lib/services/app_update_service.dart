@@ -132,8 +132,8 @@ class AppUpdateService {
       final release = response.data;
       if (release != null) {
         final name = (release['name'] ?? '').toString();
-        final versionMatch = RegExp(r'(\\d+\\.\\d+\\.\\d+)').firstMatch(name);
-        final codeMatch = RegExp(r'\\+(\\d+)').firstMatch(name);
+        final versionMatch = RegExp(r'(\d+\.\d+\.\d+)').firstMatch(name);
+        final codeMatch = RegExp(r'\+(\d+)').firstMatch(name);
         final versionCode = int.tryParse(codeMatch?.group(1) ?? '') ?? 0;
         final assets = release['assets'];
         if (versionCode > currentCode && assets is List) {
