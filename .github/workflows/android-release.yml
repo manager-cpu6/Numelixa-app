@@ -134,14 +134,15 @@ jobs:
           XML
           python3 - <<'PY'
           from pathlib import Path
-          import re
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           if 'com.google.firebase.messaging.default_notification_icon' not in s:
               meta = '<meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_numelixa"/>'
-              s, count = re.subn(r'(<application\\b[^>]*>)', r'\\1\\n        ' + meta, s, count=1)
-              if count != 1:
-                  raise SystemExit('Could not add the Numelixa notification icon metadata.')
+              start = s.find('<application')
+              end = s.find('>', start)
+              if start < 0 or end < 0:
+                  raise SystemExit('Could not locate Android application manifest element.')
+              s = s[:end + 1] + '\\n        ' + meta + s[end + 1:]
           p.write_text(s)
           PY
       - name: Configure Firebase (optional)
