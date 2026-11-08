@@ -250,7 +250,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: const Row(children: [
-          Icon(Icons.public_rounded, color: AppTheme.mint, size: 25),
+          _NumelixaLogo(size: 27),
           SizedBox(width: 9),
           Text('Numelixa', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -.5)),
         ]),
@@ -311,6 +311,22 @@ class _AppUnavailableScreen extends StatelessWidget {
   }
 }
 
+class _NumelixaLogo extends StatelessWidget {
+  const _NumelixaLogo({this.size = 44});
+  final double size;
+  @override
+  Widget build(BuildContext context) => Image.network(
+    'https://numelixa.com/numelixa-favicon.png',
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+    errorBuilder: (_, __, ___) => Text('N', style: TextStyle(
+      fontSize: size * .82, fontWeight: FontWeight.w900,
+      color: Colors.white, letterSpacing: -size * .08,
+    )),
+  );
+}
+
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
@@ -322,7 +338,7 @@ class _SplashScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(27),
           gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
         ),
-        child: const Text('N', style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -5)),
+        child: const _NumelixaLogo(size: 62),
       ),
       const SizedBox(height: 20),
       const Text('NUMELIXA', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 3)),
@@ -508,7 +524,7 @@ class _AuthScreenState extends State<_AuthScreen> {
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(26),
                 gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
                 boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))]),
-              child: const Text('N', style: TextStyle(fontSize: 47, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -5)),
+              child: const _NumelixaLogo(size: 58),
             )),
             const SizedBox(height: 26),
             const Text('Welcome to Numelixa', textAlign: TextAlign.center,
