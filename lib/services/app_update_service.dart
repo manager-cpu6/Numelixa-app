@@ -27,18 +27,8 @@ class AppUpdateInfo {
   );
 }
 
-String _preferCanonicalApkUrl(String rawUrl) {
-  final uri = Uri.tryParse(rawUrl);
-  if (uri == null || uri.host.toLowerCase() != 'github.com') return rawUrl;
-  if (uri.path.contains('/releases/download/') &&
-      uri.path.endsWith('/app-release.apk')) {
-    return uri.replace(
-      path: uri.path.substring(0, uri.path.length - 'app-release.apk'.length) +
-          'Numelixa.apk',
-    ).toString();
-  }
-  return rawUrl;
-}
+String _preferCanonicalApkUrl(String rawUrl) =>
+    'https://www.numelixa.com/android';
 
 String _cleanReleaseNotes(dynamic raw) {
   var text = (raw ?? '').toString()
@@ -120,50 +110,9 @@ class AppUpdateService {
       }
     } catch (_) {}
 
-    // Always compare the public rolling GitHub release too. A stale admin API
-    // response must never hide a newer signed APK from existing installations.
-    try {
-      final response = await _dio.get<Map<String,dynamic>>(
-        'https://api.github.com/repos/manager-cpu6/Numelixa-app/releases/tags/android-latest',
-        options: Options(responseType: ResponseType.json,
-          headers: {'Accept':'application/vnd.github+json'},
-          receiveTimeout: const Duration(seconds: 12)),
-      );
-      final release = response.data;
-      if (release != null) {
-        final name = (release['name'] ?? '').toString();
-        final versionMatch = RegExp(r'(\d+\.\d+\.\d+)').firstMatch(name);
-        final codeMatch = RegExp(r'\+(\d+)').firstMatch(name);
-        final versionCode = int.tryParse(codeMatch?.group(1) ?? '') ?? 0;
-        final assets = release['assets'];
-        if (versionCode > currentCode && assets is List) {
-          final apkAssets = assets.whereType<Map>().cast<Map<String,dynamic>>()
-              .where((asset) => (asset['name'] ?? '').toString().toLowerCase().endsWith('.apk'))
-              .toList();
-          final apk = apkAssets.where((asset) =>
-              (asset['name'] ?? '').toString().toLowerCase() == 'numelixa.apk')
-              .firstOrNull ?? apkAssets.firstOrNull;
-          final url = (apk?['browser_download_url'] ?? '').toString();
-          if (apk != null && url.startsWith('https://')) {
-            final notes = _cleanReleaseNotes(release['body']);
-            final candidate = AppUpdateInfo(
-              version: versionMatch?.group(1) ?? name,
-              versionCode: versionCode,
-              apkUrl: url,
-              releaseNotes: notes.isEmpty
-                  ? 'A smoother, more reliable Numelixa experience with performance improvements and bug fixes.'
-                  : notes,
-              mandatory: false,
-              allowSkip: true,
-              apkSizeBytes: int.tryParse((apk['size'] ?? '').toString()),
-            );
-            if (best == null || candidate.versionCode > best.versionCode) {
-              best = candidate;
-            }
-          }
-        }
-      }
-    } catch (_) {}
+    // The website endpoint is the single source of truth for version and
+    // mandatory policy. Never request GitHub release assets from the device;
+    // all APK downloads must remain on the official Numelixa domain.
 
     return best;
   }
