@@ -118,17 +118,19 @@ class ApiClient {
   }
 
   String _friendlyMessage(int status, dynamic body) {
-    // Prefer the server's actionable error over a generic HTTP label. This is
-    // especially important for diagnosing FCM token linking and OAuth tickets.
-    if (body is Map && body['message'] is String && (body['message'] as String).trim().isNotEmpty) {
-      return body['message'] as String;
-    }
-    if (body is Map && body['error'] is String && (body['error'] as String).trim().isNotEmpty) {
-      final message = (body['error'] as String).trim();
+    String sanitize(String value) {
+      final message = value.trim();
       if (RegExp(r'smtp|535|authentication failed|private email|invalid login', caseSensitive: false).hasMatch(message)) {
         return 'We could not complete the email step right now. Please try again later or contact Numelixa support.';
       }
       return message;
+    }
+    // Prefer an actionable server message, but never expose SMTP credentials or provider internals.
+    if (body is Map && body['message'] is String && (body['message'] as String).trim().isNotEmpty) {
+      return sanitize(body['message'] as String);
+    }
+    if (body is Map && body['error'] is String && (body['error'] as String).trim().isNotEmpty) {
+      return sanitize(body['error'] as String);
     }
     if (status == 401) return 'Please sign in again.';
     if (status == 403) return 'You do not have permission to do that.';
