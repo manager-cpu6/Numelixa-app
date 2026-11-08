@@ -30,6 +30,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _wasBackgrounded = false;
   bool _biometricUnlockInProgress = false;
   bool _updateCheckStarted = false;
+  bool _accessCheckDone = false;
+  Map<String, dynamic>? _accessBlock;
 
   @override
   void initState() {
@@ -198,6 +200,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _booted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      try {
+        final access = await ApiClient().get('/api/mobile/access-check');
+        if (access['allowed'] == false) {
+          if (mounted) setState(() { _accessBlock = Map<String, dynamic>.from(access); _accessCheckDone = true; });
+          return;
+        }
+      } catch (_) {
+        // Keep the app usable if a temporary policy lookup cannot be reached.
+      }
+      if (mounted) setState(() => _accessCheckDone = true);
       final auth = context.read<AuthService>();
       await auth.restore();
       if (!mounted) return;
@@ -219,6 +231,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    if (_accessBlock != null) return _AppUnavailableScreen(details: _accessBlock!);
     if (!auth.isReady) {
       return const _SplashScreen();
     }
@@ -256,6 +269,46 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           NavigationDestination(icon: Icon(Icons.person_outline_rounded), label: 'Account'),
         ],
       ),
+    );
+  }
+}
+
+class _AppUnavailableScreen extends StatelessWidget {
+  const _AppUnavailableScreen({required this.details});
+  final Map<String, dynamic> details;
+  @override
+  Widget build(BuildContext context) {
+    final reason = (details['reason'] ?? '').toString();
+    final countryBlocked = reason == 'country';
+    final number = (details['whatsapp'] ?? '252907868526').toString().replaceAll(RegExp(r'[^0-9]'), '');
+    final message = countryBlocked
+        ? 'This app is not available in your country.'
+        : reason == 'android-version'
+          ? 'This app is not available on this Android version.'
+          : 'This app is not available on your device.';
+    return Scaffold(
+      body: SafeArea(child: Center(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 76, height: 76, alignment: Alignment.center,
+              decoration: BoxDecoration(color: const Color(0xFF17233D), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF365174))),
+              child: const Icon(Icons.public_off_rounded, size: 38, color: Color(0xFF8CB8F7))),
+            const SizedBox(height: 22),
+            const Text('NUMELIXA', style: TextStyle(fontSize: 13, letterSpacing: 2.5, fontWeight: FontWeight.w900, color: AppTheme.cyan)),
+            const SizedBox(height: 14),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, height: 1.2, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 10),
+            const Text('If you believe this is a mistake, contact our support team for assistance.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4), height: 1.55)),
+            const SizedBox(height: 22),
+            SizedBox(width: double.infinity, child: FilledButton.icon(
+              onPressed: number.isEmpty ? null : () => launchUrl(Uri.parse('https://wa.me/$number'), mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.chat_rounded), label: const Text('Contact WhatsApp support'),
+            )),
+          ],
+        )),
+      ))),
     );
   }
 }
