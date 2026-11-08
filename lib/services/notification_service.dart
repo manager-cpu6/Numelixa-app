@@ -193,14 +193,14 @@ class NotificationService {
 
   Future<void> _showForeground(RemoteMessage message) async {
     final notification = message.notification;
-    if (notification == null) return;
     final channelId = _channelFor(message.data);
-    final notificationData = {...message.data, 'body': notification.body ?? ''};
+    final body = notification?.body ?? (message.data['body'] ?? message.data['message'] ?? '').toString();
+    final notificationData = {...message.data, 'body': body};
     final code = _notificationCode(notificationData);
     await _local.show(
-      notification.hashCode,
-      notification.title ?? 'Numelixa',
-      notification.body ?? '',
+      notification?.hashCode ?? message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+      notification?.title ?? (message.data['title'] ?? 'Numelixa').toString(),
+      body,
       NotificationDetails(
         android: AndroidNotificationDetails(channelId, _channelNameFor(channelId),
           channelDescription: _channelDescriptionFor(channelId),
