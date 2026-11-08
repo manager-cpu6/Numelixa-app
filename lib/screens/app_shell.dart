@@ -542,9 +542,7 @@ class _AuthScreenState extends State<_AuthScreen> {
                 decoration: const InputDecoration(labelText: 'Phone number', hintText: '+2519XXXXXXXX', prefixIcon: Icon(Icons.phone_iphone_rounded))),
               if (_phoneCodeSent) ...[
                 const SizedBox(height: 10),
-                TextField(controller: _phoneCode, keyboardType: TextInputType.number, maxLength: 6, textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 25, letterSpacing: 9, fontWeight: FontWeight.w900),
-                  decoration: const InputDecoration(labelText: '6-digit verification code', counterText: '', prefixIcon: Icon(Icons.verified_user_outlined))),
+                _OtpCodeField(controller: _phoneCode),
                 FilledButton(onPressed: auth.isValidating ? null : _verifyPhoneCode, child: const Text('Verify and continue')),
                 TextButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Resend code')),
               ] else
@@ -604,6 +602,73 @@ class _AuthScreenState extends State<_AuthScreen> {
           ],
         )),
       ))),
+    );
+  }
+}
+
+class _OtpCodeField extends StatefulWidget {
+  const _OtpCodeField({required this.controller});
+  final TextEditingController controller;
+  @override
+  State<_OtpCodeField> createState() => _OtpCodeFieldState();
+}
+class _OtpCodeFieldState extends State<_OtpCodeField> {
+  @override
+  void initState() { super.initState(); widget.controller.addListener(_refresh); }
+  @override
+  void didUpdateWidget(covariant _OtpCodeField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_refresh);
+      widget.controller.addListener(_refresh);
+    }
+  }
+  void _refresh() { if (mounted) setState(() {}); }
+  @override
+  void dispose() { widget.controller.removeListener(_refresh); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.controller.text;
+    return Semantics(
+      label: '6-digit verification code',
+      textField: true,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Padding(padding: EdgeInsets.only(bottom: 9, left: 3), child: Text('6-digit verification code', style: TextStyle(color: Color(0xFFCDDAEC), fontWeight: FontWeight.w600))),
+        SizedBox(height: 62, child: Stack(children: [
+          Row(children: List.generate(6, (index) {
+            final filled = index < value.length;
+            final active = index == value.length;
+            return Expanded(child: Container(
+              height: 58,
+              margin: EdgeInsets.only(right: index == 5 ? 0 : 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF07152B),
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: active ? AppTheme.cyan : filled ? AppTheme.blue.withValues(alpha: .7) : const Color(0xFF263F62), width: active ? 1.6 : 1),
+                boxShadow: active ? const [BoxShadow(color: Color(0x2200D9FF), blurRadius: 12)] : const [],
+              ),
+              child: Text(filled ? value[index] : '', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: Colors.white)),
+            ));
+          })),
+          Positioned.fill(child: TextField(
+            controller: widget.controller,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.transparent, fontSize: 24),
+            cursorColor: Colors.transparent,
+            decoration: const InputDecoration(
+              counterText: '',
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          )),
+        ])),
+      ]),
     );
   }
 }
