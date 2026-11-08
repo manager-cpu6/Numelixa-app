@@ -32,9 +32,10 @@ class AppTheme {
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -.35),
     ),
-    scaffoldMessengerTheme: const ScaffoldMessengerThemeData(
+    snackBarTheme: const SnackBarThemeData(
       backgroundColor: panelRaised,
       contentTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      behavior: SnackBarBehavior.floating,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
