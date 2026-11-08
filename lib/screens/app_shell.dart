@@ -1780,34 +1780,6 @@ class _DetailLine extends StatelessWidget {
   ]));
 }
 
-class _WalletAmountOption extends StatelessWidget {
-  const _WalletAmountOption({required this.selected, required this.label, required this.onTap, this.popular = false});
-  final bool selected;
-  final String label;
-  final VoidCallback onTap;
-  final bool popular;
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(14),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      constraints: const BoxConstraints(minWidth: 104),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: selected ? const Color(0xFF12345A) : const Color(0xFF071329),
-        border: Border.all(color: selected ? const Color(0xFF00D9FF) : const Color(0xFF23415F), width: selected ? 1.5 : 1),
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(label, style: TextStyle(fontWeight: FontWeight.w900, color: selected ? const Color(0xFF00D9FF) : Colors.white, fontSize: 17)),
-        const SizedBox(height: 3),
-        Text(popular ? 'POPULAR · USD' : 'USD', style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .6)),
-      ]),
-    ),
-  );
-}
-
 class _WalletPage extends StatefulWidget {
   const _WalletPage();
   @override
@@ -2209,7 +2181,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                prefixText: '\\$ ', suffixText: 'USD', hintText: 'Enter amount',
+                prefixText: '\$ ', suffixText: 'USD', hintText: 'Enter amount',
                 helperText: 'Minimum \\${_minTopupUsd.toStringAsFixed(2)} · Maximum \\${_maxTopupUsd.toStringAsFixed(2)}',
                 prefixIcon: const Icon(Icons.account_balance_wallet_rounded),
               ),
