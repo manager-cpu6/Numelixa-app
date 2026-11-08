@@ -54,7 +54,14 @@ class ApiClient {
         's24': 'Samsung Galaxy S24', 's25': 'Samsung Galaxy S25',
       };
       for (final entry in galaxyModels.entries) {
-        if (product.contains(entry.key) || model.toLowerCase().contains(entry.key)) return entry.value;
+        if (product.contains(entry.key) || model.toLowerCase().contains(entry.key)) {
+          // Keep the raw Android model code as well as the friendly Galaxy name.
+          // Admin Device Control can then match either "Samsung Galaxy A15"
+          // or the exact hardware model such as "SM-A155F".
+          return model.trim().isEmpty
+              ? entry.value
+              : '${entry.value} (${model.trim()})';
+        }
       }
     }
     return [maker, model].where((part) => part.isNotEmpty).join(' ');
