@@ -134,7 +134,7 @@ class AuthService extends ChangeNotifier {
         'phone': phone.trim(),
         'code': code.trim(),
         if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-      }, headers: const {'X-Numelixa-Client': 'android-app'});
+      });
       final token = (response['accessToken'] ?? '').toString();
       if (token.isEmpty) throw const ApiException('The server did not issue a secure mobile session. Please try again.');
       await _saveSession(token, response['user']);
