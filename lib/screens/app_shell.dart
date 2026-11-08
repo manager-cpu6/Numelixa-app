@@ -30,7 +30,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _wasBackgrounded = false;
   bool _biometricUnlockInProgress = false;
   bool _updateCheckStarted = false;
-  bool _accessCheckDone = false;
   Map<String, dynamic>? _accessBlock;
 
   @override
@@ -203,14 +202,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       try {
         final access = await ApiClient().get('/api/mobile/access-check');
         if (access['allowed'] == false) {
-          if (mounted) setState(() { _accessBlock = Map<String, dynamic>.from(access); _accessCheckDone = true; });
+          if (mounted) setState(() => _accessBlock = Map<String, dynamic>.from(access));
           return;
         }
       } catch (_) {
         // Keep the app usable if a temporary policy lookup cannot be reached.
       }
-      if (mounted) setState(() => _accessCheckDone = true);
-      final auth = context.read<AuthService>();
+            final auth = context.read<AuthService>();
       await auth.restore();
       if (!mounted) return;
       _checkForAppUpdate();
