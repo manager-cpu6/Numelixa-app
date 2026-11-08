@@ -981,17 +981,23 @@ class _CatalogPageState extends State<_CatalogPage> {
         const SizedBox(height: 12),
         if (filteredServices.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No services match your search.', textAlign: TextAlign.center)),
         for (final service in filteredServices)
-          Card(child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            leading: _serviceLogo(service),
-            title: Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text((service['description'] ?? service['category'] ?? 'Select to view country availability').toString()),
-            trailing: const Icon(Icons.chevron_right_rounded),
+          Card(child: InkWell(
+            borderRadius: BorderRadius.circular(19),
             onTap: () {
               final id = (service['id'] ?? service['code'] ?? service['name'] ?? service['title'] ?? '').toString();
               if (id.isEmpty) return;
               Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _CountriesPage(service: id)));
             },
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13), child: Row(children: [
+              SizedBox(width: 54, height: 54, child: _serviceLogo(service)),
+              const SizedBox(width: 13),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text((service['description'] ?? service['category'] ?? 'Select to view country availability').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.35)),
+              ])),
+              const Icon(Icons.chevron_right_rounded, color: AppTheme.cyan, size: 25),
+            ])),
           )),
       ]);
     },
@@ -1295,6 +1301,10 @@ class _OrdersPageState extends State<_OrdersPage> {
     }
   }
 
+  void _showNewCodeInfo() {
+    showDialog<void>(context: context, builder: (_) => const _NewCodeInfoDialog());
+  }
+
   Future<void> _cancelOrder(Map<String, dynamic> order) async {
     final id = (order['id'] ?? order['_id'] ?? '').toString();
     if (id.isEmpty) return;
@@ -1463,6 +1473,14 @@ class _OrdersPageState extends State<_OrdersPage> {
                                     )),
                                   ]),
                                 ],
+                                if (_selected == 'successful') ...[
+                                  const SizedBox(height: 10),
+                                  SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                                    onPressed: _showNewCodeInfo,
+                                    icon: const Icon(Icons.auto_awesome_rounded),
+                                    label: const Text('Get New Code'),
+                                  )),
+                                ],
                               ],
                             ),
                           ),
@@ -1474,6 +1492,57 @@ class _OrdersPageState extends State<_OrdersPage> {
         ]);
       },
     ),
+  );
+}
+
+class _NewCodeInfoDialog extends StatefulWidget {
+  const _NewCodeInfoDialog();
+  @override
+  State<_NewCodeInfoDialog> createState() => _NewCodeInfoDialogState();
+}
+
+class _NewCodeInfoDialogState extends State<_NewCodeInfoDialog> {
+  static const _services = ['WhatsApp', 'Telegram', 'Google', 'Instagram', 'TikTok', 'Facebook', 'Microsoft'];
+  late final PageController _controller = PageController(viewportFraction: .42);
+  Timer? _timer;
+  int _page = 0;
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      _page = (_page + 1) % _services.length;
+      _controller.animateToPage(_page, duration: const Duration(milliseconds: 450), curve: Curves.easeInOut);
+    });
+  }
+  @override
+  void dispose() { _timer?.cancel(); _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    backgroundColor: const Color(0xFF071329),
+    title: const Text('Get a new verification code'),
+    content: SizedBox(width: 360, child: Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(height: 94, child: PageView.builder(
+        controller: _controller,
+        itemCount: _services.length,
+        onPageChanged: (value) => _page = value,
+        itemBuilder: (context, index) => Padding(padding: const EdgeInsets.symmetric(horizontal: 5), child: Container(
+          decoration: BoxDecoration(color: const Color(0xFF102844), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF23415F))),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 27),
+            const SizedBox(height: 7),
+            Text(_services[index], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          ]),
+        )),
+      )),
+      const SizedBox(height: 15),
+      const Icon(Icons.info_outline_rounded, color: AppTheme.cyan, size: 30),
+      const SizedBox(height: 9),
+      const Text('This completed activation has already received its SMS code. A second code cannot be retrieved from the same number.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
+      const SizedBox(height: 9),
+      const Text('This service preview is view-only. To receive another code, choose a service and purchase a new number.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.45)),
+    ])),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
   );
 }
 
@@ -2341,11 +2410,16 @@ class _AccountPageState extends State<_AccountPage> {
       ])),
       const SizedBox(height: 12),
       Text((user['name'] ?? 'Numelixa user').toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
-      Text((user['email'] ?? '').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
+      Text((user['email'] ?? user['phone'] ?? 'Phone number not added').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 22),
-      const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Secure API session'), subtitle: Text('Bearer credential verified by Numelixa.'))),
+      Card(child: ListTile(
+        leading: const Icon(Icons.verified_user_outlined, color: AppTheme.cyan),
+        title: Text((user['phone'] ?? '').toString().isNotEmpty ? 'Verified phone account' : 'Secure email account'),
+        subtitle: Text((user['phone'] ?? user['email'] ?? 'Account verified by Numelixa').toString()),
+      )),
       Card(child: ListTile(leading: const Icon(Icons.devices_other_rounded, color: AppTheme.cyan), title: const Text('Your devices'), subtitle: const Text('View signed-in devices, location and recent activity.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DevicesPage())))),
-      Card(child: ListTile(leading: const Icon(Icons.password_rounded, color: AppTheme.cyan), title: const Text('Change password'), subtitle: const Text('Verify a code sent to your email.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: _changePassword)),
+      if ((user['email'] ?? '').toString().isNotEmpty)
+        Card(child: ListTile(leading: const Icon(Icons.password_rounded, color: AppTheme.cyan), title: const Text('Change password'), subtitle: const Text('Verify a code sent to your email.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: _changePassword)),
       Card(child: SwitchListTile(
         secondary: const Icon(Icons.fingerprint_rounded, color: AppTheme.cyan),
         title: const Text('Biometric app lock'),
