@@ -1065,7 +1065,7 @@ class _CatalogPageState extends State<_CatalogPage> {
             onTap: () {
               final id = (service['id'] ?? service['code'] ?? service['name'] ?? service['title'] ?? '').toString();
               if (id.isEmpty) return;
-              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _CountriesPage(service: id)));
+              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _CountriesPage(service: id, name: _serviceName(service))));
             },
             child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13), child: Row(children: [
               SizedBox(width: 54, height: 54, child: _serviceLogo(service)),
@@ -1083,8 +1083,9 @@ class _CatalogPageState extends State<_CatalogPage> {
   );
 }
 class _CountriesPage extends StatefulWidget {
-  const _CountriesPage({required this.service});
+  const _CountriesPage({required this.service, required this.name});
   final String service;
+  final String name;
   @override
   State<_CountriesPage> createState() => _CountriesPageState();
 }
@@ -1142,7 +1143,7 @@ class _CountriesPageState extends State<_CountriesPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('Countries · ${widget.service}')),
+    appBar: AppBar(title: Text('Countries · ${widget.name}')),
     body: FutureBuilder<Map<String, dynamic>>(
       future: _future,
       builder: (context, snapshot) {
