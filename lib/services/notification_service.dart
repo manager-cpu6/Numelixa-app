@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'api_client.dart';
 import '../core/config/app_config.dart';
@@ -72,7 +73,7 @@ class NotificationService {
     if (_initialized) return;
     _messaging ??= FirebaseMessaging.instance;
     _initialized = true;
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('@drawable/ic_stat_numelixa');
     await _local.initialize(
       const InitializationSettings(android: android),
       onDidReceiveNotificationResponse: (response) {
@@ -176,9 +177,10 @@ class NotificationService {
   Future<void> _register(String token, AuthService auth) async {
     if (!auth.isSignedIn) return;
     try {
+      final packageInfo = await PackageInfo.fromPlatform();
       final result = await _api.post(AppConfig.pushRegistrationPath,
         accessToken: auth.accessToken,
-        body: {'token': token, 'platform': 'android', 'deviceId': await ApiClient.deviceId, 'appVersion': '1.0.1'});
+        body: {'token': token, 'platform': 'android', 'deviceId': await ApiClient.deviceId, 'appVersion': packageInfo.version});
       if (result['registered'] != true || result['linked'] != true) {
         throw const ApiException('The server did not confirm device registration and user association.');
       }
@@ -191,21 +193,21 @@ class NotificationService {
 
   Future<void> _showForeground(RemoteMessage message) async {
     final notification = message.notification;
-    if (notification == null) return;
     final channelId = _channelFor(message.data);
-    final notificationData = {...message.data, 'body': notification.body ?? ''};
+    final body = notification?.body ?? (message.data['body'] ?? message.data['message'] ?? '').toString();
+    final notificationData = {...message.data, 'body': body};
     final code = _notificationCode(notificationData);
     await _local.show(
-      notification.hashCode,
-      notification.title ?? 'Numelixa',
-      notification.body ?? '',
+      notification?.hashCode ?? message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+      notification?.title ?? (message.data['title'] ?? 'Numelixa').toString(),
+      body,
       NotificationDetails(
         android: AndroidNotificationDetails(channelId, _channelNameFor(channelId),
           channelDescription: _channelDescriptionFor(channelId),
-          importance: Importance.max, priority: Priority.high, playSound: true,
+          importance: Importance.max, priority: Priority.high, playSound: true, icon: '@drawable/ic_stat_numelixa',
           actions: code == null ? null : const [AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false)]),
       ),
-      payload: jsonEncode(message.data),
+      payload: jsonEncode(notificationData),
     );
   }
 }

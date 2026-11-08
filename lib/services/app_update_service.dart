@@ -80,6 +80,10 @@ class AppUpdateService {
   Future<AppUpdateInfo?> check() async {
     final package = await PackageInfo.fromPlatform();
     final currentCode = int.tryParse(package.buildNumber) ?? 0;
+    AppUpdateInfo? best;
+
+    // Read the website's admin-controlled update first. It carries mandatory
+    // update policy, release notes and optional SHA-256 verification.
     try {
       final response = await _dio.get<Map<String,dynamic>>(
         'https://www.numelixa.com/api/app-update',
@@ -94,9 +98,6 @@ class AppUpdateService {
           sendTimeout: const Duration(seconds: 12)),
       );
       final body = response.data;
-      // If the admin-controlled update endpoint has no update configured,
-      // continue to the published android-latest release as a fallback. This
-      // ensures older installs can still discover a newer signed APK release.
       if (body != null) {
         final data = body['update'] is Map
             ? Map<String,dynamic>.from(body['update'] as Map)
@@ -105,7 +106,7 @@ class AppUpdateService {
         final canonicalUrl = _preferCanonicalApkUrl(update.apkUrl);
         if (update.versionCode > currentCode &&
             canonicalUrl.startsWith('https://')) {
-          return AppUpdateInfo(
+          best = AppUpdateInfo(
             version: update.version,
             versionCode: update.versionCode,
             apkUrl: canonicalUrl,
@@ -119,6 +120,8 @@ class AppUpdateService {
       }
     } catch (_) {}
 
+    // Always compare the public rolling GitHub release too. A stale admin API
+    // response must never hide a newer signed APK from existing installations.
     try {
       final response = await _dio.get<Map<String,dynamic>>(
         'https://api.github.com/repos/manager-cpu6/Numelixa-app/releases/tags/android-latest',
@@ -127,37 +130,42 @@ class AppUpdateService {
           receiveTimeout: const Duration(seconds: 12)),
       );
       final release = response.data;
-      if (release == null) return null;
-      final name = (release['name'] ?? '').toString();
-      final versionMatch = RegExp(r'(\d+\.\d+\.\d+)').firstMatch(name);
-      final codeMatch = RegExp(r'\+(\d+)').firstMatch(name);
-      final versionCode = int.tryParse(codeMatch?.group(1) ?? '') ?? 0;
-      final assets = release['assets'];
-      if (versionCode <= currentCode || assets is! List) return null;
-      final apkAssets = assets.whereType<Map>().cast<Map<String,dynamic>>()
-          .where((asset) => (asset['name'] ?? '').toString().toLowerCase().endsWith('.apk'))
-          .toList();
-      // Prefer the canonical APK created by the current workflow. Older
-      // releases may still contain a stale app-release.apk asset.
-      final apk = apkAssets.where((asset) =>
-          (asset['name'] ?? '').toString().toLowerCase() == 'numelixa.apk')
-          .firstOrNull ??
-          apkAssets.firstOrNull;
-      if (apk == null) return null;
-      final url = (apk['browser_download_url'] ?? '').toString();
-      if (!url.startsWith('https://')) return null;
-      return AppUpdateInfo(
-        version: versionMatch?.group(1) ?? name,
-        versionCode: versionCode,
-        apkUrl: url,
-        releaseNotes: _cleanReleaseNotes(release['body']).isEmpty ? 'A smoother, more reliable Numelixa experience with performance improvements and bug fixes.' : _cleanReleaseNotes(release['body']),
-        mandatory: false,
-        allowSkip: true,
-        apkSizeBytes: int.tryParse((apk['size'] ?? '').toString()),
-      );
-    } catch (_) {
-      return null;
-    }
+      if (release != null) {
+        final name = (release['name'] ?? '').toString();
+        final versionMatch = RegExp(r'(\d+\.\d+\.\d+)').firstMatch(name);
+        final codeMatch = RegExp(r'\+(\d+)').firstMatch(name);
+        final versionCode = int.tryParse(codeMatch?.group(1) ?? '') ?? 0;
+        final assets = release['assets'];
+        if (versionCode > currentCode && assets is List) {
+          final apkAssets = assets.whereType<Map>().cast<Map<String,dynamic>>()
+              .where((asset) => (asset['name'] ?? '').toString().toLowerCase().endsWith('.apk'))
+              .toList();
+          final apk = apkAssets.where((asset) =>
+              (asset['name'] ?? '').toString().toLowerCase() == 'numelixa.apk')
+              .firstOrNull ?? apkAssets.firstOrNull;
+          final url = (apk?['browser_download_url'] ?? '').toString();
+          if (apk != null && url.startsWith('https://')) {
+            final notes = _cleanReleaseNotes(release['body']);
+            final candidate = AppUpdateInfo(
+              version: versionMatch?.group(1) ?? name,
+              versionCode: versionCode,
+              apkUrl: url,
+              releaseNotes: notes.isEmpty
+                  ? 'A smoother, more reliable Numelixa experience with performance improvements and bug fixes.'
+                  : notes,
+              mandatory: false,
+              allowSkip: true,
+              apkSizeBytes: int.tryParse((apk['size'] ?? '').toString()),
+            );
+            if (best == null || candidate.versionCode > best.versionCode) {
+              best = candidate;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return best;
   }
 
   Future<void> downloadAndOpen(AppUpdateInfo update, void Function(int received, int total) onProgress) async {

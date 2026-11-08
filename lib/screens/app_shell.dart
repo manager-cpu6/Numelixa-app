@@ -30,6 +30,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _wasBackgrounded = false;
   bool _biometricUnlockInProgress = false;
   bool _updateCheckStarted = false;
+  Map<String, dynamic>? _accessBlock;
 
   @override
   void initState() {
@@ -198,7 +199,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _booted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final auth = context.read<AuthService>();
+      try {
+        final access = await ApiClient().get('/api/mobile/access-check');
+        if (access['allowed'] == false) {
+          if (mounted) setState(() => _accessBlock = Map<String, dynamic>.from(access));
+          return;
+        }
+      } catch (_) {
+        // Keep the app usable if a temporary policy lookup cannot be reached.
+      }
+            final auth = context.read<AuthService>();
       await auth.restore();
       if (!mounted) return;
       _checkForAppUpdate();
@@ -219,6 +229,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    if (_accessBlock != null) return _AppUnavailableScreen(details: _accessBlock!);
     if (!auth.isReady) {
       return const _SplashScreen();
     }
@@ -260,6 +271,46 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 }
 
+class _AppUnavailableScreen extends StatelessWidget {
+  const _AppUnavailableScreen({required this.details});
+  final Map<String, dynamic> details;
+  @override
+  Widget build(BuildContext context) {
+    final reason = (details['reason'] ?? '').toString();
+    final countryBlocked = reason == 'country';
+    final number = (details['whatsapp'] ?? '252907868526').toString().replaceAll(RegExp(r'[^0-9]'), '');
+    final message = countryBlocked
+        ? 'This app is not available in your country.'
+        : reason == 'android-version'
+          ? 'This app is not available on this Android version.'
+          : 'This app is not available on your device.';
+    return Scaffold(
+      body: SafeArea(child: Center(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 76, height: 76, alignment: Alignment.center,
+              decoration: BoxDecoration(color: const Color(0xFF17233D), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF365174))),
+              child: const Icon(Icons.public_off_rounded, size: 38, color: Color(0xFF8CB8F7))),
+            const SizedBox(height: 22),
+            const Text('NUMELIXA', style: TextStyle(fontSize: 13, letterSpacing: 2.5, fontWeight: FontWeight.w900, color: AppTheme.cyan)),
+            const SizedBox(height: 14),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, height: 1.2, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 10),
+            const Text('If you believe this is a mistake, contact our support team for assistance.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4), height: 1.55)),
+            const SizedBox(height: 22),
+            SizedBox(width: double.infinity, child: FilledButton.icon(
+              onPressed: number.isEmpty ? null : () => launchUrl(Uri.parse('https://wa.me/$number'), mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.chat_rounded), label: const Text('Contact WhatsApp support'),
+            )),
+          ],
+        )),
+      ))),
+    );
+  }
+}
+
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
@@ -271,7 +322,7 @@ class _SplashScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(27),
           gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
         ),
-        child: const Icon(Icons.public_rounded, color: Colors.white, size: 46),
+        child: const Text('N', style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -5)),
       ),
       const SizedBox(height: 20),
       const Text('NUMELIXA', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 3)),
@@ -295,13 +346,17 @@ class _AuthScreenState extends State<_AuthScreen> {
   final _password = TextEditingController();
   final _apiKey = TextEditingController();
   bool _creating = false;
+  bool _phoneMode = false;
+  bool _phoneCodeSent = false;
+  final _phone = TextEditingController();
+  final _phoneCode = TextEditingController();
   bool _showApiKey = false;
   bool _obscurePassword = true;
   String? _error;
 
   @override
   void dispose() {
-    _name.dispose(); _email.dispose(); _password.dispose(); _apiKey.dispose();
+    _name.dispose(); _email.dispose(); _password.dispose(); _apiKey.dispose(); _phone.dispose(); _phoneCode.dispose();
     super.dispose();
   }
 
@@ -334,6 +389,47 @@ class _AuthScreenState extends State<_AuthScreen> {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) setState(() => _error = 'Could not connect. Please check your internet and try again.');
+    }
+  }
+
+  Future<void> _requestPhoneCode() async {
+    final phone = _phone.text.trim();
+    if (!RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(phone)) {
+      setState(() => _error = 'Enter your phone number in international format, for example +2519XXXXXXXX.');
+      return;
+    }
+    if (_creating && _name.text.trim().length < 2) {
+      setState(() => _error = 'Enter your full name first.');
+      return;
+    }
+    setState(() { _error = null; });
+    try {
+      await context.read<AuthService>().requestPhoneCode(phone: phone, name: _name.text, signup: _creating);
+      if (mounted) setState(() => _phoneCodeSent = true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not send the phone verification code. Try again.');
+    }
+  }
+
+  Future<void> _verifyPhoneCode() async {
+    if (!RegExp(r'^\d{6}$').hasMatch(_phoneCode.text.trim())) {
+      setState(() => _error = 'Enter the 6-digit verification code.');
+      return;
+    }
+    setState(() { _error = null; });
+    try {
+      final auth = context.read<AuthService>();
+      await auth.verifyPhoneCode(phone: _phone.text, code: _phoneCode.text, name: _name.text);
+      if (!mounted) return;
+      final notifications = context.read<NotificationService>();
+      final permission = await notifications.requestPermission();
+      if (permission.isGranted) await notifications.syncToken(auth);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Phone verification could not be completed. Try again.');
     }
   }
 
@@ -412,7 +508,7 @@ class _AuthScreenState extends State<_AuthScreen> {
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(26),
                 gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
                 boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))]),
-              child: const Icon(Icons.public_rounded, size: 42, color: Colors.white),
+              child: const Text('N', style: TextStyle(fontSize: 47, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -5)),
             )),
             const SizedBox(height: 26),
             const Text('Welcome to Numelixa', textAlign: TextAlign.center,
@@ -422,19 +518,40 @@ class _AuthScreenState extends State<_AuthScreen> {
               textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
             const SizedBox(height: 24),
             Row(children: [
-              Expanded(child: FilledButton.tonal(
-                onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _error = null; }),
-                child: const Text('Log in'))),
+              Expanded(child: _AuthModeButton(label: 'Log in', selected: !_creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _phoneCodeSent = false; _error = null; }))),
               const SizedBox(width: 10),
-              Expanded(child: OutlinedButton(
-                onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _error = null; }),
-                child: const Text('Create account'))),
+              Expanded(child: _AuthModeButton(label: 'Create account', selected: _creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _phoneCodeSent = false; _error = null; }))),
             ]),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(color: const Color(0xFF091A30), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF23415F))),
+              child: Row(children: [
+                Expanded(child: _AuthModeButton(label: 'Email', selected: !_phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = false; _error = null; }))),
+                const SizedBox(width: 6),
+                Expanded(child: _AuthModeButton(label: 'Phone number', selected: _phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = true; _error = null; }))),
+              ]),
+            ),
             if (_creating) ...[
               const SizedBox(height: 16),
               TextField(controller: _name, textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline_rounded))),
             ],
+            if (_phoneMode) ...[
+              TextField(controller: _phone, keyboardType: TextInputType.phone, autofillHints: const [AutofillHints.telephoneNumber],
+                decoration: const InputDecoration(labelText: 'Phone number', hintText: '+2519XXXXXXXX', prefixIcon: Icon(Icons.phone_iphone_rounded))),
+              if (_phoneCodeSent) ...[
+                const SizedBox(height: 10),
+                _OtpCodeField(controller: _phoneCode),
+                FilledButton(onPressed: auth.isValidating ? null : _verifyPhoneCode, child: const Text('Verify and continue')),
+                TextButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Resend code')),
+              ] else
+                FilledButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Send verification code')),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, style: const TextStyle(color: Color(0xFFFF788C), height: 1.4)),
+              ],
+            ] else ...[
             const SizedBox(height: 12),
             TextField(controller: _email, keyboardType: TextInputType.emailAddress,
               autocorrect: false, autofillHints: const [AutofillHints.email],
@@ -479,6 +596,7 @@ class _AuthScreenState extends State<_AuthScreen> {
               OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin, child: const Text('Connect API key')),
             ],
             const SizedBox(height: 12),
+            ],
             const Text('By continuing, you agree to use Numelixa responsibly. Your session is stored securely on this device.',
               textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 11)),
           ],
@@ -486,6 +604,100 @@ class _AuthScreenState extends State<_AuthScreen> {
       ))),
     );
   }
+}
+
+class _OtpCodeField extends StatefulWidget {
+  const _OtpCodeField({required this.controller});
+  final TextEditingController controller;
+  @override
+  State<_OtpCodeField> createState() => _OtpCodeFieldState();
+}
+class _OtpCodeFieldState extends State<_OtpCodeField> {
+  @override
+  void initState() { super.initState(); widget.controller.addListener(_refresh); }
+  @override
+  void didUpdateWidget(covariant _OtpCodeField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_refresh);
+      widget.controller.addListener(_refresh);
+    }
+  }
+  void _refresh() { if (mounted) setState(() {}); }
+  @override
+  void dispose() { widget.controller.removeListener(_refresh); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.controller.text;
+    return Semantics(
+      label: '6-digit verification code',
+      textField: true,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Padding(padding: EdgeInsets.only(bottom: 9, left: 3), child: Text('6-digit verification code', style: TextStyle(color: Color(0xFFCDDAEC), fontWeight: FontWeight.w600))),
+        SizedBox(height: 62, child: Stack(children: [
+          Row(children: List.generate(6, (index) {
+            final filled = index < value.length;
+            final active = index == value.length;
+            return Expanded(child: Container(
+              height: 58,
+              margin: EdgeInsets.only(right: index == 5 ? 0 : 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF07152B),
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: active ? AppTheme.cyan : filled ? AppTheme.blue.withValues(alpha: .7) : const Color(0xFF263F62), width: active ? 1.6 : 1),
+                boxShadow: active ? const [BoxShadow(color: Color(0x2200D9FF), blurRadius: 12)] : const [],
+              ),
+              child: Text(filled ? value[index] : '', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: Colors.white)),
+            ));
+          })),
+          Positioned.fill(child: TextField(
+            controller: widget.controller,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.transparent, fontSize: 24),
+            cursorColor: Colors.transparent,
+            decoration: const InputDecoration(
+              counterText: '',
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          )),
+        ])),
+      ]),
+    );
+  }
+}
+
+class _AuthModeButton extends StatelessWidget {
+  const _AuthModeButton({required this.label, required this.selected, required this.onPressed});
+  final String label;
+  final bool selected;
+  final VoidCallback? onPressed;
+  @override
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: const Duration(milliseconds: 180),
+    decoration: BoxDecoration(
+      gradient: selected ? const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF6545F5)]) : null,
+      color: selected ? null : Colors.transparent,
+      borderRadius: BorderRadius.circular(11),
+      border: Border.all(color: selected ? const Color(0xFF70C9FF) : Colors.transparent),
+      boxShadow: selected ? const [BoxShadow(color: Color(0x331677FF), blurRadius: 16, offset: Offset(0, 5))] : const [],
+    ),
+    child: TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: selected ? Colors.white : const Color(0xFFA7B7D0),
+        minimumSize: const Size.fromHeight(46),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+    ),
+  );
 }
 
 class _EmailVerificationScreen extends StatefulWidget {
@@ -832,17 +1044,23 @@ class _CatalogPageState extends State<_CatalogPage> {
         const SizedBox(height: 12),
         if (filteredServices.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No services match your search.', textAlign: TextAlign.center)),
         for (final service in filteredServices)
-          Card(child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            leading: _serviceLogo(service),
-            title: Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text((service['description'] ?? service['category'] ?? 'Select to view country availability').toString()),
-            trailing: const Icon(Icons.chevron_right_rounded),
+          Card(child: InkWell(
+            borderRadius: BorderRadius.circular(19),
             onTap: () {
               final id = (service['id'] ?? service['code'] ?? service['name'] ?? service['title'] ?? '').toString();
               if (id.isEmpty) return;
               Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _CountriesPage(service: id)));
             },
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13), child: Row(children: [
+              SizedBox(width: 54, height: 54, child: _serviceLogo(service)),
+              const SizedBox(width: 13),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text((service['description'] ?? service['category'] ?? 'Select to view country availability').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.35)),
+              ])),
+              const Icon(Icons.chevron_right_rounded, color: AppTheme.cyan, size: 25),
+            ])),
           )),
       ]);
     },
@@ -1146,6 +1364,10 @@ class _OrdersPageState extends State<_OrdersPage> {
     }
   }
 
+  void _showNewCodeInfo() {
+    showDialog<void>(context: context, builder: (_) => const _NewCodeInfoDialog());
+  }
+
   Future<void> _cancelOrder(Map<String, dynamic> order) async {
     final id = (order['id'] ?? order['_id'] ?? '').toString();
     if (id.isEmpty) return;
@@ -1314,6 +1536,14 @@ class _OrdersPageState extends State<_OrdersPage> {
                                     )),
                                   ]),
                                 ],
+                                if (_selected == 'successful') ...[
+                                  const SizedBox(height: 10),
+                                  SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                                    onPressed: _showNewCodeInfo,
+                                    icon: const Icon(Icons.auto_awesome_rounded),
+                                    label: const Text('Get New Code'),
+                                  )),
+                                ],
                               ],
                             ),
                           ),
@@ -1325,6 +1555,57 @@ class _OrdersPageState extends State<_OrdersPage> {
         ]);
       },
     ),
+  );
+}
+
+class _NewCodeInfoDialog extends StatefulWidget {
+  const _NewCodeInfoDialog();
+  @override
+  State<_NewCodeInfoDialog> createState() => _NewCodeInfoDialogState();
+}
+
+class _NewCodeInfoDialogState extends State<_NewCodeInfoDialog> {
+  static const _services = ['WhatsApp', 'Telegram', 'Google', 'Instagram', 'TikTok', 'Facebook', 'Microsoft'];
+  late final PageController _controller = PageController(viewportFraction: .42);
+  Timer? _timer;
+  int _page = 0;
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      _page = (_page + 1) % _services.length;
+      _controller.animateToPage(_page, duration: const Duration(milliseconds: 450), curve: Curves.easeInOut);
+    });
+  }
+  @override
+  void dispose() { _timer?.cancel(); _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    backgroundColor: const Color(0xFF071329),
+    title: const Text('Get a new verification code'),
+    content: SizedBox(width: 360, child: Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(height: 94, child: PageView.builder(
+        controller: _controller,
+        itemCount: _services.length,
+        onPageChanged: (value) => _page = value,
+        itemBuilder: (context, index) => Padding(padding: const EdgeInsets.symmetric(horizontal: 5), child: Container(
+          decoration: BoxDecoration(color: const Color(0xFF102844), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF23415F))),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.apps_rounded, color: AppTheme.cyan, size: 27),
+            const SizedBox(height: 7),
+            Text(_services[index], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          ]),
+        )),
+      )),
+      const SizedBox(height: 15),
+      const Icon(Icons.info_outline_rounded, color: AppTheme.cyan, size: 30),
+      const SizedBox(height: 9),
+      const Text('This completed activation has already received its SMS code. A second code cannot be retrieved from the same number.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
+      const SizedBox(height: 9),
+      const Text('This service preview is view-only. To receive another code, choose a service and purchase a new number.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.45)),
+    ])),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
   );
 }
 
@@ -2192,11 +2473,16 @@ class _AccountPageState extends State<_AccountPage> {
       ])),
       const SizedBox(height: 12),
       Text((user['name'] ?? 'Numelixa user').toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
-      Text((user['email'] ?? '').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
+      Text((user['email'] ?? user['phone'] ?? 'Phone number not added').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 22),
-      const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Secure API session'), subtitle: Text('Bearer credential verified by Numelixa.'))),
+      Card(child: ListTile(
+        leading: const Icon(Icons.verified_user_outlined, color: AppTheme.cyan),
+        title: Text((user['phone'] ?? '').toString().isNotEmpty ? 'Verified phone account' : 'Secure email account'),
+        subtitle: Text((user['phone'] ?? user['email'] ?? 'Account verified by Numelixa').toString()),
+      )),
       Card(child: ListTile(leading: const Icon(Icons.devices_other_rounded, color: AppTheme.cyan), title: const Text('Your devices'), subtitle: const Text('View signed-in devices, location and recent activity.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DevicesPage())))),
-      Card(child: ListTile(leading: const Icon(Icons.password_rounded, color: AppTheme.cyan), title: const Text('Change password'), subtitle: const Text('Verify a code sent to your email.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: _changePassword)),
+      if ((user['email'] ?? '').toString().isNotEmpty)
+        Card(child: ListTile(leading: const Icon(Icons.password_rounded, color: AppTheme.cyan), title: const Text('Change password'), subtitle: const Text('Verify a code sent to your email.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: _changePassword)),
       Card(child: SwitchListTile(
         secondary: const Icon(Icons.fingerprint_rounded, color: AppTheme.cyan),
         title: const Text('Biometric app lock'),

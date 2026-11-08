@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/config/app_config.dart';
 
@@ -38,6 +39,8 @@ class ApiClient {
     return id;
   }
 
+  static final Future<int> _androidSdk = DeviceInfoPlugin().androidInfo.then((info) => info.version.sdkInt).catchError((_) => 0);
+  static final Future<String> _appVersion = PackageInfo.fromPlatform().then((info) => info.version).catchError((_) => 'unknown');
   static final Future<String> _deviceLabel = DeviceInfoPlugin().androidInfo.then((info) {
     final maker = info.manufacturer.trim();
     final model = info.model.trim();
@@ -51,7 +54,14 @@ class ApiClient {
         's24': 'Samsung Galaxy S24', 's25': 'Samsung Galaxy S25',
       };
       for (final entry in galaxyModels.entries) {
-        if (product.contains(entry.key) || model.toLowerCase().contains(entry.key)) return entry.value;
+        if (product.contains(entry.key) || model.toLowerCase().contains(entry.key)) {
+          // Keep the raw Android model code as well as the friendly Galaxy name.
+          // Admin Device Control can then match either "Samsung Galaxy A15"
+          // or the exact hardware model such as "SM-A155F".
+          return model.trim().isEmpty
+              ? entry.value
+              : '${entry.value} (${model.trim()})';
+        }
       }
     }
     return [maker, model].where((part) => part.isNotEmpty).join(' ');
@@ -83,6 +93,8 @@ class ApiClient {
       'x-numelixa-device': deviceLabel.isEmpty ? 'Android device' : deviceLabel,
       'x-numelixa-device-id': deviceId,
       'x-numelixa-platform': 'Android',
+      'x-numelixa-android-sdk': (await _androidSdk).toString(),
+      'x-numelixa-app-version': await _appVersion,
     };
     if (body != null) headers['Content-Type'] = 'application/json';
     if (accessToken != null && accessToken.isNotEmpty) {
@@ -113,13 +125,19 @@ class ApiClient {
   }
 
   String _friendlyMessage(int status, dynamic body) {
-    // Prefer the server's actionable error over a generic HTTP label. This is
-    // especially important for diagnosing FCM token linking and OAuth tickets.
+    String sanitize(String value) {
+      final message = value.trim();
+      if (RegExp(r'smtp|535|authentication failed|private email|invalid login', caseSensitive: false).hasMatch(message)) {
+        return 'We could not complete the email step right now. Please try again later or contact Numelixa support.';
+      }
+      return message;
+    }
+    // Prefer an actionable server message, but never expose SMTP credentials or provider internals.
     if (body is Map && body['message'] is String && (body['message'] as String).trim().isNotEmpty) {
-      return body['message'] as String;
+      return sanitize(body['message'] as String);
     }
     if (body is Map && body['error'] is String && (body['error'] as String).trim().isNotEmpty) {
-      return body['error'] as String;
+      return sanitize(body['error'] as String);
     }
     if (status == 401) return 'Please sign in again.';
     if (status == 403) return 'You do not have permission to do that.';
