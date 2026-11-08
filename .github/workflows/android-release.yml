@@ -1,7 +1,7 @@
 name: Numelixa Android CI
 'on':
   push:
-    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade]
+    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade, feat/numelixa-premium-mobile-upgrade]
     tags: ['v*']
   workflow_dispatch:
 permissions:
@@ -120,6 +120,29 @@ jobs:
               content = content.replace('<application', '<application android:icon="@mipmap/ic_launcher"', 1)
           content = content.replace('android:label="app"', 'android:label="Numelixa"')
           manifest.write_text(content)
+          PY
+      - name: Install Numelixa notification status icon
+        shell: bash
+        run: |
+          mkdir -p android/app/src/main/res/drawable
+          cat > android/app/src/main/res/drawable/ic_stat_numelixa.xml <<'XML'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp" android:height="24dp"
+              android:viewportWidth="24" android:viewportHeight="24">
+              <path android:fillColor="#FFFFFFFF" android:pathData="M4,3h3.5l9,12V3H20v18h-3.5L7.5,9V21H4z"/>
+          </vector>
+          XML
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          if 'com.google.firebase.messaging.default_notification_icon' not in s:
+              meta = '<meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_numelixa"/>'
+              s, count = re.subn(r'(<application\\b[^>]*>)', r'\\1\\n        ' + meta, s, count=1)
+              if count != 1:
+                  raise SystemExit('Could not add the Numelixa notification icon metadata.')
+          p.write_text(s)
           PY
       - name: Configure Firebase (optional)
         env:
