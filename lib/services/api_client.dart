@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/config/app_config.dart';
 
@@ -38,6 +39,8 @@ class ApiClient {
     return id;
   }
 
+  static final Future<int> _androidSdk = DeviceInfoPlugin().androidInfo.then((info) => info.version.sdkInt).catchError((_) => 0);
+  static final Future<String> _appVersion = PackageInfo.fromPlatform().then((info) => info.version).catchError((_) => 'unknown');
   static final Future<String> _deviceLabel = DeviceInfoPlugin().androidInfo.then((info) {
     final maker = info.manufacturer.trim();
     final model = info.model.trim();
@@ -83,6 +86,8 @@ class ApiClient {
       'x-numelixa-device': deviceLabel.isEmpty ? 'Android device' : deviceLabel,
       'x-numelixa-device-id': deviceId,
       'x-numelixa-platform': 'Android',
+      'x-numelixa-android-sdk': (await _androidSdk).toString(),
+      'x-numelixa-app-version': await _appVersion,
     };
     if (body != null) headers['Content-Type'] = 'application/json';
     if (accessToken != null && accessToken.isNotEmpty) {
