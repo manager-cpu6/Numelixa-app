@@ -1855,11 +1855,11 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
       return false;
     }
     if (amount < _minTopupUsd) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Minimum top-up is \${_minTopupUsd.toStringAsFixed(2)} USD.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Minimum top-up is ${_minTopupUsd.toStringAsFixed(2)} USD.')));
       return false;
     }
     if (amount > _maxTopupUsd) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Maximum top-up is \${_maxTopupUsd.toStringAsFixed(2)} USD.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Maximum top-up is ${_maxTopupUsd.toStringAsFixed(2)} USD.')));
       return false;
     }
     return true;
@@ -2183,12 +2183,12 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 prefixText: '\$ ',
                 suffixText: 'USD',
                 hintText: 'Enter amount',
-                helperText: 'Minimum \${_minTopupUsd.toStringAsFixed(2)} · Maximum \${_maxTopupUsd.toStringAsFixed(2)}',
+                helperText: 'Minimum ${_minTopupUsd.toStringAsFixed(2)} · Maximum ${_maxTopupUsd.toStringAsFixed(2)}',
                 prefixIcon: const Icon(Icons.account_balance_wallet_rounded),
               ),
             ),
             const SizedBox(height: 8),
-            Text('You will add \${_selectedUsd.toStringAsFixed(2)} USD to your wallet.', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
+            Text('You will add ${_selectedUsd.toStringAsFixed(2)} USD to your wallet.', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
             const SizedBox(height: 8),
             if (_localPaymentsOpen) ...[
               const SizedBox(height: 14),
@@ -3518,11 +3518,11 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
       return false;
     }
     if (amount < _minTopupUsd) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Minimum top-up is \${_minTopupUsd.toStringAsFixed(2)} USD.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Minimum top-up is ${_minTopupUsd.toStringAsFixed(2)} USD.')));
       return false;
     }
     if (amount > _maxTopupUsd) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Maximum top-up is \${_maxTopupUsd.toStringAsFixed(2)} USD.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Maximum top-up is ${_maxTopupUsd.toStringAsFixed(2)} USD.')));
       return false;
     }
     return true;
@@ -3846,12 +3846,12 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 prefixText: '\$ ',
                 suffixText: 'USD',
                 hintText: 'Enter amount',
-                helperText: 'Minimum \${_minTopupUsd.toStringAsFixed(2)} · Maximum \${_maxTopupUsd.toStringAsFixed(2)}',
+                helperText: 'Minimum ${_minTopupUsd.toStringAsFixed(2)} · Maximum ${_maxTopupUsd.toStringAsFixed(2)}',
                 prefixIcon: const Icon(Icons.account_balance_wallet_rounded),
               ),
             ),
             const SizedBox(height: 8),
-            Text('You will add \${_selectedUsd.toStringAsFixed(2)} USD to your wallet.', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
+            Text('You will add ${_selectedUsd.toStringAsFixed(2)} USD to your wallet.', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
             const SizedBox(height: 8),
             if (_localPaymentsOpen) ...[
               const SizedBox(height: 14),
