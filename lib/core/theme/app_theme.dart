@@ -5,9 +5,9 @@ class AppTheme {
   static const navy = Color(0xFF030817);
   static const panel = Color(0xFF0A1830);
   static const panelRaised = Color(0xFF102344);
-  static const blue = Color(0xFF1677FF);
-  static const cyan = Color(0xFF00D9FF);
-  static const violet = Color(0xFF713BFF);
+  static const blue = Color(0xFF792BFF);
+  static const cyan = Color(0xFFC45BFF);
+  static const violet = Color(0xFF5B18D6);
   static const magenta = Color(0xFFE83AA8);
   static const mint = Color(0xFF00E5C3);
   static const muted = Color(0xFF9DB1CE);
