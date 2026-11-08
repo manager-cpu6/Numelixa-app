@@ -205,7 +205,7 @@ class NotificationService {
           importance: Importance.max, priority: Priority.high, playSound: true,
           actions: code == null ? null : const [AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false)]),
       ),
-      payload: jsonEncode(message.data),
+      payload: jsonEncode(notificationData),
     );
   }
 }
