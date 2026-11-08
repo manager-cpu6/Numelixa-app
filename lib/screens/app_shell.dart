@@ -199,6 +199,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _booted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      // Restore the session and check for a mandatory app update before
+      // applying country/device access restrictions. Older installations must
+      // still be able to receive the update that restores current policy support.
+      final auth = context.read<AuthService>();
+      await auth.restore();
+      if (!mounted) return;
+      await _checkForAppUpdate();
+      if (!mounted) return;
       try {
         final access = await ApiClient().get('/api/mobile/access-check');
         if (access['allowed'] == false) {
@@ -208,10 +216,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       } catch (_) {
         // Keep the app usable if a temporary policy lookup cannot be reached.
       }
-            final auth = context.read<AuthService>();
-      await auth.restore();
-      if (!mounted) return;
-      _checkForAppUpdate();
       final notifications = context.read<NotificationService>();
       await notifications.initialize(auth: auth);
       // Ask only once a real account is signed in; registration requires that
