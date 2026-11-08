@@ -442,7 +442,7 @@ class _AuthScreenState extends State<_AuthScreen> {
                 Expanded(child: _AuthModeButton(label: 'Phone number', selected: _phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = true; _error = null; }))),
               ]),
             ),
-            if (_creating && !_phoneMode) ...[
+            if (_creating) ...[
               const SizedBox(height: 16),
               TextField(controller: _name, textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline_rounded))),
@@ -459,6 +459,10 @@ class _AuthScreenState extends State<_AuthScreen> {
                 TextButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Resend code')),
               ] else
                 FilledButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Send verification code')),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, style: const TextStyle(color: Color(0xFFFF788C), height: 1.4)),
+              ],
             ] else ...[
             const SizedBox(height: 12),
             TextField(controller: _email, keyboardType: TextInputType.emailAddress,
