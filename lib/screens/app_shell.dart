@@ -2264,40 +2264,14 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             if (visibleAssets.isEmpty)
               const Padding(padding: EdgeInsets.all(12), child: Text('No matching cryptocurrency. Try another name or symbol.', style: TextStyle(color: Color(0xFF91A8C4))))
             else
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: visibleAssets.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisExtent: 70, crossAxisSpacing: 9, mainAxisSpacing: 9),
-                itemBuilder: (context, index) {
-                  final asset = visibleAssets[index];
-                  final symbol = (asset['coin'] ?? '').toString();
-                  final name = (asset['name'] ?? symbol).toString();
-                  final selected = coin == symbol;
-                  final networkCount = _asMaps(asset['networks']).length;
-                  return Material(
-                    color: selected ? const Color(0xFF10385A) : const Color(0xFF091A30),
-                    borderRadius: BorderRadius.circular(14),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () => setState(() { _currency = symbol; _network = null; }),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF243A56), width: selected ? 1.5 : 1)),
-                        child: Row(children: [
-                          _coinLogo(asset), const SizedBox(width: 8),
-                          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(symbol, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-                            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 10)),
-                            Text(networkCount.toString() + ' networks', style: const TextStyle(color: AppTheme.cyan, fontSize: 9)),
-                          ])),
-                          if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.cyan, size: 17),
-                        ]),
-                      ),
-                    ),
-                  );
-                },
-              ),
+              GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: visibleAssets.length, gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisExtent: 70, crossAxisSpacing: 9, mainAxisSpacing: 9), itemBuilder: (context, index) {
+                final asset = visibleAssets[index];
+                final symbol = (asset['coin'] ?? '').toString();
+                final name = (asset['name'] ?? symbol).toString();
+                final selected = coin == symbol;
+                final networkCount = _asMaps(asset['networks']).length;
+                return Material(color: selected ? const Color(0xFF10385A) : const Color(0xFF091A30), borderRadius: BorderRadius.circular(14), child: InkWell(borderRadius: BorderRadius.circular(14), onTap: () => setState(() { _currency = symbol; _network = null; }), child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF243A56), width: selected ? 1.5 : 1)), child: Row(children: [_coinLogo(asset), const SizedBox(width: 8), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(symbol, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)), Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 10)), Text(networkCount.toString() + ' networks', style: const TextStyle(color: AppTheme.cyan, fontSize: 9))])), if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.cyan, size: 17)]))));
+              }),
             const SizedBox(height: 12),
             const Text('3. Choose network', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
