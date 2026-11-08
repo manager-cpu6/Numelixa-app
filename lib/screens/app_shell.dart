@@ -2129,148 +2129,116 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
         const SizedBox(height: 5),
         const Text('1. Choose how much to add.  2. Choose how to pay.  3. Follow the payment instructions.', style: TextStyle(color: Color(0xFF91A8C4), height: 1.5)),
         const SizedBox(height: 12),
-        FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
-          }
-          if (snapshot.hasError) {
-            return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-              Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
-              TextButton(onPressed: () => setState(_load), child: const Text('Retry payment options')),
-            ])));
-          }
-          final assets = _asMaps(snapshot.data?['assets']);
-          final visibleAssets = assets.where((a) => ('${a['coin'] ?? ''} ${a['name'] ?? ''}').toLowerCase().contains(_cryptoSearch.text.trim().toLowerCase())).toList();
-          if (assets.isEmpty) {
-            return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
-          }
-          final selectedAsset = assets.firstWhere((a) => a['coin'] == _currency, orElse: () => assets.first);
-          final coin = (selectedAsset['coin'] ?? '').toString();
-          final networks = _asMaps(selectedAsset['networks']);
-          if (_currency != coin) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() { _currency = coin; _network = null; });
-              }
-            });
-          }
-          if (networks.isNotEmpty && !networks.any((n) => n['network'] == _network)) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() => _network = (networks.first['network'] ?? '').toString());
-              }
-            });
-          }
-          return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Text('1. Enter your top-up amount', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             const SizedBox(height: 10),
             TextField(controller: _amountController, keyboardType: const TextInputType.numberWithOptions(decimal: true), enabled: !_creating, onChanged: (_) => setState(() {}), decoration: InputDecoration(prefixText: '\$ ', suffixText: 'USD', labelText: 'Amount you want to add', hintText: _minTopupUsd.toStringAsFixed(2), helperText: 'Minimum \$' + _minTopupUsd.toStringAsFixed(2) + ' · Maximum \$' + _maxTopupUsd.toStringAsFixed(2), errorText: _validAmount ? null : 'Enter an amount within the allowed limits.')),
             const SizedBox(height: 8),
             Text('Your top-up: \$' + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
-            const SizedBox(height: 8),
-            if (_localPaymentsOpen) ...[
-              const SizedBox(height: 14),
-              const Text('Payment method', style: TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
+          ]))),
+          if (_localPaymentsOpen) ...[
+            const SizedBox(height: 12),
+            Card(child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('2. Choose payment type', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              const SizedBox(height: 9),
               Row(children: [
-                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto', subtitle: 'USDT and more', onTap: () => setState(() => _paymentMethod = 'crypto'))),
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() => _paymentMethod = 'crypto'))),
                 const SizedBox(width: 10),
-                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local', subtitle: 'Mobile wallets · Premier Wallet · eDahab · Waafi', onTap: () => setState(() => _paymentMethod = 'local'))),
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local Payment', subtitle: 'Waafi, EVC, ZAAD, SAHAL and more', onTap: () => setState(() => _paymentMethod = 'local'))),
               ]),
               const SizedBox(height: 10),
-              Card(
-                color: const Color(0xFF091A30),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: const BorderSide(color: Color(0xFF243A56))),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-                  child: Row(children: [
-                    Image.network('https://cdn.simpleicons.org/visa/1A1F71', width: 34, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('VISA', style: TextStyle(fontWeight: FontWeight.w900))),
-                    const SizedBox(width: 8),
-                    Image.network('https://cdn.simpleicons.org/mastercard/EB001B', width: 30, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('MC', style: TextStyle(fontWeight: FontWeight.w900))),
-                    const SizedBox(width: 12),
-                    const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Visa / Mastercard', style: TextStyle(fontWeight: FontWeight.w800)),
-                      SizedBox(height: 3),
-                      Text('Card payments are coming soon', style: TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
-                    ])),
-                    const Text('COMING SOON', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFFFCF83))),
-                  ]),
-                ),
-              ),
-              if (_paymentMethod == 'local') ...[
-                const SizedBox(height: 12),
-                Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF081B36), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF1A4770))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Pay without leaving Numelixa', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.cyan)),
-                  const SizedBox(height: 6),
-                  Text('Amount: \$${_selectedUsd.toStringAsFixed(2)} USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 10),
-                  const Text('Payment method', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    initialValue: _localMethod,
-                    decoration: const InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'waafi', child: Row(children: [_localPaymentLogo('waafi'), const SizedBox(width: 8), const Expanded(child: Text('Waafi · EVC Plus · ZAAD · SAHAL'))])),
-                      DropdownMenuItem(value: 'edahab', child: Row(children: [_localPaymentLogo('edahab'), const SizedBox(width: 8), const Expanded(child: Text('eDahab'))])),
-                      DropdownMenuItem(value: 'premier', child: Row(children: [_localPaymentLogo('premier'), const SizedBox(width: 8), const Expanded(child: Text('Premier Wallet'))])),
-                    ],
-                    onChanged: _creating ? null : (value) { if (value != null) setState(() => _localMethod = value); },
-                  ),
-                  if (_localMethod == 'waafi') ...[
-                    const SizedBox(height: 9),
-                    Wrap(spacing: 6, runSpacing: 6, children: [
-                      _localPaymentBadge('WAAFI', const Color(0xFF42DCC7)),
-                      _localPaymentBadge('EVC PLUS', const Color(0xFF6DB5FF)),
-                      _localPaymentBadge('ZAAD', const Color(0xFFC3A2FF)),
-                      _localPaymentBadge('SAHAL', const Color(0xFFFFD18A)),
-                    ]),
-                  ],
-                  const SizedBox(height: 10),
-                  TextField(controller: _localPhone, enabled: !_creating, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile wallet phone number', hintText: '+252 6X XXX XXXX', prefixIcon: Icon(Icons.phone_android_rounded))),
-                  const SizedBox(height: 8),
-                  const Text('A payment request will be sent to your phone. Approve it there, then this screen checks the payment automatically.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4), height: 1.45)),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12), decoration: BoxDecoration(color: const Color(0xFF091A30), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF243A56))), child: Row(children: [
+                Image.network('https://cdn.simpleicons.org/visa/1A1F71', width: 34, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('VISA', style: TextStyle(fontWeight: FontWeight.w900))),
+                const SizedBox(width: 8),
+                Image.network('https://cdn.simpleicons.org/mastercard/EB001B', width: 30, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('MC', style: TextStyle(fontWeight: FontWeight.w900))),
+                const SizedBox(width: 12),
+                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Visa / Mastercard', style: TextStyle(fontWeight: FontWeight.w800)),
+                  SizedBox(height: 3),
+                  Text('Card payments are coming soon', style: TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
                 ])),
-                const SizedBox(height: 12),
-                FilledButton.icon(onPressed: _creating || !_validAmount ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Sending payment request…' : 'Pay \$${_selectedUsd.toStringAsFixed(2)} USD')),
-                if (_pendingLocalOrderId != null) Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(onPressed: _checkingLocalPayment ? null : _verifyLocalPayment, icon: const Icon(Icons.refresh_rounded), label: Text(_checkingLocalPayment ? 'Checking payment…' : 'Check payment status'))),
+                const Text('COMING SOON', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFFFCF83))),
+              ])),
+            ]))),
+          ],
+          if (_localPaymentsOpen && _paymentMethod == 'local') ...[
+            const SizedBox(height: 12),
+            Card(child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('3. Local wallet details', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.cyan)),
+              const SizedBox(height: 7),
+              Text('Amount: \$' + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _localMethod,
+                decoration: const InputDecoration(labelText: 'Choose mobile wallet'),
+                items: [
+                  DropdownMenuItem(value: 'waafi', child: Row(children: [_localPaymentLogo('waafi'), const SizedBox(width: 8), const Expanded(child: Text('Waafi · EVC Plus · ZAAD · SAHAL'))])),
+                  DropdownMenuItem(value: 'edahab', child: Row(children: [_localPaymentLogo('edahab'), const SizedBox(width: 8), const Expanded(child: Text('eDahab'))])),
+                  DropdownMenuItem(value: 'premier', child: Row(children: [_localPaymentLogo('premier'), const SizedBox(width: 8), const Expanded(child: Text('Premier Wallet'))])),
+                ],
+                onChanged: _creating ? null : (value) { if (value != null) setState(() => _localMethod = value); },
+              ),
+              if (_localMethod == 'waafi') ...[
+                const SizedBox(height: 9),
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  _localPaymentBadge('WAAFI', const Color(0xFF42DCC7)),
+                  _localPaymentBadge('EVC PLUS', const Color(0xFF6DB5FF)),
+                  _localPaymentBadge('ZAAD', const Color(0xFFC3A2FF)),
+                  _localPaymentBadge('SAHAL', const Color(0xFFFFD18A)),
+                ]),
               ],
-            ],
-            if (_paymentMethod == 'crypto' || !_localPaymentsOpen) ...[
+              const SizedBox(height: 10),
+              TextField(controller: _localPhone, enabled: !_creating, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile wallet phone number', hintText: '+252 6X XXX XXXX', prefixIcon: Icon(Icons.phone_android_rounded))),
+              const SizedBox(height: 8),
+              const Text('A payment request will be sent to your phone. Approve it there, then this screen checks the payment automatically.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4), height: 1.45)),
+              const SizedBox(height: 12),
+              FilledButton.icon(onPressed: _creating || !_validAmount ? null : _createLocalPayment, icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_rounded), label: Text(_creating ? 'Sending payment request…' : 'Pay \$' + _selectedUsd.toStringAsFixed(2) + ' USD')),
+              if (_pendingLocalOrderId != null) Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(onPressed: _checkingLocalPayment ? null : _verifyLocalPayment, icon: const Icon(Icons.refresh_rounded), label: Text(_checkingLocalPayment ? 'Checking payment…' : 'Check payment status'))),
+            ]))),
+          ],
+          if (_paymentMethod == 'crypto' || !_localPaymentsOpen) ...[
             const SizedBox(height: 12),
-            const Text('2. Choose cryptocurrency', style: TextStyle(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            TextField(controller: _cryptoSearch, decoration: InputDecoration(prefixIcon: const Icon(Icons.search_rounded), hintText: 'Search Bitcoin, USDT, Ethereum…', suffixIcon: _cryptoSearch.text.isEmpty ? null : IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => setState(() => _cryptoSearch.clear()))), onChanged: (_) => setState(() {})),
-            const SizedBox(height: 10),
-            if (visibleAssets.isEmpty)
-              const Padding(padding: EdgeInsets.all(12), child: Text('No matching cryptocurrency. Try another name or symbol.', style: TextStyle(color: Color(0xFF91A8C4))))
-            else
-              GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: visibleAssets.length, gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisExtent: 70, crossAxisSpacing: 9, mainAxisSpacing: 9), itemBuilder: (context, index) {
-                final asset = visibleAssets[index];
-                final symbol = (asset['coin'] ?? '').toString();
-                final name = (asset['name'] ?? symbol).toString();
-                final selected = coin == symbol;
-                final networkCount = _asMaps(asset['networks']).length;
-                return Material(color: selected ? const Color(0xFF10385A) : const Color(0xFF091A30), borderRadius: BorderRadius.circular(14), child: InkWell(borderRadius: BorderRadius.circular(14), onTap: () => setState(() { _currency = symbol; _network = null; }), child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF243A56), width: selected ? 1.5 : 1)), child: Row(children: [_coinLogo(asset), const SizedBox(width: 8), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(symbol, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)), Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 10)), Text(networkCount.toString() + ' networks', style: const TextStyle(color: AppTheme.cyan, fontSize: 9))])), if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.cyan, size: 17)]))));
-              }),
-            const SizedBox(height: 12),
-            const Text('3. Choose network', style: TextStyle(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<String>(initialValue: networks.any((n) => n['network'] == _network) ? _network : null,
-              decoration: const InputDecoration(),
-              items: networks.map((n) => DropdownMenuItem<String>(value: (n['network'] ?? '').toString(),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  _networkLogo((n['networkName'] ?? n['network'] ?? '').toString()),
-                  const SizedBox(width: 9),
-                  Flexible(child: Text((n['networkName'] ?? n['network'] ?? '').toString(), overflow: TextOverflow.ellipsis)),
-                ]))).toList(),
-              onChanged: (value) => setState(() => _network = value)),
-            const SizedBox(height: 14),
-            FilledButton.icon(onPressed: _creating || _network == null || !_validAmount ? null : () => _createDeposit(selectedAsset),
-              icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_card_rounded),
-              label: Text(_creating ? 'Creating deposit…' : 'Create deposit request')),
-            ],
-          ])));
-        }),
+            FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
+              if (snapshot.hasError) return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+                Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
+                TextButton(onPressed: () => setState(_load), child: const Text('Retry payment options')),
+              ])));
+              final assets = _asMaps(snapshot.data?['assets']);
+              if (assets.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No deposit assets are available right now.')));
+              final visibleAssets = assets.where((asset) => ((asset['coin'] ?? '').toString() + ' ' + (asset['name'] ?? '').toString()).toLowerCase().contains(_cryptoSearch.text.trim().toLowerCase())).toList();
+              final selectedAsset = assets.firstWhere((asset) => asset['coin'] == _currency, orElse: () => assets.first);
+              final coin = (selectedAsset['coin'] ?? '').toString();
+              final networks = _asMaps(selectedAsset['networks']);
+              if (_currency != coin) WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() { _currency = coin; _network = null; }); });
+              if (networks.isNotEmpty && !networks.any((network) => network['network'] == _network)) WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) setState(() => _network = (networks.first['network'] ?? '').toString()); });
+              return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const Text('3. Choose cryptocurrency', style: TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                TextField(controller: _cryptoSearch, decoration: InputDecoration(prefixIcon: const Icon(Icons.search_rounded), hintText: 'Search Bitcoin, USDT, Ethereum…', suffixIcon: _cryptoSearch.text.isEmpty ? null : IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => setState(() => _cryptoSearch.clear()))), onChanged: (_) => setState(() {})),
+                const SizedBox(height: 10),
+                if (visibleAssets.isEmpty)
+                  const Padding(padding: EdgeInsets.all(12), child: Text('No matching cryptocurrency. Try another name or symbol.', style: TextStyle(color: Color(0xFF91A8C4))))
+                else
+                  GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: visibleAssets.length, gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisExtent: 70, crossAxisSpacing: 9, mainAxisSpacing: 9), itemBuilder: (context, index) {
+                    final asset = visibleAssets[index];
+                    final symbol = (asset['coin'] ?? '').toString();
+                    final name = (asset['name'] ?? symbol).toString();
+                    final selected = coin == symbol;
+                    final networkCount = _asMaps(asset['networks']).length;
+                    return Material(color: selected ? const Color(0xFF10385A) : const Color(0xFF091A30), borderRadius: BorderRadius.circular(14), child: InkWell(borderRadius: BorderRadius.circular(14), onTap: () => setState(() { _currency = symbol; _network = null; }), child: Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF243A56), width: selected ? 1.5 : 1)), child: Row(children: [_coinLogo(asset), const SizedBox(width: 8), Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(symbol, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)), Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 10)), Text(networkCount.toString() + ' networks', style: const TextStyle(color: AppTheme.cyan, fontSize: 9))])), if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.cyan, size: 17)]))));
+                  }),
+                const SizedBox(height: 12),
+                const Text('4. Choose network', style: TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(initialValue: networks.any((network) => network['network'] == _network) ? _network : null, decoration: const InputDecoration(), items: networks.map((network) => DropdownMenuItem<String>(value: (network['network'] ?? '').toString(), child: Row(mainAxisSize: MainAxisSize.min, children: [_networkLogo((network['networkName'] ?? network['network'] ?? '').toString()), const SizedBox(width: 9), Flexible(child: Text((network['networkName'] ?? network['network'] ?? '').toString(), overflow: TextOverflow.ellipsis))]))).toList(), onChanged: (value) => setState(() => _network = value)),
+                const SizedBox(height: 14),
+                FilledButton.icon(onPressed: _creating || _network == null || !_validAmount ? null : () => _createDeposit(selectedAsset), icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_card_rounded), label: Text(_creating ? 'Creating deposit…' : 'Create deposit request')),
+              ])));
+            }),
+          ],
+        ]),
         const SizedBox(height: 20),
         const Text('Transaction history', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
