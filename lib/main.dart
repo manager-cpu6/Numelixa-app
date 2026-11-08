@@ -25,9 +25,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final title = (data['title'] ?? 'Numelixa').toString();
   final body = (data['body'] ?? data['message'] ?? '').toString();
   final rawCode = (data['code'] ?? data['otp'] ?? data['verificationCode'] ?? data['smsCode'] ?? '').toString();
-  final code = RegExp(r'^\\d{4,8}$').hasMatch(rawCode)
+  final code = RegExp(r'^\d{4,8}$').hasMatch(rawCode)
       ? rawCode
-      : RegExp(r'(?<!\\d)\\d{4,8}(?!\\d)').firstMatch(body)?.group(0);
+      : RegExp(r'(?<!\d)\d{4,8}(?!\d)').firstMatch(body)?.group(0);
   await local.show(
     message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
     title,
