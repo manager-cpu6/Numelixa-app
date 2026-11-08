@@ -1770,34 +1770,6 @@ class _DetailLine extends StatelessWidget {
   ]));
 }
 
-class _WalletAmountOption extends StatelessWidget {
-  const _WalletAmountOption({required this.selected, required this.label, required this.onTap, this.popular = false});
-  final bool selected;
-  final String label;
-  final VoidCallback onTap;
-  final bool popular;
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(14),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      constraints: const BoxConstraints(minWidth: 104),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: selected ? const Color(0xFF12345A) : const Color(0xFF071329),
-        border: Border.all(color: selected ? const Color(0xFF00D9FF) : const Color(0xFF23415F), width: selected ? 1.5 : 1),
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(label, style: TextStyle(fontWeight: FontWeight.w900, color: selected ? const Color(0xFF00D9FF) : Colors.white, fontSize: 17)),
-        const SizedBox(height: 3),
-        Text(popular ? 'POPULAR · USD' : 'USD', style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .6)),
-      ]),
-    ),
-  );
-}
-
 class _WalletPage extends StatefulWidget {
   const _WalletPage();
   @override
@@ -1808,13 +1780,6 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   late Future<Map<String, dynamic>> _transactions;
   late Future<Map<String, dynamic>> _balance;
   late Future<Map<String, dynamic>> _assets;
-  int _coins = 36;
-  List<Map<String, dynamic>> _walletPackages = const [
-    {'coins': 36, 'priceUsd': 0.77, 'popular': true},
-    {'coins': 75, 'priceUsd': 1.65, 'popular': false},
-    {'coins': 250, 'priceUsd': 5.49, 'popular': false},
-    {'coins': 499, 'priceUsd': 10.99, 'popular': false},
-  ];
   final TextEditingController _localPhone = TextEditingController();
   final TextEditingController _amountController = TextEditingController(text: '5.00');
   final TextEditingController _cryptoSearch = TextEditingController();
@@ -1856,15 +1821,12 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     _assets = repo.depositAssets(token: token);
     repo.walletPricing(token: token).then((data) {
       final pricing = data['pricing'];
-      final rawPackages = pricing is Map ? pricing['coinPackages'] : null;
-      final packages = _asMaps(rawPackages).where((p) => (int.tryParse((p['coins'] ?? '').toString()) ?? 0) > 0 && (double.tryParse((p['priceUsd'] ?? '').toString()) ?? 0) > 0).toList();
       if (!mounted) return;
       final minimum = double.tryParse((pricing is Map ? pricing['minTopupUsd'] : null)?.toString() ?? '') ?? 1;
       final maximum = double.tryParse((pricing is Map ? pricing['maxTopupUsd'] : null)?.toString() ?? '') ?? 10000;
       setState(() {
         _minTopupUsd = minimum > 0 ? minimum : 1;
         _maxTopupUsd = maximum >= _minTopupUsd ? maximum : 10000;
-        _walletPackages = packages.take(6).toList();
         final current = double.tryParse(_amountController.text) ?? 5;
         if (current < _minTopupUsd || current > _maxTopupUsd) _amountController.text = _minTopupUsd.toStringAsFixed(2);
       });
