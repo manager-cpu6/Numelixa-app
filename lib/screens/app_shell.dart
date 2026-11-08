@@ -250,7 +250,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: const Row(children: [
-          Icon(Icons.public_rounded, color: AppTheme.mint, size: 25),
+          _NumelixaMark(size: 25),
           SizedBox(width: 9),
           Text('Numelixa', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -.5)),
         ]),
@@ -311,6 +311,16 @@ class _AppUnavailableScreen extends StatelessWidget {
   }
 }
 
+class _NumelixaMark extends StatelessWidget {
+  const _NumelixaMark({this.size = 34});
+  final double size;
+  @override
+  Widget build(BuildContext context) => ShaderMask(
+    shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFE7A6FF), Color(0xFF9B36FF), Color(0xFF4B12D7), Color(0xFF00D9FF)]).createShader(bounds),
+    child: Text('N', style: TextStyle(fontSize: size, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic, letterSpacing: -size * .16, height: 1, color: Colors.white)),
+  );
+}
+
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
@@ -322,7 +332,7 @@ class _SplashScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(27),
           gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
         ),
-        child: const Text('N', style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -5)),
+        child: const _NumelixaMark(size: 58),
       ),
       const SizedBox(height: 20),
       const Text('NUMELIXA', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 3)),
@@ -1808,13 +1818,9 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   late Future<Map<String, dynamic>> _transactions;
   late Future<Map<String, dynamic>> _balance;
   late Future<Map<String, dynamic>> _assets;
-  int _coins = 36;
-  List<Map<String, dynamic>> _walletPackages = const [
-    {'coins': 36, 'priceUsd': 0.77, 'popular': true},
-    {'coins': 75, 'priceUsd': 1.65, 'popular': false},
-    {'coins': 250, 'priceUsd': 5.49, 'popular': false},
-    {'coins': 499, 'priceUsd': 10.99, 'popular': false},
-  ];
+  final TextEditingController _amountController = TextEditingController(text: '1.00');
+  double _minTopupUsd = 1.00;
+  double _maxTopupUsd = 10000.00;
   final TextEditingController _localPhone = TextEditingController();
   final TextEditingController _cryptoSearch = TextEditingController();
   String _localMethod = 'waafi';
@@ -1832,7 +1838,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   StateSetter? _updateDepositDialog;
 
   @override
-  void dispose() { _localPhone.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _localPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
+  void dispose() { _amountController.dispose(); _localPhone.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _localPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
 
   @override
   void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _load(); }
@@ -1853,13 +1859,14 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     _assets = repo.depositAssets(token: token);
     repo.walletPricing(token: token).then((data) {
       final pricing = data['pricing'];
-      final rawPackages = pricing is Map ? pricing['coinPackages'] : null;
-      final packages = _asMaps(rawPackages).where((p) => (int.tryParse((p['coins'] ?? '').toString()) ?? 0) > 0 && (double.tryParse((p['priceUsd'] ?? '').toString()) ?? 0) > 0).toList();
-      if (!mounted || packages.isEmpty) return;
+      if (!mounted || pricing is! Map) return;
+      final minimum = double.tryParse((pricing['minTopupUsd'] ?? 1).toString()) ?? 1;
+      final maximum = double.tryParse((pricing['maxTopupUsd'] ?? 10000).toString()) ?? 10000;
       setState(() {
-        _walletPackages = packages.take(6).toList();
-        if (!_walletPackages.any((p) => int.tryParse((p['coins'] ?? '').toString()) == _coins)) {
-          _coins = int.tryParse((_walletPackages.first['coins'] ?? 36).toString()) ?? 36;
+        _minTopupUsd = minimum > 0 ? minimum : 1;
+        _maxTopupUsd = maximum >= _minTopupUsd ? maximum : 10000;
+        if (_amountController.text.trim().isEmpty || (double.tryParse(_amountController.text) ?? 0) < _minTopupUsd) {
+          _amountController.text = _minTopupUsd.toStringAsFixed(2);
         }
       });
     }).catchError((_) {});
@@ -1868,14 +1875,27 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _asMaps(dynamic value) =>
       value is List ? value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
 
-  double get _selectedUsd {
-    final selected = _walletPackages.where((p) => int.tryParse((p['coins'] ?? '').toString()) == _coins);
-    if (selected.isNotEmpty) return double.tryParse((selected.first['priceUsd'] ?? '').toString()) ?? 0.77;
-    return double.tryParse((_walletPackages.isNotEmpty ? _walletPackages.first['priceUsd'] : 0.77).toString()) ?? 0.77;
+  double get _selectedUsd => double.tryParse(_amountController.text.trim().replaceAll(',', '.')) ?? 0;
+
+  bool _validateTopupAmount() {
+    final amount = _selectedUsd;
+    if (!amount.isFinite || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid USD amount.')));
+      return false;
+    }
+    if (amount < _minTopupUsd) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Minimum top-up is \${_minTopupUsd.toStringAsFixed(2)} USD.')));
+      return false;
+    }
+    if (amount > _maxTopupUsd) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Maximum top-up is \${_maxTopupUsd.toStringAsFixed(2)} USD.')));
+      return false;
+    }
+    return true;
   }
 
   Future<void> _createLocalPayment() async {
-    if (_creating) return;
+    if (_creating || !_validateTopupAmount()) return;
     if (_localPhone.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter the phone number linked to your mobile wallet.')));
       return;
@@ -1947,7 +1967,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   }
 
   Future<void> _createDeposit(Map<String, dynamic> asset) async {
-    if (_currency == null || _network == null || _creating) return;
+    if (_currency == null || _network == null || _creating || !_validateTopupAmount()) return;
     setState(() => _creating = true);
     try {
       final auth = context.read<AuthService>();
@@ -2181,20 +2201,23 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             });
           }
           return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('1. Choose top-up amount', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+            const Text('1. Enter top-up amount', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             const SizedBox(height: 10),
-            Wrap(spacing: 8, runSpacing: 8, children: _walletPackages.map((pack) {
-              final units = int.tryParse((pack['coins'] ?? '').toString()) ?? 0;
-              final price = double.tryParse((pack['priceUsd'] ?? '').toString()) ?? 0;
-              return _WalletAmountOption(
-                selected: _coins == units,
-                label: String.fromCharCode(36) + price.toStringAsFixed(2),
-                popular: pack['popular'] == true,
-                onTap: () => setState(() => _coins = units),
-              );
-            }).toList()),
+            TextField(
+              controller: _amountController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                prefixText: '\$ ',
+                suffixText: 'USD',
+                hintText: 'Enter amount',
+                helperText: 'Minimum \${_minTopupUsd.toStringAsFixed(2)} · Maximum \${_maxTopupUsd.toStringAsFixed(2)}',
+                prefixIcon: const Icon(Icons.account_balance_wallet_rounded),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('Selected amount: ' + String.fromCharCode(36) + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
+            Text('You will add \${_selectedUsd.toStringAsFixed(2)} USD to your wallet.', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
             const SizedBox(height: 8),
             if (_localPaymentsOpen) ...[
               const SizedBox(height: 14),
@@ -2269,22 +2292,34 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             const SizedBox(height: 6),
             TextField(controller: _cryptoSearch, decoration: InputDecoration(prefixIcon: const Icon(Icons.search_rounded), hintText: 'Search Bitcoin, USDT, Ethereum…', suffixIcon: _cryptoSearch.text.isEmpty ? null : IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => setState(() => _cryptoSearch.clear()))), onChanged: (_) => setState(() {})),
             const SizedBox(height: 10),
-            if (visibleAssets.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('No matching cryptocurrency. Try another name or symbol.', style: TextStyle(color: Color(0xFF91A8C4)))) else Wrap(spacing: 8, runSpacing: 8, children: visibleAssets.map((a) {
-              final symbol = (a['coin'] ?? '').toString();
-              return ChoiceChip(selected: coin == symbol, label: Row(mainAxisSize: MainAxisSize.min, children: [_coinLogo(a), const SizedBox(width: 7), Text(symbol, style: const TextStyle(fontWeight: FontWeight.w800))]), onSelected: (_) => setState(() { _currency = symbol; _network = null; }));
-            }).toList()),
+            if (visibleAssets.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('No matching cryptocurrency. Try another name or symbol.', style: TextStyle(color: Color(0xFF91A8C4)))) else GridView.count(
+              crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 2.75,
+              children: visibleAssets.map((a) {
+                final symbol = (a['coin'] ?? '').toString();
+                final selected = coin == symbol;
+                return InkWell(onTap: () => setState(() { _currency = symbol; _network = null; }), borderRadius: BorderRadius.circular(14), child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                  decoration: BoxDecoration(color: selected ? const Color(0xFF25145A) : const Color(0xFF0B1B34), borderRadius: BorderRadius.circular(14), border: Border.all(color: selected ? AppTheme.violet : const Color(0xFF263F62), width: selected ? 1.6 : 1)),
+                  child: Row(children: [_coinLogo(a), const SizedBox(width: 8), Expanded(child: Text(symbol, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900))), if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.cyan, size: 17)]),
+                ));
+              }).toList(),
+            ),
             const SizedBox(height: 12),
             const Text('3. Choose network', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
-            DropdownButtonFormField<String>(initialValue: networks.any((n) => n['network'] == _network) ? _network : null,
-              decoration: const InputDecoration(),
-              items: networks.map((n) => DropdownMenuItem<String>(value: (n['network'] ?? '').toString(),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  _networkLogo((n['networkName'] ?? n['network'] ?? '').toString()),
-                  const SizedBox(width: 9),
-                  Flexible(child: Text((n['networkName'] ?? n['network'] ?? '').toString(), overflow: TextOverflow.ellipsis)),
-                ]))).toList(),
-              onChanged: (value) => setState(() => _network = value)),
+            GridView.count(
+              crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 2.65,
+              children: networks.map((n) {
+                final value = (n['network'] ?? '').toString();
+                final label = (n['networkName'] ?? value).toString();
+                final selected = _network == value;
+                return InkWell(onTap: () => setState(() => _network = value), borderRadius: BorderRadius.circular(14), child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(color: selected ? const Color(0xFF25145A) : const Color(0xFF0B1B34), borderRadius: BorderRadius.circular(14), border: Border.all(color: selected ? AppTheme.violet : const Color(0xFF263F62), width: selected ? 1.6 : 1)),
+                  child: Row(children: [_networkLogo(label), const SizedBox(width: 8), Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))), if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.cyan, size: 16)]),
+                ));
+              }).toList(),
+            ),
             const SizedBox(height: 14),
             FilledButton.icon(onPressed: _creating || _network == null ? null : () => _createDeposit(selectedAsset),
               icon: _creating ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_card_rounded),
