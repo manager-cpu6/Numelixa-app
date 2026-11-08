@@ -124,7 +124,11 @@ class ApiClient {
       return body['message'] as String;
     }
     if (body is Map && body['error'] is String && (body['error'] as String).trim().isNotEmpty) {
-      return body['error'] as String;
+      final message = (body['error'] as String).trim();
+      if (RegExp(r'smtp|535|authentication failed|private email|invalid login', caseSensitive: false).hasMatch(message)) {
+        return 'We could not complete the email step right now. Please try again later or contact Numelixa support.';
+      }
+      return message;
     }
     if (status == 401) return 'Please sign in again.';
     if (status == 403) return 'You do not have permission to do that.';
