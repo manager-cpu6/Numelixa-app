@@ -1160,8 +1160,9 @@ class _CountriesPageState extends State<_CountriesPage> {
               leading: Container(width: 42, height: 42, alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFF171044), borderRadius: BorderRadius.circular(13), border: Border.all(color: const Color(0xFF5730A8))), child: const Icon(Icons.public_rounded, color: Color(0xFFBD8BFF), size: 22)),
               title: Text((country['name'] ?? country['title'] ?? country['id'] ?? 'Country').toString()),
               subtitle: Text('Available: ${(country['stock'] is Map ? country['stock']['count'] : country['count']) ?? '—'}'),
-              trailing: Text(() { final stock = country['stock'] is Map ? Map<String, dynamic>.from(country['stock']) : <String, dynamic>{}; final raw = stock['usdPrice'] ?? country['usdPrice'] ?? country['priceUsd'] ?? country['price']; final price = double.tryParse((raw ?? '').toString()); return price == null || price <= 0 ? 'Price unavailable' : '\
-        ]);
+              trailing: Text(() { final stock = country['stock'] is Map ? Map<String, dynamic>.from(country['stock']) : <String, dynamic>{}; final raw = stock['usdPrice'] ?? country['usdPrice'] ?? country['priceUsd'] ?? country['price']; final price = double.tryParse((raw ?? '').toString()); return price == null || price <= 0 ? 'Price unavailable' : String.fromCharCode(36) + price.toStringAsFixed(2) + ' USD'; }(), style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w900)),
+              onTap: () => _confirmPurchase(country),
+            )),
       },
     ),
   );
@@ -1776,34 +1777,6 @@ class _DetailLine extends StatelessWidget {
     SizedBox(width: 92, child: Text(label, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12))),
     Expanded(child: Text(value.isEmpty ? '—' : value, style: const TextStyle(fontWeight: FontWeight.w600))),
   ]));
-}
-
-class _WalletAmountOption extends StatelessWidget {
-  const _WalletAmountOption({required this.selected, required this.label, required this.onTap, this.popular = false});
-  final bool selected;
-  final String label;
-  final VoidCallback onTap;
-  final bool popular;
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(14),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      constraints: const BoxConstraints(minWidth: 104),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: selected ? const Color(0xFF12345A) : const Color(0xFF071329),
-        border: Border.all(color: selected ? const Color(0xFF00D9FF) : const Color(0xFF23415F), width: selected ? 1.5 : 1),
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(label, style: TextStyle(fontWeight: FontWeight.w900, color: selected ? const Color(0xFF00D9FF) : Colors.white, fontSize: 17)),
-        const SizedBox(height: 3),
-        Text(popular ? 'POPULAR · USD' : 'USD', style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .6)),
-      ]),
-    ),
-  );
 }
 
 class _WalletPage extends StatefulWidget {
