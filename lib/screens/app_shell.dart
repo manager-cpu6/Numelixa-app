@@ -291,12 +291,18 @@ class _AppUnavailableScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final reason = (details['reason'] ?? '').toString();
     final countryBlocked = reason == 'country';
+    final appVersionBlocked = reason == 'version';
     final number = (details['whatsapp'] ?? '252907868526').toString().replaceAll(RegExp(r'[^0-9]'), '');
     final message = countryBlocked
         ? 'This app is not available in your country.'
-        : reason == 'android-version'
-          ? 'This app is not available on this Android version.'
-          : 'This app is not available on your device.';
+        : appVersionBlocked
+          ? 'This Numelixa app version is no longer supported.'
+          : reason == 'android-version'
+            ? 'This app is not available on this Android version.'
+            : 'This app is not available on this device.';
+    final description = appVersionBlocked
+        ? 'An administrator has retired this app version. Install the latest official Numelixa update to continue. If you still cannot update, contact support and we will help you.'
+        : 'If you believe this is a mistake, contact our support team for assistance.';
     return Scaffold(
       body: SafeArea(child: Center(child: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
@@ -311,7 +317,15 @@ class _AppUnavailableScreen extends StatelessWidget {
             const SizedBox(height: 14),
             Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, height: 1.2, fontWeight: FontWeight.w900)),
             const SizedBox(height: 10),
-            const Text('If you believe this is a mistake, contact our support team for assistance.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4), height: 1.55)),
+            Text(description, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4), height: 1.55)),
+            if (appVersionBlocked) ...[
+              const SizedBox(height: 18),
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                onPressed: () => launchUrl(Uri.parse('https://www.numelixa.com/android'), mode: LaunchMode.externalApplication),
+                icon: const Icon(Icons.system_update_rounded),
+                label: const Text('Get the latest Numelixa update'),
+              )),
+            ],
             const SizedBox(height: 22),
             SizedBox(width: double.infinity, child: FilledButton.icon(
               onPressed: number.isEmpty ? null : () => launchUrl(Uri.parse('https://wa.me/$number'), mode: LaunchMode.externalApplication),
