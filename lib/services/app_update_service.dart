@@ -124,7 +124,17 @@ class AppUpdateService {
       onReceiveProgress: onProgress,
       options: Options(receiveTimeout: const Duration(minutes: 5),
         sendTimeout: const Duration(seconds: 30)));
-    if (!await file.exists() || await file.length() < 1024) throw Exception('The downloaded APK is incomplete.');
+    if (!await file.exists() || await file.length() < 20 * 1024 * 1024) {
+      throw Exception('The downloaded APK is incomplete or is not the official package.');
+    }
+    final handle = await file.open();
+    final signature = await handle.read(4);
+    await handle.close();
+    if (signature.length != 4 || signature[0] != 0x50 || signature[1] != 0x4B ||
+        signature[2] != 0x03 || signature[3] != 0x04) {
+      await file.delete();
+      throw Exception('The downloaded file is not a valid Android package.');
+    }
     final expected = update.sha256?.trim().toLowerCase();
     if (expected != null && expected.isNotEmpty) {
       final actual = (await sha256.bind(file.openRead()).first).toString();
