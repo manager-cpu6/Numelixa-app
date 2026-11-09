@@ -291,12 +291,18 @@ class _AppUnavailableScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final reason = (details['reason'] ?? '').toString();
     final countryBlocked = reason == 'country';
+    final appVersionBlocked = reason == 'version';
     final number = (details['whatsapp'] ?? '252907868526').toString().replaceAll(RegExp(r'[^0-9]'), '');
     final message = countryBlocked
         ? 'This app is not available in your country.'
-        : reason == 'android-version'
-          ? 'This app is not available on this Android version.'
-          : 'This app is not available on your device.';
+        : appVersionBlocked
+          ? 'This Numelixa app version is no longer supported.'
+          : reason == 'android-version'
+            ? 'This app is not available on this Android version.'
+            : 'This app is not available on this device.';
+    final description = appVersionBlocked
+        ? 'An administrator has retired this app version. Install the latest official Numelixa update to continue. If you still cannot update, contact support and we will help you.'
+        : 'If you believe this is a mistake, contact our support team for assistance.';
     return Scaffold(
       body: SafeArea(child: Center(child: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
@@ -311,7 +317,15 @@ class _AppUnavailableScreen extends StatelessWidget {
             const SizedBox(height: 14),
             Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, height: 1.2, fontWeight: FontWeight.w900)),
             const SizedBox(height: 10),
-            const Text('If you believe this is a mistake, contact our support team for assistance.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF91A8C4), height: 1.55)),
+            Text(description, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4), height: 1.55)),
+            if (appVersionBlocked) ...[
+              const SizedBox(height: 18),
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                onPressed: () => launchUrl(Uri.parse('https://www.numelixa.com/android'), mode: LaunchMode.externalApplication),
+                icon: const Icon(Icons.system_update_rounded),
+                label: const Text('Get the latest Numelixa update'),
+              )),
+            ],
             const SizedBox(height: 22),
             SizedBox(width: double.infinity, child: FilledButton.icon(
               onPressed: number.isEmpty ? null : () => launchUrl(Uri.parse('https://wa.me/$number'), mode: LaunchMode.externalApplication),
@@ -328,18 +342,37 @@ class _NumelixaLogo extends StatelessWidget {
   const _NumelixaLogo({this.size = 44});
   final double size;
   @override
-  Widget build(BuildContext context) => Image.network(
-    'https://numelixa.com/numelixa-favicon.png',
-    width: size,
-    height: size,
-    fit: BoxFit.contain,
-    errorBuilder: (_, __, ___) => Text('N', style: TextStyle(
-      fontSize: size * .82, fontWeight: FontWeight.w900,
-      color: Colors.white, letterSpacing: -size * .08,
-    )),
+  Widget build(BuildContext context) => SizedBox(
+    width: size, height: size,
+    child: CustomPaint(painter: _NumelixaBrandPainter()),
   );
 }
 
+class _NumelixaBrandPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 100, size.height / 100);
+    final globe = Paint()..shader = const LinearGradient(
+      colors: [Color(0xFF27E8FF), Color(0xFF0864FF), Color(0xFF07134C)],
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+    ).createShader(const Rect.fromLTWH(8, 5, 84, 84));
+    canvas.drawCircle(const Offset(50, 43), 35, globe);
+    final grid = Paint()..color = const Color(0xFF71EFFF).withValues(alpha: .42)..style = PaintingStyle.stroke..strokeWidth = 1.1;
+    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:58,height:66),grid);
+    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:30,height:66),grid);
+    canvas.drawLine(const Offset(18,43),const Offset(82,43),grid);
+    final ribbon = Path()..moveTo(19,72)..cubicTo(28,48,34,26,43,28)..cubicTo(51,29,57,47,65,57)..cubicTo(72,67,80,69,84,60)..cubicTo(87,54,87,45,87,38);
+    final paint = Paint()..style=PaintingStyle.stroke..strokeWidth=13..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round
+      ..shader=const LinearGradient(colors:[Color(0xFF2AF4EE),Color(0xFF168BFF),Color(0xFF722CFF),Color(0xFFEF43E8)]).createShader(const Rect.fromLTWH(10,20,82,60));
+    canvas.drawPath(ribbon,paint);
+    final orbit=Path()..moveTo(5,57)..cubicTo(23,38,43,39,60,48)..cubicTo(75,56,88,51,96,39);
+    canvas.drawPath(orbit,Paint()..style=PaintingStyle.stroke..strokeWidth=2.2..strokeCap=StrokeCap.round..color=Colors.white);
+    canvas.restore();
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate)=>false;
+}
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
@@ -526,113 +559,193 @@ class _AuthScreenState extends State<_AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    final accent = const Color(0xFF8B4DFF);
+    Widget divider() => const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Row(children: [
+        Expanded(child: Divider(color: Color(0xFF344064))),
+        Padding(padding: EdgeInsets.symmetric(horizontal: 13), child: Text('OR', style: TextStyle(color: Color(0xFF9DAED0), fontWeight: FontWeight.w800, fontSize: 12))),
+        Expanded(child: Divider(color: Color(0xFF344064))),
+      ]),
+    );
+    Widget socialIcon(IconData icon, Color color) => Container(
+      width: 42, height: 42, decoration: BoxDecoration(
+        color: color.withValues(alpha: .15), borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: .42)),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: .12), blurRadius: 18)],
+      ), child: Icon(icon, color: color, size: 23),
+    );
     return Scaffold(
-      body: SafeArea(child: Center(child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(child: Container(
-              width: 78, height: 78, alignment: Alignment.center,
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(26),
-                gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
-                boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 28, offset: Offset(0, 8))]),
-              child: const _NumelixaLogo(size: 58),
-            )),
-            const SizedBox(height: 26),
-            const Text('Welcome to Numelixa', textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.7)),
-            const SizedBox(height: 8),
-            const Text('Global virtual numbers, with a secure account and instant SMS updates.',
-              textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFA7B7D0), height: 1.5)),
-            const SizedBox(height: 24),
-            Row(children: [
-              Expanded(child: _AuthModeButton(label: 'Log in', selected: !_creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _phoneCodeSent = false; _error = null; }))),
-              const SizedBox(width: 10),
-              Expanded(child: _AuthModeButton(label: 'Create account', selected: _creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _phoneCodeSent = false; _error = null; }))),
-            ]),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(color: const Color(0xFF091A30), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF23415F))),
-              child: Row(children: [
-                Expanded(child: _AuthModeButton(label: 'Email', selected: !_phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = false; _error = null; }))),
-                const SizedBox(width: 6),
-                Expanded(child: _AuthModeButton(label: 'Phone number', selected: _phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = true; _error = null; }))),
-              ]),
-            ),
-            if (_creating) ...[
-              const SizedBox(height: 16),
-              TextField(controller: _name, textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline_rounded))),
-            ],
-            if (_phoneMode) ...[
-              TextField(controller: _phone, keyboardType: TextInputType.phone, autofillHints: const [AutofillHints.telephoneNumber],
-                decoration: const InputDecoration(labelText: 'Phone number', hintText: '+2519XXXXXXXX', prefixIcon: Icon(Icons.phone_iphone_rounded))),
-              if (_phoneCodeSent) ...[
-                const SizedBox(height: 10),
-                _OtpCodeField(controller: _phoneCode),
-                FilledButton(onPressed: auth.isValidating ? null : _verifyPhoneCode, child: const Text('Verify and continue')),
-                TextButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Resend code')),
-              ] else
-                FilledButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Send verification code')),
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(_error!, style: const TextStyle(color: Color(0xFFFF788C), height: 1.4)),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(center: Alignment(0, -.8), radius: 1.25,
+            colors: [Color(0xFF101C69), Color(0xFF080A2B), Color(0xFF02030D)]),
+        ),
+        child: Stack(children: [
+          Positioned(top: -90, left: -80, child: Container(width: 250, height: 250, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.blue.withValues(alpha: .10), boxShadow: [BoxShadow(color: AppTheme.blue.withValues(alpha: .18), blurRadius: 90, spreadRadius: 25)]))),
+          Positioned(bottom: -110, right: -90, child: Container(width: 280, height: 280, decoration: BoxDecoration(shape: BoxShape.circle, color: accent.withValues(alpha: .12), boxShadow: [BoxShadow(color: accent.withValues(alpha: .2), blurRadius: 100, spreadRadius: 20)]))),
+          SafeArea(child: Center(child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 22, 18, 26),
+            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 460), child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: Column(children: [
+                  Container(width: 104, height: 104, padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(34),
+                      gradient: const LinearGradient(colors: [Color(0xFF00DFFF), Color(0xFF174DFF), Color(0xFF9B39FF)]),
+                      boxShadow: const [BoxShadow(color: Color(0x553B63FF), blurRadius: 38, spreadRadius: 2)]),
+                    child: Container(decoration: BoxDecoration(color: const Color(0xFF030718), borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.all(8), child: const _NumelixaLogo(size: 78))),
+                  const SizedBox(height: 12),
+                  const Text('Numelixa', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: -1.2, color: Colors.white)),
+                  const SizedBox(height: 4),
+                  const Text('Virtual Numbers. Global Access.', style: TextStyle(color: Color(0xFFB7C6E8), fontSize: 14, letterSpacing: .25)),
+                  const SizedBox(height: 15),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    socialIcon(Icons.chat_rounded, const Color(0xFF25D366)),
+                    const SizedBox(width: 25),
+                    socialIcon(Icons.camera_alt_rounded, const Color(0xFFFFD43B)),
+                    const SizedBox(width: 25),
+                    socialIcon(Icons.send_rounded, const Color(0xFF39B9FF)),
+                  ]),
+                ])),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      colors: [Color(0xF51A1747), Color(0xF509102F), Color(0xF51A0B43)]),
+                    border: Border.all(color: const Color(0x885F67E8), width: 1.2),
+                    boxShadow: const [BoxShadow(color: Color(0x553E2BFF), blurRadius: 34, offset: Offset(0, 12)), BoxShadow(color: Color(0x44FFFFFF), blurRadius: 1, offset: Offset(0, 1))],
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Text(_creating ? 'Create Your Account ✨' : 'Welcome Back 👋',
+                      textAlign: TextAlign.center, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.7)),
+                    const SizedBox(height: 6),
+                    Text(_creating ? 'Join Numelixa and connect globally' : 'Sign in to your Numelixa account',
+                      textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFB3BCE0), fontSize: 14)),
+                    if (!_phoneMode) ...[
+                      const SizedBox(height: 21),
+                      OutlinedButton.icon(
+                        onPressed: auth.isValidating ? null : _google,
+                        icon: const Icon(Icons.g_mobiledata_rounded, size: 30, color: Color(0xFF4285F4)),
+                        label: const Text('Continue with Google', style: TextStyle(color: Color(0xFF10162B), fontWeight: FontWeight.w900, fontSize: 15)),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(56), backgroundColor: Colors.white,
+                          side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        ),
+                      ),
+                      divider(),
+                    ],
+                    Row(children: [
+                      Expanded(child: _AuthModeButton(label: 'Log in', selected: !_creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _phoneCodeSent = false; _error = null; }))),
+                      const SizedBox(width: 9),
+                      Expanded(child: _AuthModeButton(label: 'Sign up', selected: _creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _phoneCodeSent = false; _error = null; }))),
+                    ]),
+                    const SizedBox(height: 11),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: const Color(0x66040A20), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0x443F4E8C))),
+                      child: Row(children: [
+                        Expanded(child: _AuthModeButton(label: 'Email', selected: !_phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = false; _error = null; }))),
+                        const SizedBox(width: 5),
+                        Expanded(child: _AuthModeButton(label: 'Phone number', selected: _phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = true; _error = null; }))),
+                      ]),
+                    ),
+                    if (_creating) ...[
+                      const SizedBox(height: 14),
+                      TextField(controller: _name, textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline_rounded))),
+                    ],
+                    if (_phoneMode) ...[
+                      const SizedBox(height: 14),
+                      TextField(controller: _phone, keyboardType: TextInputType.phone, autofillHints: const [AutofillHints.telephoneNumber],
+                        decoration: const InputDecoration(labelText: 'Phone number', hintText: '+2519XXXXXXXX', prefixIcon: Icon(Icons.phone_iphone_rounded))),
+                      if (_phoneCodeSent) ...[
+                        const SizedBox(height: 12), _OtpCodeField(controller: _phoneCode),
+                        FilledButton(onPressed: auth.isValidating ? null : _verifyPhoneCode, child: const Text('Verify and continue')),
+                        TextButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Resend code')),
+                      ] else
+                        FilledButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Send verification code')),
+                    ] else ...[
+                      const SizedBox(height: 14),
+                      TextField(controller: _email, keyboardType: TextInputType.emailAddress,
+                        autocorrect: false, autofillHints: const [AutofillHints.email],
+                        decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.email_outlined))),
+                      const SizedBox(height: 12),
+                      TextField(controller: _password, obscureText: _obscurePassword,
+                        autofillHints: [_creating ? AutofillHints.newPassword : AutofillHints.password],
+                        decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword))),
+                        onSubmitted: (_) => auth.isValidating ? null : _submit()),
+                      if (!_creating) Align(alignment: Alignment.centerRight,
+                        child: TextButton(onPressed: auth.isValidating ? null : _forgotPassword, child: const Text('Forgot password?'))),
+                    ],
+                    if (_error != null) ...[
+                      const SizedBox(height: 12),
+                      Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0x44FF476F), borderRadius: BorderRadius.circular(13), border: Border.all(color: const Color(0x66FF6B8C))),
+                        child: Text(_error!, style: const TextStyle(color: Color(0xFFFFA9BD), height: 1.4))),
+                    ],
+                    if (!_phoneMode) ...[
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: auth.isValidating ? null : _submit,
+                        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(55),
+                          backgroundColor: const Color(0xFF6B28F5), foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 8, shadowColor: const Color(0x886C35FF)),
+                        child: auth.isValidating
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          : Text(_creating ? 'Create account  ›' : 'Sign In  ›', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() { _showApiKey = !_showApiKey; _error = null; }),
+                      icon: const Icon(Icons.code_rounded, size: 18),
+                      label: Text(_showApiKey ? 'Hide developer API key' : 'Use developer API key instead'),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48),
+                        foregroundColor: const Color(0xFFD6D9FF), side: const BorderSide(color: Color(0x775B55AA)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                    ),
+                    if (_showApiKey) ...[
+                      const SizedBox(height: 12),
+                      TextField(controller: _apiKey, obscureText: true, autocorrect: false,
+                        decoration: const InputDecoration(labelText: 'Numelixa API key', hintText: 'nx_live_…')),
+                      const SizedBox(height: 8),
+                      OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin, child: const Text('Connect API key')),
+                    ],
+                    const SizedBox(height: 16),
+                    Text(_creating ? 'Already have an account?  Log in' : 'Don’t have an account?  Sign Up',
+                      textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFB3BCE0), fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+                const SizedBox(height: 22),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                  _AuthBenefit(icon: Icons.bolt_rounded, label: '1 Free\nNumber/Month', color: const Color(0xFFB85CFF)),
+                  _AuthBenefit(icon: Icons.verified_user_rounded, label: 'Secure &\nPrivate', color: const Color(0xFF35D7B2)),
+                  _AuthBenefit(icon: Icons.public_rounded, label: 'Worldwide\nCoverage', color: const Color(0xFF9B73FF)),
+                ]),
+                const SizedBox(height: 20),
+                const Row(children: [Expanded(child: Divider(color: Color(0xFF354064))), Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('Powered by Numelixa 💜', style: TextStyle(color: Color(0xFF9DAED0), fontSize: 12))), Expanded(child: Divider(color: Color(0xFF354064)))]),
               ],
-            ] else ...[
-            const SizedBox(height: 12),
-            TextField(controller: _email, keyboardType: TextInputType.emailAddress,
-              autocorrect: false, autofillHints: const [AutofillHints.email],
-              decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.email_outlined))),
-            const SizedBox(height: 12),
-            TextField(controller: _password, obscureText: _obscurePassword,
-              autofillHints: [_creating ? AutofillHints.newPassword : AutofillHints.password],
-              decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock_outline_rounded),
-                suffixIcon: IconButton(icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword))),
-              onSubmitted: (_) => auth.isValidating ? null : _submit()),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Color(0xFFFF788C), height: 1.4)),
-            ],
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: auth.isValidating ? null : _submit,
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              child: auth.isValidating
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(_creating ? 'Create account' : 'Log in securely')),
-            if (!_creating) Align(alignment: Alignment.centerRight,
-              child: TextButton(onPressed: auth.isValidating ? null : _forgotPassword, child: const Text('Forgot password?'))),
-            const SizedBox(height: 6),
-            OutlinedButton.icon(
-              onPressed: auth.isValidating ? null : _google,
-              icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
-              label: const Text('Continue with Google'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-            ),
-            const SizedBox(height: 18),
-            TextButton.icon(
-              onPressed: () => setState(() { _showApiKey = !_showApiKey; _error = null; }),
-              icon: const Icon(Icons.key_rounded, size: 17),
-              label: Text(_showApiKey ? 'Hide developer API-key login' : 'Use developer API key instead')),
-            if (_showApiKey) ...[
-              TextField(controller: _apiKey, obscureText: true, autocorrect: false,
-                decoration: const InputDecoration(labelText: 'Numelixa API key', hintText: 'nx_live_…')),
-              const SizedBox(height: 8),
-              OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin, child: const Text('Connect API key')),
-            ],
-            const SizedBox(height: 12),
-            ],
-            const Text('By continuing, you agree to use Numelixa responsibly. Your session is stored securely on this device.',
-              textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 11)),
-          ],
-        )),
-      ))),
+            )),
+          ))),
+        ]),
+      ),
     );
   }
+}
+
+class _AuthBenefit extends StatelessWidget {
+  const _AuthBenefit({required this.icon,required this.label,required this.color});
+  final IconData icon; final String label; final Color color;
+  @override Widget build(BuildContext context)=>Expanded(child:Column(children:[
+    Icon(icon,color:color,size:23),const SizedBox(height:6),
+    Text(label,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFE6EBFF),fontSize:10,fontWeight:FontWeight.w700,height:1.35)),
+  ]));
 }
 
 class _OtpCodeField extends StatefulWidget {
