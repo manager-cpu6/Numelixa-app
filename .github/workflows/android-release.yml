@@ -334,9 +334,11 @@ jobs:
           body: |
             Numelixa — Global Virtual Numbers
 
-            This release includes the Help Team Chat experience, improved automatic update discovery, and a more reliable mobile experience.
+            Major Numelixa mobile refresh: official globe-and-orbit app identity, redesigned premium sign-in and sign-up, updated notification status icon, stronger APK integrity checks, and official-domain in-app updates.
 
-            Download Numelixa.apk to install or update the Android app. Push notification delivery remains enabled.
+            Version 1.0.14+15 keeps the existing Android package ID and uses the configured release signing key for in-place updates. Existing account data remains on the Numelixa service.
+
+            Download Numelixa.apk to install or update the Android app. Do not uninstall an existing installation before updating.
           files: |
             build/app/outputs/flutter-apk/Numelixa.apk
             build/app/outputs/bundle/release/app-release.aab
