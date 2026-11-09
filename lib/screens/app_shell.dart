@@ -674,7 +674,7 @@ class _AuthScreenState extends State<_AuthScreen> {
                       Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0x44FF476F), borderRadius: BorderRadius.circular(13), border: Border.all(color: const Color(0x66FF6B8C))),
                         child: Text(_error!, style: const TextStyle(color: Color(0xFFFFA9BD), height: 1.4))),
                     ],
-                    if (!_phoneMode || !_phoneCodeSent) ...[
+                    if (!_phoneMode) ...[
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: auth.isValidating ? null : _submit,
