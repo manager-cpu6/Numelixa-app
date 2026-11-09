@@ -28,7 +28,7 @@ class AppUpdateInfo {
 }
 
 String _preferCanonicalApkUrl(String rawUrl) =>
-    'https://www.numelixa.com/android';
+    'https://www.numelixa.com/api/mobile/apk';
 
 String _cleanReleaseNotes(dynamic raw) {
   var text = (raw ?? '').toString()
