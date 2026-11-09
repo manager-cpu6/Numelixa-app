@@ -345,8 +345,8 @@ class _NumelixaBrandPainter extends CustomPainter {
     ).createShader(const Rect.fromLTWH(8, 5, 84, 84));
     canvas.drawCircle(const Offset(50, 43), 35, globe);
     final grid = Paint()..color = const Color(0xFF71EFFF).withValues(alpha: .42)..style = PaintingStyle.stroke..strokeWidth = 1.1;
-    canvas.drawOval(const Rect.fromCenter(center: const Offset(50,43),width:58,height:66),grid);
-    canvas.drawOval(const Rect.fromCenter(center: const Offset(50,43),width:30,height:66),grid);
+    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:58,height:66),grid);
+    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:30,height:66),grid);
     canvas.drawLine(const Offset(18,43),const Offset(82,43),grid);
     final ribbon = Path()..moveTo(19,72)..cubicTo(28,48,34,26,43,28)..cubicTo(51,29,57,47,65,57)..cubicTo(72,67,80,69,84,60)..cubicTo(87,54,87,45,87,38);
     final paint = Paint()..style=PaintingStyle.stroke..strokeWidth=13..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round
