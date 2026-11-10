@@ -560,7 +560,6 @@ class _AuthScreenState extends State<_AuthScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     const ink = Color(0xFF061225);
-    const panel = Color(0xFF0B1D35);
     const blue = Color(0xFF168BFF);
     const cyan = Color(0xFF35DDF5);
     Widget sectionLabel(String value) => Padding(
@@ -779,15 +778,6 @@ class _AuthScreenState extends State<_AuthScreen> {
     );
   }
 
-}
-
-class _AuthBenefit extends StatelessWidget {
-  const _AuthBenefit({required this.icon,required this.label,required this.color});
-  final IconData icon; final String label; final Color color;
-  @override Widget build(BuildContext context)=>Expanded(child:Column(children:[
-    Icon(icon,color:color,size:23),const SizedBox(height:6),
-    Text(label,textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFFE6EBFF),fontSize:10,fontWeight:FontWeight.w700,height:1.35)),
-  ]));
 }
 
 class _OtpCodeField extends StatefulWidget {
