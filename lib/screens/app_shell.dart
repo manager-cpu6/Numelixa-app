@@ -559,184 +559,226 @@ class _AuthScreenState extends State<_AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final accent = const Color(0xFF8B4DFF);
-    Widget divider() => const Padding(
-      padding: EdgeInsets.symmetric(vertical: 16),
-      child: Row(children: [
-        Expanded(child: Divider(color: Color(0xFF344064))),
-        Padding(padding: EdgeInsets.symmetric(horizontal: 13), child: Text('OR', style: TextStyle(color: Color(0xFF9DAED0), fontWeight: FontWeight.w800, fontSize: 12))),
-        Expanded(child: Divider(color: Color(0xFF344064))),
-      ]),
+    const ink = Color(0xFF061225);
+    const panel = Color(0xFF0B1D35);
+    const blue = Color(0xFF168BFF);
+    const cyan = Color(0xFF35DDF5);
+    Widget sectionLabel(String value) => Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 3),
+      child: Text(value.toUpperCase(), style: const TextStyle(
+        color: Color(0xFF9DB5D1), fontSize: 10, letterSpacing: 1.35,
+        fontWeight: FontWeight.w800)),
     );
-    Widget socialIcon(IconData icon, Color color) => Container(
-      width: 42, height: 42, decoration: BoxDecoration(
-        color: color.withValues(alpha: .15), borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: .42)),
-        boxShadow: [BoxShadow(color: color.withValues(alpha: .12), blurRadius: 18)],
-      ), child: Icon(icon, color: color, size: 23),
-    );
+    InputDecoration fieldDecoration(String label, IconData icon, {Widget? suffix}) =>
+      InputDecoration(
+        labelText: label, prefixIcon: Icon(icon, color: const Color(0xFF83A9D0)),
+        suffixIcon: suffix, filled: true, fillColor: const Color(0xFF07172B),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        labelStyle: const TextStyle(color: Color(0xFF9DB5D1)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF203D5C))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: cyan, width: 1.5)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+      );
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(center: Alignment(0, -.8), radius: 1.25,
-            colors: [Color(0xFF101C69), Color(0xFF080A2B), Color(0xFF02030D)]),
-        ),
-        child: Stack(children: [
-          Positioned(top: -90, left: -80, child: Container(width: 250, height: 250, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.blue.withValues(alpha: .10), boxShadow: [BoxShadow(color: AppTheme.blue.withValues(alpha: .18), blurRadius: 90, spreadRadius: 25)]))),
-          Positioned(bottom: -110, right: -90, child: Container(width: 280, height: 280, decoration: BoxDecoration(shape: BoxShape.circle, color: accent.withValues(alpha: .12), boxShadow: [BoxShadow(color: accent.withValues(alpha: .2), blurRadius: 100, spreadRadius: 20)]))),
-          SafeArea(child: Center(child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(18, 22, 18, 26),
-            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 460), child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(child: Column(children: [
-                  Container(width: 104, height: 104, padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(34),
-                      gradient: const LinearGradient(colors: [Color(0xFF00DFFF), Color(0xFF174DFF), Color(0xFF9B39FF)]),
-                      boxShadow: const [BoxShadow(color: Color(0x553B63FF), blurRadius: 38, spreadRadius: 2)]),
-                    child: Container(decoration: BoxDecoration(color: const Color(0xFF030718), borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.all(8), child: const _NumelixaLogo(size: 78))),
-                  const SizedBox(height: 12),
-                  const Text('Numelixa', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: -1.2, color: Colors.white)),
-                  const SizedBox(height: 4),
-                  const Text('Virtual Numbers. Global Access.', style: TextStyle(color: Color(0xFFB7C6E8), fontSize: 14, letterSpacing: .25)),
-                  const SizedBox(height: 15),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    socialIcon(Icons.chat_rounded, const Color(0xFF25D366)),
-                    const SizedBox(width: 25),
-                    socialIcon(Icons.camera_alt_rounded, const Color(0xFFFFD43B)),
-                    const SizedBox(width: 25),
-                    socialIcon(Icons.send_rounded, const Color(0xFF39B9FF)),
-                  ]),
-                ])),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      colors: [Color(0xF51A1747), Color(0xF509102F), Color(0xF51A0B43)]),
-                    border: Border.all(color: const Color(0x885F67E8), width: 1.2),
-                    boxShadow: const [BoxShadow(color: Color(0x553E2BFF), blurRadius: 34, offset: Offset(0, 12)), BoxShadow(color: Color(0x44FFFFFF), blurRadius: 1, offset: Offset(0, 1))],
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Text(_creating ? 'Create Your Account ✨' : 'Welcome Back 👋',
-                      textAlign: TextAlign.center, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.7)),
-                    const SizedBox(height: 6),
-                    Text(_creating ? 'Join Numelixa and connect globally' : 'Sign in to your Numelixa account',
-                      textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFB3BCE0), fontSize: 14)),
-                    if (!_phoneMode) ...[
-                      const SizedBox(height: 21),
-                      OutlinedButton.icon(
-                        onPressed: auth.isValidating ? null : _google,
-                        icon: const Icon(Icons.g_mobiledata_rounded, size: 30, color: Color(0xFF4285F4)),
-                        label: const Text('Continue with Google', style: TextStyle(color: Color(0xFF10162B), fontWeight: FontWeight.w900, fontSize: 15)),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(56), backgroundColor: Colors.white,
-                          side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        ),
-                      ),
-                      divider(),
-                    ],
-                    Row(children: [
-                      Expanded(child: _AuthModeButton(label: 'Log in', selected: !_creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _phoneCodeSent = false; _error = null; }))),
-                      const SizedBox(width: 9),
-                      Expanded(child: _AuthModeButton(label: 'Sign up', selected: _creating, onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _phoneCodeSent = false; _error = null; }))),
-                    ]),
-                    const SizedBox(height: 11),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: const Color(0x66040A20), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0x443F4E8C))),
-                      child: Row(children: [
-                        Expanded(child: _AuthModeButton(label: 'Email', selected: !_phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = false; _error = null; }))),
-                        const SizedBox(width: 5),
-                        Expanded(child: _AuthModeButton(label: 'Phone number', selected: _phoneMode, onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = true; _error = null; }))),
+      backgroundColor: ink,
+      resizeToAvoidBottomInset: true,
+      body: Stack(children: [
+        const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Color(0xFF102D58), Color(0xFF07172D), Color(0xFF030A15)])))),
+        Positioned(top: -125, right: -95, child: Container(width: 270, height: 270,
+          decoration: const BoxDecoration(shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Color(0x442078FF), blurRadius: 100, spreadRadius: 35)]))),
+        Positioned(bottom: -150, left: -120, child: Container(width: 300, height: 300,
+          decoration: const BoxDecoration(shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Color(0x332B57FF), blurRadius: 110, spreadRadius: 35)]))),
+        SafeArea(child: Center(child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 28),
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Center(child: Column(children: [
+                Container(width: 76, height: 76, padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(24),
+                    gradient: const LinearGradient(colors: [cyan, blue, Color(0xFF8655FF)]),
+                    boxShadow: const [BoxShadow(color: Color(0x55328BFF), blurRadius: 28, spreadRadius: 1)]),
+                  child: ClipRRect(borderRadius: BorderRadius.circular(21),
+                    child: Container(color: const Color(0xFF030B18),
+                      alignment: Alignment.center, child: const _NumelixaLogo(size: 60)))),
+                const SizedBox(height: 13),
+                const Text('Numelixa', style: TextStyle(color: Colors.white,
+                  fontSize: 27, fontWeight: FontWeight.w900, letterSpacing: -.7)),
+                const SizedBox(height: 5),
+                const Text('Your numbers. Your world.',
+                  style: TextStyle(color: Color(0xFFAAC2DE), fontSize: 13, letterSpacing: .2)),
+              ])),
+              const SizedBox(height: 28),
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xF20A1B30),
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(color: const Color(0xFF25496C)),
+                  boxShadow: const [BoxShadow(color: Color(0x44000000), blurRadius: 32, offset: Offset(0, 16))],
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Text(_creating ? 'Create your account' : 'Welcome back',
+                    style: const TextStyle(color: Colors.white, fontSize: 25,
+                      fontWeight: FontWeight.w900, letterSpacing: -.65)),
+                  const SizedBox(height: 6),
+                  Text(_creating ? 'Set up your secure Numelixa account.' : 'Sign in to continue to your Numelixa account.',
+                    style: const TextStyle(color: Color(0xFFA7BCD4), fontSize: 13, height: 1.45)),
+                  if (!_phoneMode) ...[
+                    const SizedBox(height: 20),
+                    OutlinedButton(
+                      onPressed: auth.isValidating ? null : _google,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFF102743),
+                        side: const BorderSide(color: Color(0xFF315477)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
+                        Icon(Icons.g_mobiledata_rounded, size: 30, color: Color(0xFF69A9FF)),
+                        SizedBox(width: 9),
+                        Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.w800)),
                       ]),
                     ),
-                    if (_creating) ...[
-                      const SizedBox(height: 14),
-                      TextField(controller: _name, textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline_rounded))),
-                    ],
-                    if (_phoneMode) ...[
-                      const SizedBox(height: 14),
-                      TextField(controller: _phone, keyboardType: TextInputType.phone, autofillHints: const [AutofillHints.telephoneNumber],
-                        decoration: const InputDecoration(labelText: 'Phone number', hintText: '+2519XXXXXXXX', prefixIcon: Icon(Icons.phone_iphone_rounded))),
-                      if (_phoneCodeSent) ...[
-                        const SizedBox(height: 12), _OtpCodeField(controller: _phoneCode),
-                        FilledButton(onPressed: auth.isValidating ? null : _verifyPhoneCode, child: const Text('Verify and continue')),
-                        TextButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Resend code')),
-                      ] else
-                        FilledButton(onPressed: auth.isValidating ? null : _requestPhoneCode, child: const Text('Send verification code')),
-                    ] else ...[
-                      const SizedBox(height: 14),
-                      TextField(controller: _email, keyboardType: TextInputType.emailAddress,
-                        autocorrect: false, autofillHints: const [AutofillHints.email],
-                        decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.email_outlined))),
-                      const SizedBox(height: 12),
-                      TextField(controller: _password, obscureText: _obscurePassword,
-                        autofillHints: [_creating ? AutofillHints.newPassword : AutofillHints.password],
-                        decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock_outline_rounded),
-                          suffixIcon: IconButton(icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword))),
-                        onSubmitted: (_) => auth.isValidating ? null : _submit()),
-                      if (!_creating) Align(alignment: Alignment.centerRight,
-                        child: TextButton(onPressed: auth.isValidating ? null : _forgotPassword, child: const Text('Forgot password?'))),
-                    ],
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0x44FF476F), borderRadius: BorderRadius.circular(13), border: Border.all(color: const Color(0x66FF6B8C))),
-                        child: Text(_error!, style: const TextStyle(color: Color(0xFFFFA9BD), height: 1.4))),
-                    ],
-                    if (!_phoneMode) ...[
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: auth.isValidating ? null : _submit,
-                        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(55),
-                          backgroundColor: const Color(0xFF6B28F5), foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                          elevation: 8, shadowColor: const Color(0x886C35FF)),
-                        child: auth.isValidating
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : Text(_creating ? 'Create account  ›' : 'Sign In  ›', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => setState(() { _showApiKey = !_showApiKey; _error = null; }),
-                      icon: const Icon(Icons.code_rounded, size: 18),
-                      label: Text(_showApiKey ? 'Hide developer API key' : 'Use developer API key instead'),
-                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48),
-                        foregroundColor: const Color(0xFFD6D9FF), side: const BorderSide(color: Color(0x775B55AA)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                    ),
-                    if (_showApiKey) ...[
-                      const SizedBox(height: 12),
-                      TextField(controller: _apiKey, obscureText: true, autocorrect: false,
-                        decoration: const InputDecoration(labelText: 'Numelixa API key', hintText: 'nx_live_…')),
-                      const SizedBox(height: 8),
-                      OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin, child: const Text('Connect API key')),
-                    ],
-                    const SizedBox(height: 16),
-                    Text(_creating ? 'Already have an account?  Log in' : 'Don’t have an account?  Sign Up',
-                      textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFB3BCE0), fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 17),
+                    Row(children: const [
+                      Expanded(child: Divider(color: Color(0xFF29425D))),
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('OR USE EMAIL', style: TextStyle(color: Color(0xFF7F9AB8),
+                          fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.w800))),
+                      Expanded(child: Divider(color: Color(0xFF29425D))),
+                    ]),
+                  ],
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(child: _AuthModeButton(label: 'Sign in', selected: !_creating,
+                      onPressed: auth.isValidating ? null : () => setState(() { _creating = false; _phoneCodeSent = false; _error = null; }))),
+                    const SizedBox(width: 8),
+                    Expanded(child: _AuthModeButton(label: 'Create account', selected: _creating,
+                      onPressed: auth.isValidating ? null : () => setState(() { _creating = true; _phoneCodeSent = false; _error = null; }))),
                   ]),
-                ),
-                const SizedBox(height: 22),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                  _AuthBenefit(icon: Icons.bolt_rounded, label: '1 Free\nNumber/Month', color: const Color(0xFFB85CFF)),
-                  _AuthBenefit(icon: Icons.verified_user_rounded, label: 'Secure &\nPrivate', color: const Color(0xFF35D7B2)),
-                  _AuthBenefit(icon: Icons.public_rounded, label: 'Worldwide\nCoverage', color: const Color(0xFF9B73FF)),
+                  const SizedBox(height: 12),
+                  Container(padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(color: const Color(0xFF061326),
+                      borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF203A56))),
+                    child: Row(children: [
+                      Expanded(child: _AuthModeButton(label: 'Email', selected: !_phoneMode,
+                        onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = false; _error = null; }))),
+                      const SizedBox(width: 5),
+                      Expanded(child: _AuthModeButton(label: 'Phone', selected: _phoneMode,
+                        onPressed: auth.isValidating ? null : () => setState(() { _phoneMode = true; _error = null; }))),
+                    ])),
+                  if (_creating) ...[
+                    const SizedBox(height: 18), sectionLabel('Full name'),
+                    TextField(controller: _name, textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                      decoration: fieldDecoration('Your name', Icons.person_outline_rounded)),
+                  ],
+                  if (_phoneMode) ...[
+                    const SizedBox(height: 18), sectionLabel('Phone number'),
+                    TextField(controller: _phone, keyboardType: TextInputType.phone,
+                      autofillHints: const [AutofillHints.telephoneNumber],
+                      decoration: fieldDecoration('e.g. +2519XXXXXXXX', Icons.phone_iphone_rounded)),
+                    if (_phoneCodeSent) ...[
+                      const SizedBox(height: 14), const Text('Verification code',
+                        style: TextStyle(color: Color(0xFFB5C8DD'), fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 9), _OtpCodeField(controller: _phoneCode),
+                      const SizedBox(height: 12),
+                      FilledButton(onPressed: auth.isValidating ? null : _verifyPhoneCode,
+                        child: const Text('Verify and continue')),
+                      TextButton(onPressed: auth.isValidating ? null : _requestPhoneCode,
+                        child: const Text('Resend code')),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      FilledButton(onPressed: auth.isValidating ? null : _requestPhoneCode,
+                        child: const Text('Send verification code')),
+                    ],
+                  ] else ...[
+                    const SizedBox(height: 18), sectionLabel('Email address'),
+                    TextField(controller: _email, keyboardType: TextInputType.emailAddress,
+                      autocorrect: false, autofillHints: const [AutofillHints.email],
+                      textInputAction: TextInputAction.next,
+                      decoration: fieldDecoration('name@example.com', Icons.mail_outline_rounded)),
+                    const SizedBox(height: 14), sectionLabel('Password'),
+                    TextField(controller: _password, obscureText: _obscurePassword,
+                      autofillHints: [_creating ? AutofillHints.newPassword : AutofillHints.password],
+                      onSubmitted: (_) => auth.isValidating ? null : _submit(),
+                      decoration: fieldDecoration('Enter your password', Icons.lock_outline_rounded,
+                        suffix: IconButton(
+                          icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            color: const Color(0xFF91ABC6)),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword)))),
+                    if (!_creating) Align(alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: auth.isValidating ? null : _forgotPassword,
+                        style: TextButton.styleFrom(foregroundColor: cyan),
+                        child: const Text('Forgot password?'))),
+                  ],
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Container(padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: const Color(0x332C1320),
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(color: const Color(0x88FF6B8C))),
+                      child: Text(_error!, style: const TextStyle(color: Color(0xFFFFA9BD), height: 1.4))),
+                  ],
+                  if (!_phoneMode) ...[
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: auth.isValidating ? null : _submit,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(54),
+                        backgroundColor: blue, foregroundColor: Colors.white,
+                        elevation: 5, shadowColor: const Color(0x66328BFF),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      child: auth.isValidating
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(_creating ? 'Create account' : 'Sign in securely',
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() { _showApiKey = !_showApiKey; _error = null; }),
+                    icon: const Icon(Icons.key_rounded, size: 17),
+                    label: Text(_showApiKey ? 'Hide API key sign in' : 'Sign in with API key'),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(45),
+                      foregroundColor: const Color(0xFFBBD2EA),
+                      side: const BorderSide(color: Color(0xFF294967)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  ),
+                  if (_showApiKey) ...[
+                    const SizedBox(height: 12),
+                    TextField(controller: _apiKey, obscureText: !_showApiKey,
+                      autocorrect: false, decoration: fieldDecoration('Numelixa API key', Icons.vpn_key_rounded)),
+                    const SizedBox(height: 9),
+                    OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin,
+                      child: const Text('Connect API key')),
+                  ],
                 ]),
-                const SizedBox(height: 20),
-                const Row(children: [Expanded(child: Divider(color: Color(0xFF354064))), Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('Powered by Numelixa 💜', style: TextStyle(color: Color(0xFF9DAED0), fontSize: 12))), Expanded(child: Divider(color: Color(0xFF354064)))]),
-              ],
-            )),
-          ))),
-        ]),
-      ),
+              ),
+              const SizedBox(height: 18),
+              const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.shield_outlined, size: 15, color: Color(0xFF55D8B8)),
+                SizedBox(width: 7),
+                Text('Secure sign-in · Your account stays protected',
+                  style: TextStyle(color: Color(0xFF8FA9C4), fontSize: 11, fontWeight: FontWeight.w600)),
+              ]),
+              const SizedBox(height: 12),
+              Center(child: Text(_creating ? 'Already registered? Sign in' : 'New to Numelixa? Create an account',
+                style: const TextStyle(color: Color(0xFFA8BED5), fontSize: 12))),
+            ]),
+          ),
+        ))),
+      ]),
     );
   }
+
 }
 
 class _AuthBenefit extends StatelessWidget {
