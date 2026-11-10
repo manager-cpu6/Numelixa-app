@@ -687,7 +687,7 @@ class _AuthScreenState extends State<_AuthScreen> {
                       decoration: fieldDecoration('e.g. +2519XXXXXXXX', Icons.phone_iphone_rounded)),
                     if (_phoneCodeSent) ...[
                       const SizedBox(height: 14), const Text('Verification code',
-                        style: TextStyle(color: Color(0xFFB5C8DD'), fontWeight: FontWeight.w700)),
+                        style: TextStyle(color: Color(0xFFB5C8DD), fontWeight: FontWeight.w700)),
                       const SizedBox(height: 9), _OtpCodeField(controller: _phoneCode),
                       const SizedBox(height: 12),
                       FilledButton(onPressed: auth.isValidating ? null : _verifyPhoneCode,
