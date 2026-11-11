@@ -90,30 +90,37 @@ jobs:
           if 'android.newDsl=false' not in properties:
               gp.write_text(properties + '\nandroid.newDsl=false\n')
           PY
-      - name: Install Numelixa launcher icon
+      - name: Install exact Numelixa PNG launcher icon
         shell: bash
         run: |
-          mkdir -p android/app/src/main/res/drawable
-          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          cp android/numelixa_icon.xml android/app/src/main/res/drawable/numelixa_launcher.xml
+          python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from pathlib import Path
+          from PIL import Image
+          source = Image.open('assets/numelixa_icon_source.jpg').convert('RGBA')
+          if source.size != (256, 256):
+              raise SystemExit(f'Unexpected source icon dimensions: {source.size}')
           res = Path('android/app/src/main/res')
-          vector = (res / 'drawable/numelixa_launcher.xml').read_text()
-          # flutter create already generates density-specific ic_launcher.png files.
-          # Do not create same-name XML resources in those folders: Android treats
-          # ic_launcher.xml + ic_launcher.png in one density as duplicate resources.
-          # Keep the vector as the adaptive icon foreground and use the existing PNGs
-          # for legacy launcher resource fallbacks.
-          adaptive = '''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+          for density, size in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
+              folder = res / f'mipmap-{density}'
+              folder.mkdir(parents=True, exist_ok=True)
+              source.resize((size,size), Image.Resampling.LANCZOS).save(folder / 'ic_launcher.png', optimize=True)
+          # Adaptive icon foreground keeps the complete original artwork inside Android's safe mask.
+          foreground = Image.new('RGBA',(432,432),(0,0,0,0))
+          artwork = source.resize((284,284), Image.Resampling.LANCZOS)
+          foreground.alpha_composite(artwork,((432-284)//2,(432-284)//2))
+          drawable = res / 'drawable-nodpi'
+          drawable.mkdir(parents=True, exist_ok=True)
+          foreground.save(drawable / 'numelixa_launcher.png', optimize=True)
+          adaptive_dir = res / 'mipmap-anydpi-v26'
+          adaptive_dir.mkdir(parents=True, exist_ok=True)
+          (adaptive_dir / 'ic_launcher.xml').write_text('''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
               <background android:drawable="@color/numelixa_icon_background"/>
               <foreground android:drawable="@drawable/numelixa_launcher"/>
-          </adaptive-icon>'''
-          (res / 'mipmap-anydpi-v26/ic_launcher.xml').write_text(adaptive)
+          </adaptive-icon>''')
           colors = res / 'values'
           colors.mkdir(parents=True, exist_ok=True)
-          (colors / 'numelixa_icon_colors.xml').write_text(
-              '<resources><color name="numelixa_icon_background">#030817</color></resources>')
+          (colors / 'numelixa_icon_colors.xml').write_text('<resources><color name="numelixa_icon_background">#000000</color></resources>')
           manifest = Path('android/app/src/main/AndroidManifest.xml')
           content = manifest.read_text()
           if 'android:icon="@mipmap/ic_launcher"' not in content:
