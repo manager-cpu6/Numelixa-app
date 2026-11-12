@@ -101,7 +101,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
     catch(e){if(mounted)setState(()=>message=e.toString());}finally{if(mounted)setState(()=>busy=false);}
   }
   Future<void> _closeOrder(String id) async {
-    final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:_panel,title:const Text('Xir dalabkan?'),content:const Text('Lacag laguma shubayo wallet-ka. Dalabka waa la xirayaa.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Ka noqo')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Xir'))]));
+    final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:_panelBg,title:const Text('Xir dalabkan?'),content:const Text('Lacag laguma shubayo wallet-ka. Dalabka waa la xirayaa.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Ka noqo')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Xir'))]));
     if(yes!=true)return;setState(()=>busy=true);
     try{await _api('POST',body:{'action':'close_order','orderId':id});setState(()=>message='Dalabka waa la xiray.');await _load(silent:true);}catch(e){setState(()=>message=e.toString());}finally{if(mounted)setState(()=>busy=false);}
   }
@@ -132,7 +132,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
   }
   Future<void> _askPermission() async {final p=await Permission.sms.request();if(mounted)setState(()=>permission=p.isGranted);if(p.isGranted)await _syncSms();}
   Future<void> _revoke() async {
-    final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:_panel,title:const Text('Ka saar pairing-ka?'),content:const Text('App-kan ma sii diri doono SMS ilaa token cusub la geliyo.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Revoke'))]));
+    final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:_panelBg,title:const Text('Ka saar pairing-ka?'),content:const Text('App-kan ma sii diri doono SMS ilaa token cusub la geliyo.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Revoke'))]));
     if(yes!=true)return;
     try{await _api('POST',body:{'action':'revoke_device'});await widget.onRevoke();}catch(e){setState(()=>message=e.toString());}
   }
