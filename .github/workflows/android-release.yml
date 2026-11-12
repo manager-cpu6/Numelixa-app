@@ -451,3 +451,5 @@ jobs:
 # Admin build entry point: lib/ebirr_admin_main.dart (kept separate from the customer app).
 
 # Rebuild after payment controls, provider instructions and admin approval fixes.
+
+# Rebuild after adding SMS scan diagnostics to the admin APK.
