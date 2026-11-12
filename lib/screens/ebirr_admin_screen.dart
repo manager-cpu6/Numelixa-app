@@ -119,6 +119,20 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
     if(yes!=true)return;setState(()=>busy=true);
     try{await _api('POST',body:{'action':'close_order','orderId':id});setState(()=>message='Dalabka waa la xiray.');await _load(silent:true);}catch(e){setState(()=>message=e.toString());}finally{if(mounted)setState(()=>busy=false);}
   }
+  Future<void> _reviewOrder(String id,String decision) async {
+    final approve=decision=='approve';
+    final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
+      backgroundColor:_panelBg,
+      title:Text(approve?'Xaqiiji lacag-bixinta?':'Diid lacag-bixinta?'),
+      content:Text(approve?'Kaliya xaqiiji haddii aad ka hubisay lacagta akoonka rasmiga ah. Wallet-ka macmiilka waa la shubi doonaa.':'Dalabkan waa la diidayaa; wallet-ka lama shubayo.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Ka noqo')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:Text(approve?'ACCEPT & CREDIT':'REJECT'))],
+    ));
+    if(yes!=true)return;
+    setState(()=>busy=true);
+    try{await _api('POST',body:{'action':'review_order','orderId':id,'decision':decision,'manualConfirmed':approve});if(mounted)setState(()=>message=approve?'Lacagta waa la xaqiijiyey, wallet-kana waa la shubay.':'Dalabka waa la diiday.');await _load(silent:true);}
+    catch(e){if(mounted)setState(()=>message=e.toString());}
+    finally{if(mounted)setState(()=>busy=false);}
+  }
   Future<void> _syncSms() async {
     if(syncing||!permission)return;syncing=true;
     try{
@@ -209,7 +223,11 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
       const SizedBox(height:5),Text('Order: ${o['orderId']??'—'}',style:const TextStyle(color:Colors.white70,fontSize:11)),
       Text('Payer: ${o['payerPhone']??'—'} · USD ${o['amountUsd']??'—'}',style:const TextStyle(color:Colors.white60,fontSize:11)),
       Text('SMS: ${o['smsMatched']==true?'MATCHED':'WAITING'} · Ref: ${o['transactionReference']??'—'}',style:TextStyle(color:o['smsMatched']==true?_mint:Colors.orangeAccent,fontSize:11)),
-      if(!paid&&status!='closed'&&status!='rejected')Align(alignment:Alignment.centerRight,child:TextButton.icon(onPressed:busy?null:()=>_closeOrder((o['orderId']??'').toString()),icon:const Icon(Icons.close_rounded),label:const Text('CLOSE ORDER')))
+      if(!paid&&status!='closed'&&status!='rejected')Wrap(alignment:WrapAlignment.end,spacing:6,children:[
+        TextButton.icon(onPressed:busy?null:()=>_reviewOrder((o['orderId']??'').toString(),'reject'),icon:const Icon(Icons.block_rounded),label:const Text('REJECT')),
+        FilledButton.icon(onPressed:busy?null:()=>_reviewOrder((o['orderId']??'').toString(),'approve'),icon:const Icon(Icons.verified_rounded),label:const Text('ACCEPT & CREDIT')),
+        TextButton.icon(onPressed:busy?null:()=>_closeOrder((o['orderId']??'').toString()),icon:const Icon(Icons.close_rounded),label:const Text('CLOSE'))
+      ])
     ]));
   }
 }
