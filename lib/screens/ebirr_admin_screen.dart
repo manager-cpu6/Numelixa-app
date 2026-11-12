@@ -162,7 +162,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
       }
       if(newest>after)await _storage.write(key:_syncKey,value:newest.toString());
       if(uploaded>0&&mounted)setState(()=>message='$uploaded SMS lacag-bixin ah ayaa server-ka loo diray; xaqiijinta server-ka ayaa go’aaminaysa.');
-    }catch(e){if(mounted&&e.toString().contains('Token-ka waa la joojiyay'))setState(()=>message=e.toString());}
+    }catch(e){if(mounted)setState(()=>message=e.toString().contains('Token-ka waa la joojiyay')?e.toString():'Cilad baarista SMS: $e');}
     finally{syncing=false;}
   }
   Future<void> _askPermission() async {final p=await Permission.sms.request();if(mounted)setState(()=>permission=p.isGranted);if(p.isGranted)await _syncSms();}
