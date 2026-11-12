@@ -360,20 +360,20 @@ jobs:
       - name: Unit and widget tests
         run: flutter test
       - name: Build debug APK
-        run: flutter build apk --debug --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+        run: flutter build apk --debug --target lib/ebirr_admin_main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Build release APK
-        run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+        run: flutter build apk --release --target lib/ebirr_admin_main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Rename release APK for public downloads and updates
-        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Numelixa.apk
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
       - name: Build AAB
-        run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+        run: flutter build appbundle --release --target lib/ebirr_admin_main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: numelixa-android-builds
           path: |
             build/app/outputs/flutter-apk/app-debug.apk
-            build/app/outputs/flutter-apk/Numelixa.apk
+            build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
@@ -416,7 +416,7 @@ jobs:
 
             Version ${{ steps.app_version.outputs.version }} keeps the existing Android package ID and uses the configured release signing key for in-place updates. Existing account data remains on the Numelixa service.
 
-            Download Numelixa.apk to install or update the Android app. Do not uninstall an existing installation before updating.
+            Download Ebirr-Numelixa-Admin.apk to install or update the Android app. Do not uninstall an existing installation before updating.
           files: |
             build/app/outputs/flutter-apk/Numelixa.apk
             build/app/outputs/bundle/release/app-release.aab
