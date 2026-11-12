@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AppUpdateInfo {
   const AppUpdateInfo({required this.version, required this.versionCode, required this.apkUrl, required this.releaseNotes, required this.mandatory, required this.allowSkip, this.apkSizeBytes, this.sha256});
@@ -69,6 +70,7 @@ class AppUpdateService {
 
   Future<AppUpdateInfo?> check() async {
     final package = await PackageInfo.fromPlatform();
+    if (package.packageName != 'com.numelixa.app') return null;
     final currentCode = int.tryParse(package.buildNumber) ?? 0;
     AppUpdateInfo? best;
 
@@ -143,7 +145,20 @@ class AppUpdateService {
         throw Exception('The downloaded file failed its SHA-256 integrity check.');
       }
     }
+    // Android 8+ requires the user to allow this app to request APK installs.
+    // Ask first; if denied, open the exact system settings page and keep the
+    // downloaded APK so the user can return and retry without downloading again.
+    var installPermission = await Permission.requestInstallPackages.status;
+    if (!installPermission.isGranted) {
+      installPermission = await Permission.requestInstallPackages.request();
+    }
+    if (!installPermission.isGranted) {
+      await openAppSettings();
+      throw Exception('Allow Numelixa to install unknown apps in Android Settings, then return and tap Install update again. The downloaded APK has been kept.');
+    }
     final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
-    if (result.type != ResultType.done) throw Exception(result.message.isEmpty ? 'Android could not open the installer.' : result.message);
+    if (result.type != ResultType.done) {
+      throw Exception(result.message.isEmpty ? 'Android could not open the installer. Check Numelixa install permission in Android Settings.' : result.message);
+    }
   }
 }
