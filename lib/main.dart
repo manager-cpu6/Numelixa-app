@@ -71,7 +71,7 @@ class NumelixaApp extends StatelessWidget {
           Provider(create: (_) => NotificationService(firebaseReady: firebaseReady)),
         ],
         child: MaterialApp(
-          title: 'Numelixa',
+          title: 'Ebirr-Numelixa',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.dark,
           home: const EbirrAdminGate(),
