@@ -31,7 +31,8 @@ class _EbirrAdminGateState extends State<EbirrAdminGate> {
         if(r['ok']!=true)throw Exception('Pairing token is not active.');
       }
     } catch(e) {
-      if(token!=null){await _storage.delete(key:_tokenKey);token=null;}
+      final invalid=e.toString().toLowerCase().contains('invalid or revoked')||e.toString().contains('401');
+      if(token!=null&&invalid){await _storage.delete(key:_tokenKey);token=null;}
       error=e.toString();
     } finally {if(mounted)setState(()=>loading=false);}
   }
