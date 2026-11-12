@@ -237,7 +237,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Static analysis
-        run: flutter analyze
+        shell: bash
+        run: |
+          set +e
+          flutter analyze --no-pub > /tmp/flutter-analyze.log 2>&1
+          result=$?
+          set -e
+          cat /tmp/flutter-analyze.log
+          if grep -Eq ' (error|warning) •' /tmp/flutter-analyze.log; then
+            exit 1
+          fi
+          if [ "$result" -gt 1 ]; then
+            exit "$result"
+          fi
       - name: Unit and widget tests
         run: flutter test
       - name: Build Ebirr-Numelixa Admin APK
