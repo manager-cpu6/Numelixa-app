@@ -447,3 +447,5 @@ jobs:
             build/app/outputs/flutter-apk/Numelixa.apk
             build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
             build/app/outputs/bundle/release/app-release.aab
+
+# Admin build entry point: lib/ebirr_admin_main.dart (kept separate from the customer app).
