@@ -71,3 +71,11 @@ Artifacts are uploaded by the workflow as `numelixa-android-builds`.
 ## In-app APK updates
 
 The app checks `GET /api/app-update` without blocking launch, downloads a published APK with actual byte progress and optional SHA-256 validation, then opens Android's package installer. Android requires the user to approve installation. The update API/admin publishing controls must be implemented in the website/backend repository; see `docs/MOBILE_API_CONTRACT.md`. Preserve package ID `com.numelixa.app` and the same release signing keystore.
+
+## Ebirr-Numelixa paired SMS admin mode
+
+The Android build starts in the Ebirr-Numelixa pairing flow. On first launch, grant SMS inbox permission, then paste the one-time device token generated in the website Admin Panel under **eBirr → Generate / replace pairing token**. The token is stored with Android secure storage.
+
+The paired dashboard can open/close eBirr checkout, edit the ETB/USD rate and receiving SIM number, view orders and incoming SMS audit records, and close unpaid orders. While the app is open, it scans newly received eBirr SMS messages and submits candidate receipts to `POST /api/v1/payment-sms`. The backend alone decides whether a receipt matches a unique recent order and credits the wallet transactionally. A swipe, app screen, or client-side message cannot credit funds.
+
+The paired-device dashboard API and the SMS matching update are in the companion `Virt-num` backend change. Android SMS inbox permission is required; background delivery while the app is force-stopped is not guaranteed by this polling implementation.

@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
       - name: Generate Android platform files
         shell: bash
         run: |
@@ -288,14 +288,111 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: Unit and widget tests
         run: flutter test
-      - name: Build debug APK
-        run: flutter build apk --debug --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
-      - name: Build release APK
-        run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
-      - name: Rename release APK for public downloads and updates
+      - name: Build customer debug APK
+        run: flutter build apk --debug --target lib/main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Build customer release APK
+        run: flutter build apk --release --target lib/main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Name customer release APK
         run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Numelixa.apk
-      - name: Build AAB
-        run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Build customer AAB
+        run: flutter build appbundle --release --target lib/main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Configure separate admin APK package
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          gradle = Path('android/app/build.gradle.kts')
+          s = gradle.read_text()
+          if 'applicationId = "com.numelixa.app"' not in s:
+              raise SystemExit('Expected customer applicationId was not found; refusing to overwrite an unknown package ID.')
+          s = s.replace('applicationId = "com.numelixa.app"', 'applicationId = "com.numelixa.admin"', 1)
+          s = s.replace('id("com.google.gms.google-services") version "4.4.2"', '')
+          gradle.write_text(s)
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          m = manifest.read_text()
+          m = re.sub(r'\s*<intent-filter>(?:(?!</intent-filter>).)*android:scheme="com.numelixa.app"(?:(?!</intent-filter>).)*</intent-filter>', '', m, flags=re.S)
+          m = m.replace('android:label="Numelixa"', 'android:label="Ebirr-Numelixa Admin"')
+          m = m.replace('android:label="Ebirr-Numelixa"', 'android:label="Ebirr-Numelixa Admin"')
+          m = m.replace('android:name=".MainActivity"', 'android:name="com.numelixa.app.MainActivity"')
+          manifest.write_text(m)
+          Path('android/app/google-services.json').unlink(missing_ok=True)
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          s = manifest.read_text()
+          for permission in ['android.permission.READ_SMS', 'android.permission.RECEIVE_SMS']:
+              tag = f'    <uses-permission android:name="{permission}"/>'
+              if permission not in s:
+                  s = s.replace('<application', tag + '\\n    <application', 1)
+          s = s.replace('android:label="app"', 'android:label="Ebirr-Numelixa"')
+          s = s.replace('android:label="Numelixa"', 'android:label="Ebirr-Numelixa Admin"')
+          manifest.write_text(s)
+          candidates = list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
+          if not candidates:
+              raise SystemExit('Flutter MainActivity.kt was not generated.')
+          activity = candidates[0]
+          activity.write_text('''package com.numelixa.app
+
+          import android.Manifest
+          import android.content.pm.PackageManager
+          import android.provider.Telephony
+          import io.flutter.embedding.android.FlutterFragmentActivity
+          import io.flutter.embedding.engine.FlutterEngine
+          import io.flutter.plugin.common.MethodChannel
+
+          class MainActivity : FlutterFragmentActivity() {
+              override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+                  super.configureFlutterEngine(flutterEngine)
+                  MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.numelixa/ebirr_sms")
+                      .setMethodCallHandler { call, result ->
+                          if (call.method != "readRecentSms") {
+                              result.notImplemented()
+                          } else if (checkSelfPermission(Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+                              result.error("permission_denied", "SMS permission is required.", null)
+                          } else {
+                              try {
+                                  val after = (call.argument<Number>("after") ?: 0).toLong()
+                                  val limit = ((call.argument<Number>("limit") ?: 80).toInt()).coerceIn(1, 100)
+                                  val rows = mutableListOf<Map<String, Any?>>()
+                                  val columns = arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.SUBSCRIPTION_ID)
+                                  contentResolver.query(
+                                      Telephony.Sms.Inbox.CONTENT_URI,
+                                      columns,
+                                      "${Telephony.Sms.DATE} > ?",
+                                      arrayOf(after.toString()),
+                                      "${Telephony.Sms.DATE} ASC"
+                                  )?.use { cursor ->
+                                      val idCol = cursor.getColumnIndex(Telephony.Sms._ID)
+                                      val addressCol = cursor.getColumnIndex(Telephony.Sms.ADDRESS)
+                                      val bodyCol = cursor.getColumnIndex(Telephony.Sms.BODY)
+                                      val dateCol = cursor.getColumnIndex(Telephony.Sms.DATE)
+                                      val subCol = cursor.getColumnIndex(Telephony.Sms.SUBSCRIPTION_ID)
+                                      while (cursor.moveToNext() && rows.size < limit) {
+                                          rows.add(mapOf(
+                                              "id" to if (idCol >= 0) cursor.getString(idCol) else "",
+                                              "address" to if (addressCol >= 0) cursor.getString(addressCol) else "",
+                                              "body" to if (bodyCol >= 0) cursor.getString(bodyCol) else "",
+                                              "date" to if (dateCol >= 0) cursor.getLong(dateCol) else 0L,
+                                              "subscriptionId" to if (subCol >= 0) cursor.getInt(subCol) else -1
+                                          ))
+                                      }
+                                  }
+                                  result.success(rows)
+                              } catch (error: Exception) {
+                                  result.error("sms_read_failed", error.message ?: "Could not read SMS inbox.", null)
+                              }
+                          }
+                      }
+              }
+          }
+          ''')
+          PY
+      - name: Build separate admin release APK
+        run: flutter build apk --release --target lib/ebirr_admin_main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Name admin release APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -303,6 +400,7 @@ jobs:
           path: |
             build/app/outputs/flutter-apk/app-debug.apk
             build/app/outputs/flutter-apk/Numelixa.apk
+            build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
@@ -345,7 +443,16 @@ jobs:
 
             Version ${{ steps.app_version.outputs.version }} keeps the existing Android package ID and uses the configured release signing key for in-place updates. Existing account data remains on the Numelixa service.
 
-            Download Numelixa.apk to install or update the Android app. Do not uninstall an existing installation before updating.
+            Numelixa.apk is the customer app. Ebirr-Numelixa-Admin.apk is a separate admin app with its own Android package ID so both apps can be installed side by side.
           files: |
             build/app/outputs/flutter-apk/Numelixa.apk
+            build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
             build/app/outputs/bundle/release/app-release.aab
+
+# Admin build entry point: lib/ebirr_admin_main.dart (kept separate from the customer app).
+
+# Rebuild after payment controls, provider instructions and admin approval fixes.
+
+# Rebuild after adding SMS scan diagnostics to the admin APK.
+
+# Rebuild with explicit admin MainActivity manifest target.
