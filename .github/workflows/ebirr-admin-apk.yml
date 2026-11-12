@@ -236,6 +236,56 @@ jobs:
           EOF
       - name: Install dependencies
         run: flutter pub get
+      - name: Disable unused Firebase plugins in Admin APK
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java')
+          if not p.exists():
+              raise SystemExit('Generated Flutter plugin registrant was not found.')
+          s = p.read_text()
+          for cls in ('FlutterFirebaseCorePlugin', 'FlutterFirebaseMessagingPlugin'):
+              pattern = r'\\s*try\\s*\\{\\s*flutterEngine\\.getPlugins\\(\\)\\.add\\(new [^;]*' + cls + r'\\(\\)\\);\\s*\\}\\s*catch\\s*\\(Exception e\\)\\s*\\{\\s*Log\\.e\\([^;]*;\\s*\\}'
+              s, count = re.subn(pattern, '', s, flags=re.S)
+              s = re.sub(r'^\\s*import [^;]*' + cls + r';\\s*
+        shell: bash
+        run: |
+          set +e
+          flutter analyze --no-pub > /tmp/flutter-analyze.log 2>&1
+          result=$?
+          set -e
+          cat /tmp/flutter-analyze.log
+          if grep -Eq ' (error|warning) •' /tmp/flutter-analyze.log; then
+            exit 1
+          fi
+          if [ "$result" -gt 1 ]; then
+            exit "$result"
+          fi
+      - name: Unit and widget tests
+        run: flutter test
+      - name: Build Ebirr-Numelixa Admin APK
+        run: flutter build apk --release --target lib/ebirr_admin_main.dart --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+      - name: Name and verify Admin APK
+        shell: bash
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
+          test -s build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
+          ls -lh build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
+      - name: Upload Admin APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebirr-numelixa-admin-apk
+          path: build/app/outputs/flutter-apk/Ebirr-Numelixa-Admin.apk
+          if-no-files-found: error
+          retention-days: 30
+, '', s, flags=re.M)
+              print(f'Removed {count} registration(s) for {cls}.')
+          if 'FlutterFirebaseCorePlugin' in s or 'FlutterFirebaseMessagingPlugin' in s:
+              raise SystemExit('Firebase plugin registration remains in the Admin APK.')
+          p.write_text(s)
+          PY
       - name: Static analysis
         shell: bash
         run: |
