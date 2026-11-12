@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import '../core/config/app_config.dart';
 
-const _ink=Color(0xff07111f),_panel=Color(0xff111f32),_line=Color(0xff263b56),_mint=Color(0xff45ddb4),_blue=Color(0xff718bff);
+const _ink=Color(0xff07111f),_panelBg=Color(0xff111f32),_line=Color(0xff263b56),_mint=Color(0xff45ddb4),_blue=Color(0xff718bff);
 const _smsChannel=MethodChannel('com.numelixa/ebirr_sms');
 const _storage=FlutterSecureStorage();
 const _tokenKey='ebirr_numelixa_device_token';
@@ -186,7 +186,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
   }
   Widget _orderCard(Map<String,dynamic> o){
     final status=(o['status']??'pending').toString();final paid=status=='paid';
-    return Container(margin:const EdgeInsets.only(top:11),padding:13,decoration:BoxDecoration(color:const Color(0xff0b192b),borderRadius:BorderRadius.circular(13),border:Border.all(color:_line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    return Container(margin:const EdgeInsets.only(top:11),padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:const Color(0xff0b192b),borderRadius:BorderRadius.circular(13),border:Border.all(color:_line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[Expanded(child:Text('${o['method']??'eBirr'} · ${o['amountEtb']??'—'} ETB',style:const TextStyle(fontWeight:FontWeight.w900))),_status(status.toUpperCase(),paid?_mint:status=='closed'?Colors.white54:Colors.orangeAccent)]),
       const SizedBox(height:5),Text('Order: ${o['orderId']??'—'}',style:const TextStyle(color:Colors.white70,fontSize:11)),
       Text('Payer: ${o['payerPhone']??'—'} · USD ${o['amountUsd']??'—'}',style:const TextStyle(color:Colors.white60,fontSize:11)),
@@ -224,7 +224,7 @@ class _PairingPageState extends State<_PairingPage>{
 }
 
 class _LoadingPage extends StatelessWidget {const _LoadingPage();@override Widget build(BuildContext context)=>const Scaffold(backgroundColor:_ink,body:Center(child:CircularProgressIndicator(color:_mint)));}
-Widget _panel({required Widget child})=>Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:_panel,borderRadius:BorderRadius.circular(17),border:Border.all(color:_line)),child:child);
-Widget _metric(String label,String value,Color color)=>Expanded(child:Container(padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:_panel,borderRadius:BorderRadius.circular(14),border:Border.all(color:_line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(label,style:const TextStyle(color:Colors.white54,fontSize:9,fontWeight:FontWeight.w900)),const SizedBox(height:6),Text(value,style:TextStyle(color:color,fontSize:23,fontWeight:FontWeight.w900))])));
+Widget _panel({required Widget child})=>Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:_panelBg,borderRadius:BorderRadius.circular(17),border:Border.all(color:_line)),child:child);
+Widget _metric(String label,String value,Color color)=>Expanded(child:Container(padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:_panelBg,borderRadius:BorderRadius.circular(14),border:Border.all(color:_line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(label,style:const TextStyle(color:Colors.white54,fontSize:9,fontWeight:FontWeight.w900)),const SizedBox(height:6),Text(value,style:TextStyle(color:color,fontSize:23,fontWeight:FontWeight.w900))])));
 Widget _status(String text,Color color)=>Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:color.withOpacity(.12),borderRadius:BorderRadius.circular(20)),child:Text(text,style:TextStyle(color:color,fontSize:9,fontWeight:FontWeight.w900)));
 Widget _field(String label,TextEditingController c,{TextInputType? keyboard,int maxLines=1})=>Padding(padding:const EdgeInsets.only(bottom:12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(label,style:const TextStyle(color:Colors.white70,fontSize:11)),const SizedBox(height:6),TextField(controller:c,keyboardType:keyboard,maxLines:maxLines,style:const TextStyle(color:Colors.white),decoration:const InputDecoration(filled:true,fillColor:_ink,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(12)))]));
