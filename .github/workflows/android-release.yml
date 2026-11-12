@@ -1,7 +1,7 @@
 name: Numelixa Android CI
 'on':
   push:
-    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade, feat/numelixa-premium-mobile-upgrade, feat/numelixa-major-brand-security-2026, feat/exact-brand-icon-native-login]
+    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade, feat/numelixa-premium-mobile-upgrade, feat/numelixa-major-brand-security-2026, feat/exact-brand-icon-native-login, feat/reliable-inplace-updates-2026]
     tags: ['v*']
   workflow_dispatch:
 permissions:
@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
       - name: Generate Android platform files
         shell: bash
         run: |
