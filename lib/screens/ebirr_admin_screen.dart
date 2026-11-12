@@ -129,10 +129,14 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
         if(item is! Map)continue;final sms=Map<String,dynamic>.from(item);
         final date=(sms['date'] as num?)?.toInt()??0;if(date<=after)continue;if(date>newest)newest=date;
         final body=(sms['body']??'').toString().trim(),sender=(sms['address']??'').toString();
-        if(body.isEmpty||!RegExp(r'ebirr|e-birr|\bbirr\b|ብር',caseSensitive:false).hasMatch(body+' '+sender))continue;
+        final combined=(body+' '+sender).toLowerCase();
+        if(body.isEmpty||!RegExp(r'ebirr|e-birr|\bbirr\b|ብር|kaafi|cbe|mpesa|m-pesa|safaricom|telebirr',caseSensitive:false).hasMatch(combined))continue;
+        final provider=combined.contains('mpesa')||combined.contains('m-pesa')||combined.contains('safaricom')?'MPESA':combined.contains('telebirr')?'TELEBIRR':combined.contains('kaafi')?'KAAFI':combined.contains('cbe')?'CBE':'EBIRR';
+        final methodId=provider=='MPESA'?'mpesa':provider=='TELEBIRR'?'telebirr':provider=='KAAFI'?'kaafi_ebirr':provider=='CBE'?'cbe_birr':'coopay_ebirr';
+        final simReceiver=methodReceiverCtrls[methodId]?.text.trim()??receiver;
         final uri=Uri.parse(AppConfig.apiBase).resolve('/api/v1/payment-sms');
         final response=await http.post(uri,headers:{'Content-Type':'application/json','x-numelixa-device-token':widget.token},body:jsonEncode({
-          'provider':'EBIRR','rawBody':body,'receivingSimPhone':receiver,'senderPhone':sender,
+          'provider':provider,'rawBody':body,'receivingSimPhone':simReceiver,'senderPhone':sender,
           'simOperator':'Android SIM ${sms['subscriptionId']??'unknown'}','deviceId':'ebirr-numelixa-android'
         })).timeout(const Duration(seconds:20));
         if(response.statusCode==401)throw Exception('Token-ka waa la joojiyay. Dib uga samee pairing Admin Panel-ka.');
