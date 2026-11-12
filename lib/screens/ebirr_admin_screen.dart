@@ -98,7 +98,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
   }
   Future<void> _save() async {
     setState(()=>busy=true);
-    try{final methods=<String,dynamic>{};for(final entry in paymentMethods.entries){final item=Map<String,dynamic>.from(entry.value as Map);item['receiver']=methodReceiverCtrls[entry.key]?.text.trim()??'';methods[entry.key]=item;}await _api('POST',body:{'action':'save_settings','open':open,'rate':double.tryParse(rateCtrl.text.trim())??0,'receiver':receiverCtrl.text.trim(),'instructions':instructionsCtrl.text.trim(),'paymentMethods':methods});if(mounted)setState(()=>message='Dejinta eBirr waa la kaydiyay.');await _load(silent:true);}
+    try{final methods=<String,dynamic>{};for(final entry in paymentMethods.entries){final item=Map<String,dynamic>.from(entry.value as Map);item['receiver']=methodReceiverCtrls[entry.key]?.text.trim()??'';methods[entry.key]=item;}await _api('POST',body:{'action':'save_settings','open':open,'rate':double.tryParse(rateCtrl.text.trim())??0,'receiver':receiverCtrl.text.trim(),'instructions':instructionsCtrl.text.trim(),'paymentMethods':methods});if(mounted)setState(()=>message='Dejimaha adeegyada lacag-bixinta waa la kaydiyay.');await _load(silent:true);}
     catch(e){if(mounted)setState(()=>message=e.toString());}finally{if(mounted)setState(()=>busy=false);}
   }
 
@@ -179,7 +179,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
       const SizedBox(height:14),
       _panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Row(children:[const Expanded(child:Text('AUTOMATIC SMS MONITOR',style:TextStyle(fontWeight:FontWeight.w900))),_status(syncing?'SYNCING':permission?'ACTIVE':'PERMISSION OFF',permission?_mint:Colors.orangeAccent)]),
-        const SizedBox(height:8),const Text('App-ku wuxuu baarayaa SMS-yada cusub ee eBirr. Server-ku wuxuu xaqiijiyaa sender-ka, lacagta, lambarka diraha, receiver SIM iyo dalabka; wallet-ka hal mar oo keliya ayaa la credit-gareeyaa.',style:TextStyle(color:Colors.white70,height:1.45,fontSize:12)),
+        const SizedBox(height:8),const Text('App-ku wuxuu baarayaa SMS-yada cusub ee eBirr, Kaafi, CBE, M-Pesa iyo Telebirr. Marka xogta dalabka iyo SMS-ku is waafaqaan, server-ku si toos ah ayuu u xaqiijiyaa; admin ansixin gacanta ah looma baahna.',style:TextStyle(color:Colors.white70,height:1.45,fontSize:12)),
         const SizedBox(height:10),SizedBox(width:double.infinity,child:OutlinedButton.icon(onPressed:syncing?null:_syncSms,icon:const Icon(Icons.sync),label:const Text('SCAN INCOMING SMS')))
       ])),
       const SizedBox(height:14),
@@ -205,7 +205,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
   Widget _orderCard(Map<String,dynamic> o){
     final status=(o['status']??'pending').toString();final paid=status=='paid';
     return Container(margin:const EdgeInsets.only(top:11),padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:const Color(0xff0b192b),borderRadius:BorderRadius.circular(13),border:Border.all(color:_line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Row(children:[Expanded(child:Text('${o['method']??'eBirr'} · ${o['amountEtb']??'—'} ETB',style:const TextStyle(fontWeight:FontWeight.w900))),_status(status.toUpperCase(),paid?_mint:status=='closed'?Colors.white54:Colors.orangeAccent)]),
+      Row(children:[Expanded(child:Text('${o['method']??'Mobile money'} · ${o['amountEtb']??'—'} ETB',style:const TextStyle(fontWeight:FontWeight.w900))),_status(status.toUpperCase(),paid?_mint:status=='closed'?Colors.white54:Colors.orangeAccent)]),
       const SizedBox(height:5),Text('Order: ${o['orderId']??'—'}',style:const TextStyle(color:Colors.white70,fontSize:11)),
       Text('Payer: ${o['payerPhone']??'—'} · USD ${o['amountUsd']??'—'}',style:const TextStyle(color:Colors.white60,fontSize:11)),
       Text('SMS: ${o['smsMatched']==true?'MATCHED':'WAITING'} · Ref: ${o['transactionReference']??'—'}',style:TextStyle(color:o['smsMatched']==true?_mint:Colors.orangeAccent,fontSize:11)),
