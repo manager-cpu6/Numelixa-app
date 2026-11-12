@@ -35,7 +35,7 @@ jobs:
           for permission in ['android.permission.POST_NOTIFICATIONS', 'android.permission.READ_SMS', 'android.permission.RECEIVE_SMS']:
               tag = f'    <uses-permission android:name="{permission}"/>'
               if permission not in s:
-                  s = s.replace('<application', tag + '\\n    <application', 1)
+                  s = s.replace('<application', tag + '\n    <application', 1)
           s = s.replace('android:label="app"', 'android:label="Ebirr-Numelixa Admin"')
           s = s.replace('android:name=".MainActivity"', 'android:name="com.numelixa.app.MainActivity"')
           manifest.write_text(s)
@@ -45,7 +45,7 @@ jobs:
               raise SystemExit('Expected default customer namespace was not generated.')
           g = g.replace('applicationId = "com.numelixa.app"', 'applicationId = "com.numelixa.admin"', 1)
           if 'import java.util.Properties' not in g:
-              g = 'import java.util.Properties\\n' + g
+              g = 'import java.util.Properties\n' + g
           if 'create("release")' not in g:
               signing = '''    signingConfigs {
                   create("release") {
@@ -65,14 +65,14 @@ jobs:
           g = g.replace('signingConfig = signingConfigs.getByName("debug")',
               'signingConfig = if (rootProject.file("key.properties").exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")')
           if 'isCoreLibraryDesugaringEnabled = true' not in g:
-              g = g.replace('    compileOptions {', '    compileOptions {\\n        isCoreLibraryDesugaringEnabled = true', 1)
+              g = g.replace('    compileOptions {', '    compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
           if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in g:
-              g += '\\ndependencies {\\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\\n}\\n'
+              g += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
           gradle.write_text(g)
           gp = Path('android/gradle.properties')
           props = gp.read_text() if gp.exists() else ''
           if 'android.newDsl=false' not in props:
-              gp.write_text(props + '\\nandroid.newDsl=false\\n')
+              gp.write_text(props + '\nandroid.newDsl=false\n')
           candidates = list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
           if not candidates:
               raise SystemExit('Flutter MainActivity.kt was not generated.')
@@ -191,7 +191,7 @@ jobs:
               end = s.find('>', start)
               if start < 0 or end < 0:
                   raise SystemExit('Could not locate Android application manifest element.')
-              s = s[:end + 1] + '\\n        ' + meta + s[end + 1:]
+              s = s[:end + 1] + '\n        ' + meta + s[end + 1:]
           p.write_text(s)
           PY
       - name: Configure release signing
