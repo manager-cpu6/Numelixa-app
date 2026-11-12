@@ -454,3 +454,5 @@ jobs:
 # Rebuild after payment controls, provider instructions and admin approval fixes.
 
 # Rebuild after adding SMS scan diagnostics to the admin APK.
+
+# Rebuild with explicit admin MainActivity manifest target.
