@@ -147,7 +147,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
       const SizedBox(height:16),
       if(message.isNotEmpty)_panel(child:Text(message,style:const TextStyle(color:_mint))),
       if(!permission)_panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SMS permission is required',style:TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:6),const Text('Allow SMS access so the app can read incoming eBirr receipts and send matching data to Numelixa securely.',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),FilledButton(onPressed:_askPermission,child:const Text('Grant SMS permission'))])),
-      Row(children:[Expanded(child:_metric('PENDING',pending.toString(),Colors.orangeAccent)),const SizedBox(width:9),Expanded(child:_metric('PAID',paid.toString(),_mint)),const SizedBox(width:9),Expanded(child:_metric('SMS LOGS',events.length.toString(),_blue))]),
+      Row(children:[_metric('PENDING',pending.toString(),Colors.orangeAccent),const SizedBox(width:9),_metric('PAID',paid.toString(),_mint),const SizedBox(width:9),_metric('SMS LOGS',events.length.toString(),_blue)]),
       const SizedBox(height:14),
       _panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Row(children:[const Expanded(child:Text('eBirr PAYMENT SETTINGS',style:TextStyle(fontWeight:FontWeight.w900))),Switch(value:open,onChanged:(v)=>setState(()=>open=v),activeColor:_mint)]),
