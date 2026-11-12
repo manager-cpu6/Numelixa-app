@@ -6,7 +6,7 @@ void main() {
   runApp(const NumelixaPaymentAdminApp());
 }
 
-// Dedicated entry point: this APK is the payment-admin app, not the customer app.\nclass NumelixaPaymentAdminApp extends StatelessWidget {
+// Dedicated entry point: isolated payment-admin APK build.\nclass NumelixaPaymentAdminApp extends StatelessWidget {
   const NumelixaPaymentAdminApp({super.key});
 
   @override
