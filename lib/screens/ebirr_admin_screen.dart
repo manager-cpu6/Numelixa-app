@@ -169,11 +169,9 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
       Row(children:[_metric('PENDING',pending.toString(),Colors.orangeAccent),const SizedBox(width:9),_metric('PAID',paid.toString(),_mint),const SizedBox(width:9),_metric('SMS LOGS',events.length.toString(),_blue)]),
       const SizedBox(height:14),
       _panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(children:[const Expanded(child:Text('eBirr PAYMENT SETTINGS',style:TextStyle(fontWeight:FontWeight.w900))),Switch(value:open,onChanged:(v)=>setState(()=>open=v),activeColor:_mint)]),
-        Text(open?'OPEN · Customers can pay with eBirr':'CLOSED · Hidden from customer checkout',style:TextStyle(color:open?_mint:Colors.orangeAccent,fontSize:12,fontWeight:FontWeight.bold)),
+        const Text('EXCHANGE RATE & GENERAL PAYMENT INSTRUCTIONS',style:TextStyle(fontWeight:FontWeight.w900)),
         const SizedBox(height:12),_field('ETB per 1 USD',rateCtrl,keyboard:TextInputType.number),
-        _field('Official eBirr receiving number',receiverCtrl,keyboard:TextInputType.phone),
-        _field('Payment instructions',instructionsCtrl,maxLines:3),
+        _field('General payment instructions',instructionsCtrl,maxLines:3),
         SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:busy?null:_save,icon:const Icon(Icons.save_rounded),label:const Text('SAVE SETTINGS'),style:FilledButton.styleFrom(backgroundColor:_mint,foregroundColor:_ink)))
       ])),
       const SizedBox(height:14),
