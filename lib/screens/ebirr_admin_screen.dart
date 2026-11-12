@@ -52,7 +52,7 @@ class _EbirrAdminGateState extends State<EbirrAdminGate> {
   }
   Future<void> _pair(String value) async {
     final clean=value.trim();
-    if(clean.length<24)throw Exception('Geli Token-ka saxda ah ee laga soo saaray Admin Panel → eBirr.');
+    if(clean.length<24)throw Exception('Geli Token-ka saxda ah ee laga soo saaray Admin Panel → lacag-bixinta.');
     final data=await _request('GET','/api/v1/ebirr-device',token:clean);
     if(data['ok']!=true)throw Exception('Token-ku ma shaqaynayo.');
     await _storage.write(key:_tokenKey,value:clean);
@@ -159,13 +159,13 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
   @override Widget build(BuildContext context){
     final pending=orders.where((o)=>!['paid','closed','rejected'].contains((o['status']??'').toString())).length;
     final paid=orders.where((o)=>o['status']=='paid').length;
-    return Scaffold(backgroundColor:_ink,appBar:AppBar(backgroundColor:_ink,title:const Text('EBIRR · NUMELIXA',style:TextStyle(fontWeight:FontWeight.w900,letterSpacing:1)),actions:[IconButton(onPressed:()=>_load(),icon:const Icon(Icons.refresh_rounded)),IconButton(onPressed:_revoke,icon:const Icon(Icons.link_off_rounded))]),body:RefreshIndicator(onRefresh:()=>_load(),child:ListView(padding:const EdgeInsets.all(16),children:[
+    return Scaffold(backgroundColor:_ink,appBar:AppBar(backgroundColor:_ink,title:const Text('NUMELIXA · PAYMENT ADMIN',style:TextStyle(fontWeight:FontWeight.w900,letterSpacing:1)),actions:[IconButton(onPressed:()=>_load(),icon:const Icon(Icons.refresh_rounded)),IconButton(onPressed:_revoke,icon:const Icon(Icons.link_off_rounded))]),body:RefreshIndicator(onRefresh:()=>_load(),child:ListView(padding:const EdgeInsets.all(16),children:[
       const Text('PAYMENT CONTROL CENTER',style:TextStyle(color:_mint,fontWeight:FontWeight.w900,letterSpacing:2,fontSize:11)),
-      const SizedBox(height:7),const Text('eBirr Admin Dashboard',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)),
+      const SizedBox(height:7),const Text('Mobile Money Admin Dashboard',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)),
       const SizedBox(height:5),Text('SMS monitoring · Automatic receipt matching · Wallet audit',style:TextStyle(color:Colors.blueGrey.shade200,fontSize:12)),
       const SizedBox(height:16),
       if(message.isNotEmpty)_panel(child:Text(message,style:const TextStyle(color:_mint))),
-      if(!permission)_panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SMS permission is required',style:TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:6),const Text('Allow SMS access so the app can read incoming eBirr receipts and send matching data to Numelixa securely.',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),FilledButton(onPressed:_askPermission,child:const Text('Grant SMS permission'))])),
+      if(!permission)_panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('SMS permission is required',style:TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:6),const Text('Allow SMS access so the app can read supported payment receipts and send matching data to Numelixa securely.',style:TextStyle(color:Colors.white70)),const SizedBox(height:10),FilledButton(onPressed:_askPermission,child:const Text('Grant SMS permission'))])),
       Row(children:[_metric('PENDING',pending.toString(),Colors.orangeAccent),const SizedBox(width:9),_metric('PAID',paid.toString(),_mint),const SizedBox(width:9),_metric('SMS LOGS',events.length.toString(),_blue)]),
       const SizedBox(height:14),
       _panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -185,7 +185,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
       const SizedBox(height:14),
       _panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Row(children:[const Expanded(child:Text('PAYMENT ORDERS',style:TextStyle(fontWeight:FontWeight.w900))),Text('${orders.length} total',style:const TextStyle(color:Colors.white54,fontSize:11))]),
-        if(orders.isEmpty)const Padding(padding:EdgeInsets.all(14),child:Text('No eBirr orders found.',style:TextStyle(color:Colors.white60))),
+        if(orders.isEmpty)const Padding(padding:EdgeInsets.all(14),child:Text('No payment orders found.',style:TextStyle(color:Colors.white60))),
         ...orders.map((o)=>_orderCard(o))
       ])),
       const SizedBox(height:14),
@@ -199,7 +199,7 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
           Text((e['rawBody']??'').toString(),maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white70,fontSize:11))
         ])))
       ])),
-      const SizedBox(height:20),const Center(child:Text('NUMELIXA · SECURE ETHIOPIA PAYMENTS',style:TextStyle(color:Colors.white30,fontSize:10,letterSpacing:1.2)))
+      const SizedBox(height:20),const Center(child:Text('NUMELIXA · SECURE MOBILE MONEY CONTROL',style:TextStyle(color:Colors.white30,fontSize:10,letterSpacing:1.2)))
     ])));
   }
   Widget _orderCard(Map<String,dynamic> o){
@@ -225,7 +225,7 @@ class _PairingPageState extends State<_PairingPage>{
   Future<void> pair()async{setState(()=>busy=true);try{await widget.onPair(controller.text);}catch(e){setState(()=>error=e.toString());}finally{if(mounted)setState(()=>busy=false);}}
   @override Widget build(BuildContext context)=>Scaffold(backgroundColor:_ink,body:SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(22),child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:480),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     const Icon(Icons.account_balance_wallet_rounded,color:_mint,size:58),const SizedBox(height:16),
-    const Text('EBIRR · NUMELIXA',textAlign:TextAlign.center,style:TextStyle(color:_mint,fontWeight:FontWeight.w900,letterSpacing:2)),
+    const Text('NUMELIXA · PAYMENT ADMIN',textAlign:TextAlign.center,style:TextStyle(color:_mint,fontWeight:FontWeight.w900,letterSpacing:2)),
     const SizedBox(height:10),const Text('Ku xidh Admin Panel-ka',textAlign:TextAlign.center,style:TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),
     const SizedBox(height:8),const Text('Marka ugu horraysa, oggolow SMS permission kadib geli pairing token-ka aad ka soo saartay Website Admin → eBirr → Generate pairing token.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white70,height:1.5)),
     const SizedBox(height:24),_panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
