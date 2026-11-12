@@ -147,8 +147,9 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
         final body=(sms['body']??'').toString().trim(),sender=(sms['address']??'').toString();
         final combined=(body+' '+sender).toLowerCase();
         if(body.isEmpty||!RegExp(r'ebirr|e-birr|\bbirr\b|ብር|kaafi|cbe|mpesa|m-pesa|safaricom|telebirr',caseSensitive:false).hasMatch(combined))continue;
-        final provider=combined.contains('mpesa')||combined.contains('m-pesa')||combined.contains('safaricom')?'MPESA':combined.contains('telebirr')?'TELEBIRR':combined.contains('kaafi')?'KAAFI':combined.contains('cbe')?'CBE':'EBIRR';
-        final methodId=provider=='MPESA'?'mpesa':provider=='TELEBIRR'?'telebirr':provider=='KAAFI'?'kaafi_ebirr':provider=='CBE'?'cbe_birr':'coopay_ebirr';
+        final isCbe=combined.contains('cbe')||combined.contains('commercial bank of ethiopia');
+        final provider=combined.contains('mpesa')||combined.contains('m-pesa')||combined.contains('safaricom')?'MPESA':combined.contains('telebirr')?'TELEBIRR':combined.contains('kaafi')?'KAAFI':isCbe&&(combined.contains('bank')||combined.contains('account'))?'CBE_BANK':isCbe?'CBE':'EBIRR';
+        final methodId=provider=='MPESA'?'mpesa':provider=='TELEBIRR'?'telebirr':provider=='KAAFI'?'kaafi_ebirr':provider=='CBE_BANK'?'cbe_bank':provider=='CBE'?'cbe_birr':'coopay_ebirr';
         final simReceiver=methodReceiverCtrls[methodId]?.text.trim()??receiver;
         final uri=Uri.parse(AppConfig.apiBase).resolve('/api/v1/payment-sms');
         final response=await http.post(uri,headers:{'Content-Type':'application/json','x-numelixa-device-token':widget.token},body:jsonEncode({
