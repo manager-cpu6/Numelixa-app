@@ -314,6 +314,7 @@ jobs:
           m = re.sub(r'\s*<intent-filter>(?:(?!</intent-filter>).)*android:scheme="com.numelixa.app"(?:(?!</intent-filter>).)*</intent-filter>', '', m, flags=re.S)
           m = m.replace('android:label="Numelixa"', 'android:label="Ebirr-Numelixa Admin"')
           m = m.replace('android:label="Ebirr-Numelixa"', 'android:label="Ebirr-Numelixa Admin"')
+          m = m.replace('android:name=".MainActivity"', 'android:name="com.numelixa.app.MainActivity"')
           manifest.write_text(m)
           Path('android/app/google-services.json').unlink(missing_ok=True)
           PY
