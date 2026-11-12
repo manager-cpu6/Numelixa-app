@@ -1,7 +1,7 @@
 name: Numelixa Android CI
 'on':
   push:
-    branches: [main, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade, feat/numelixa-premium-mobile-upgrade, feat/numelixa-major-brand-security-2026, feat/exact-brand-icon-native-login]
+    branches: [main, feat/ebirr-numelixa-admin-apk, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade, feat/numelixa-premium-mobile-upgrade, feat/numelixa-major-brand-security-2026, feat/exact-brand-icon-native-login]
     tags: ['v*']
   workflow_dispatch:
 permissions:
@@ -89,6 +89,77 @@ jobs:
           properties = gp.read_text() if gp.exists() else ''
           if 'android.newDsl=false' not in properties:
               gp.write_text(properties + '\nandroid.newDsl=false\n')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          s = manifest.read_text()
+          for permission in ['android.permission.READ_SMS', 'android.permission.RECEIVE_SMS']:
+              tag = f'    <uses-permission android:name="{permission}"/>'
+              if permission not in s:
+                  s = s.replace('<application', tag + '\\n    <application', 1)
+          s = s.replace('android:label="app"', 'android:label="Ebirr-Numelixa"')
+          s = s.replace('android:label="Numelixa"', 'android:label="Ebirr-Numelixa"')
+          manifest.write_text(s)
+          candidates = list(Path('android/app/src/main/kotlin').rglob('MainActivity.kt'))
+          if not candidates:
+              raise SystemExit('Flutter MainActivity.kt was not generated.')
+          activity = candidates[0]
+          activity.write_text('''package com.numelixa.app
+
+          import android.Manifest
+          import android.content.pm.PackageManager
+          import android.provider.Telephony
+          import io.flutter.embedding.android.FlutterFragmentActivity
+          import io.flutter.embedding.engine.FlutterEngine
+          import io.flutter.plugin.common.MethodChannel
+
+          class MainActivity : FlutterFragmentActivity() {
+              override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+                  super.configureFlutterEngine(flutterEngine)
+                  MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.numelixa/ebirr_sms")
+                      .setMethodCallHandler { call, result ->
+                          if (call.method != "readRecentSms") {
+                              result.notImplemented()
+                          } else if (checkSelfPermission(Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+                              result.error("permission_denied", "SMS permission is required.", null)
+                          } else {
+                              try {
+                                  val after = (call.argument<Number>("after") ?: 0).toLong()
+                                  val limit = ((call.argument<Number>("limit") ?: 80).toInt()).coerceIn(1, 100)
+                                  val rows = mutableListOf<Map<String, Any?>>()
+                                  val columns = arrayOf(Telephony.Sms._ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.SUBSCRIPTION_ID)
+                                  contentResolver.query(
+                                      Telephony.Sms.Inbox.CONTENT_URI,
+                                      columns,
+                                      "${Telephony.Sms.DATE} > ?",
+                                      arrayOf(after.toString()),
+                                      "${Telephony.Sms.DATE} ASC"
+                                  )?.use { cursor ->
+                                      val idCol = cursor.getColumnIndex(Telephony.Sms._ID)
+                                      val addressCol = cursor.getColumnIndex(Telephony.Sms.ADDRESS)
+                                      val bodyCol = cursor.getColumnIndex(Telephony.Sms.BODY)
+                                      val dateCol = cursor.getColumnIndex(Telephony.Sms.DATE)
+                                      val subCol = cursor.getColumnIndex(Telephony.Sms.SUBSCRIPTION_ID)
+                                      while (cursor.moveToNext() && rows.size < limit) {
+                                          rows.add(mapOf(
+                                              "id" to if (idCol >= 0) cursor.getString(idCol) else "",
+                                              "address" to if (addressCol >= 0) cursor.getString(addressCol) else "",
+                                              "body" to if (bodyCol >= 0) cursor.getString(bodyCol) else "",
+                                              "date" to if (dateCol >= 0) cursor.getLong(dateCol) else 0L,
+                                              "subscriptionId" to if (subCol >= 0) cursor.getInt(subCol) else -1
+                                          ))
+                                      }
+                                  }
+                                  result.success(rows)
+                              } catch (error: Exception) {
+                                  result.error("sms_read_failed", error.message ?: "Could not read SMS inbox.", null)
+                              }
+                          }
+                      }
+              }
+          }
+          ''')
           PY
       - name: Install exact Numelixa PNG launcher icon
         shell: bash
