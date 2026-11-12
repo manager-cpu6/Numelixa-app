@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'screens/app_shell.dart';
+import 'screens/ebirr_admin_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -74,7 +75,7 @@ class NumelixaApp extends StatelessWidget {
           title: 'Numelixa',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.dark,
-          home: const AppShell(),
+          home: const EbirrAdminGate(),
         ),
       );
 }
