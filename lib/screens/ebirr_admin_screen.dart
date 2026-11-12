@@ -74,11 +74,12 @@ class EbirrAdminScreen extends StatefulWidget {
 }
 class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBindingObserver {
   Timer? poll;bool busy=false,syncing=false,open=false,permission=false;
-  String message='',receiver='',instructions='',rate='';Map<String,dynamic> data={};
+  String message='',receiver='',instructions='',rate='';Map<String,dynamic> data={},paymentMethods={};
   final receiverCtrl=TextEditingController(),rateCtrl=TextEditingController(),instructionsCtrl=TextEditingController();
+  final Map<String,TextEditingController> methodReceiverCtrls={};
   @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);permission=widget.permissionGranted;_load();poll=Timer.periodic(const Duration(seconds:20),(_){_syncSms();_load(silent:true);});}
   @override void didChangeAppLifecycleState(AppLifecycleState s){if(s==AppLifecycleState.resumed){_load(silent:true);_syncSms();}}
-  @override void dispose(){WidgetsBinding.instance.removeObserver(this);poll?.cancel();receiverCtrl.dispose();rateCtrl.dispose();instructionsCtrl.dispose();super.dispose();}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);poll?.cancel();receiverCtrl.dispose();rateCtrl.dispose();instructionsCtrl.dispose();for(final ctrl in methodReceiverCtrls.values){ctrl.dispose();}super.dispose();}
   Future<Map<String,dynamic>> _api(String method,{Map<String,dynamic>? body}) async {
     final uri=Uri.parse(AppConfig.apiBase).resolve('/api/v1/ebirr-device');
     final headers={'Accept':'application/json','Content-Type':'application/json','x-numelixa-device-token':widget.token};
@@ -91,15 +92,28 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
   }
   Future<void> _load({bool silent=false}) async {
     if(busy&&!silent)return;
-    try{final d=await _api('GET');if(!mounted)return;final s=Map<String,dynamic>.from(d['settings']??{});
-      setState((){data=d;open=s['open']==true;receiver=s['receiver']?.toString()??'';rate=(s['rate']??'').toString();instructions=s['instructions']?.toString()??'';receiverCtrl.text=receiver;rateCtrl.text=rate;instructionsCtrl.text=instructions;if(!silent)message='Xogta server-ka waa la cusboonaysiiyay.';});
+    try{final d=await _api('GET');if(!mounted)return;final s=Map<String,dynamic>.from(d['settings']??{});final methods=Map<String,dynamic>.from(s['paymentMethods']??{});for(final id in ['coopay_ebirr','kaafi_ebirr','cbe_birr','cbe_bank','mpesa','telebirr']){final item=Map<String,dynamic>.from(methods[id]??{});methods[id]=item;if(!methodReceiverCtrls.containsKey(id))methodReceiverCtrls[id]=TextEditingController();methodReceiverCtrls[id]!.text=(item['receiver']??'').toString();}
+      setState((){data=d;paymentMethods=methods;open=s['open']==true;receiver=s['receiver']?.toString()??'';rate=(s['rate']??'').toString();instructions=s['instructions']?.toString()??'';receiverCtrl.text=receiver;rateCtrl.text=rate;instructionsCtrl.text=instructions;if(!silent)message='Xogta server-ka waa la cusboonaysiiyay.';});
     }catch(e){if(mounted&&!silent)setState(()=>message=e.toString());}
   }
   Future<void> _save() async {
     setState(()=>busy=true);
-    try{await _api('POST',body:{'action':'save_settings','open':open,'rate':double.tryParse(rateCtrl.text.trim())??0,'receiver':receiverCtrl.text.trim(),'instructions':instructionsCtrl.text.trim()});if(mounted)setState(()=>message='Dejinta eBirr waa la kaydiyay.');await _load(silent:true);}
+    try{final methods=<String,dynamic>{};for(final entry in paymentMethods.entries){final item=Map<String,dynamic>.from(entry.value as Map);item['receiver']=methodReceiverCtrls[entry.key]?.text.trim()??'';methods[entry.key]=item;}await _api('POST',body:{'action':'save_settings','open':open,'rate':double.tryParse(rateCtrl.text.trim())??0,'receiver':receiverCtrl.text.trim(),'instructions':instructionsCtrl.text.trim(),'paymentMethods':methods});if(mounted)setState(()=>message='Dejinta eBirr waa la kaydiyay.');await _load(silent:true);}
     catch(e){if(mounted)setState(()=>message=e.toString());}finally{if(mounted)setState(()=>busy=false);}
   }
+
+  List<Widget> _methodSettings(){
+    const defs=[('coopay_ebirr','Coopay eBirr'),('kaafi_ebirr','Kaafi eBirr'),('cbe_birr','CBE Birr'),('cbe_bank','CBE Bank Transfer'),('mpesa','M-Pesa'),('telebirr','Telebirr')];
+    return defs.map((def){
+      final id=def.$1,name=def.$2,item=Map<String,dynamic>.from(paymentMethods[id]??{}),enabled=item['open']==true;
+      return Container(margin:const EdgeInsets.only(top:10),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:_ink,borderRadius:BorderRadius.circular(12),border:Border.all(color:_line)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(children:[Expanded(child:Text(name,style:const TextStyle(fontWeight:FontWeight.w800))),Switch(value:enabled,onChanged:(v)=>setState(()=>paymentMethods[id]={...item,'open':v}),activeColor:_mint)]),
+        Text(enabled?'OPEN · Visible in Local Payment':'CLOSED · Hidden from Local Payment',style:TextStyle(color:enabled?_mint:Colors.orangeAccent,fontSize:11,fontWeight:FontWeight.bold)),
+        const SizedBox(height:8),_field('Receiving phone / account',methodReceiverCtrls[id]??TextEditingController(),keyboard:TextInputType.phone)
+      ]));
+    }).toList();
+  }
+
   Future<void> _closeOrder(String id) async {
     final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(backgroundColor:_panelBg,title:const Text('Xir dalabkan?'),content:const Text('Lacag laguma shubayo wallet-ka. Dalabka waa la xirayaa.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Ka noqo')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Xir'))]));
     if(yes!=true)return;setState(()=>busy=true);
@@ -158,6 +172,8 @@ class _EbirrAdminScreenState extends State<EbirrAdminScreen> with WidgetsBinding
         _field('Payment instructions',instructionsCtrl,maxLines:3),
         SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:busy?null:_save,icon:const Icon(Icons.save_rounded),label:const Text('SAVE SETTINGS'),style:FilledButton.styleFrom(backgroundColor:_mint,foregroundColor:_ink)))
       ])),
+      const SizedBox(height:14),
+      _panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('ETHIOPIA PAYMENT SERVICES',style:TextStyle(fontWeight:FontWeight.w900)),const SizedBox(height:6),const Text('Fur ama xir adeeg kasta si gooni ah; lambarka qaataha adeeg kasta waa gaar.',style:TextStyle(color:Colors.white70,fontSize:12)),..._methodSettings(),const SizedBox(height:10),SizedBox(width:double.infinity,child:FilledButton.icon(onPressed:busy?null:_save,icon:const Icon(Icons.save_rounded),label:const Text('SAVE ALL PAYMENT SERVICES'),style:FilledButton.styleFrom(backgroundColor:_mint,foregroundColor:_ink)))])),
       const SizedBox(height:14),
       _panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Row(children:[const Expanded(child:Text('AUTOMATIC SMS MONITOR',style:TextStyle(fontWeight:FontWeight.w900))),_status(syncing?'SYNCING':permission?'ACTIVE':'PERMISSION OFF',permission?_mint:Colors.orangeAccent)]),
