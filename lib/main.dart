@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
-import 'screens/app_shell.dart';
 import 'screens/ebirr_admin_screen.dart';
 
 @pragma('vm:entry-point')
