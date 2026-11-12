@@ -43,8 +43,11 @@ jobs:
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
+          install_permission = '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>'
           if 'android.permission.POST_NOTIFICATIONS' not in s:
               s = s.replace('<application', permission + '\n    <application', 1)
+          if 'android.permission.REQUEST_INSTALL_PACKAGES' not in s:
+              s = s.replace('<application', install_permission + '\n    <application', 1)
           s = s.replace('android:label="app"', 'android:label="Numelixa"')
           # Receive the short-lived, one-time OAuth ticket returned by the
           # production website after Google verifies the chosen account.
