@@ -2370,7 +2370,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7), decoration: BoxDecoration(color: const Color(0x2237DFFF), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0x554FCBFF))), child: const Text('USD', style: TextStyle(color: Color(0xFFB9EFFF), fontSize: 10, fontWeight: FontWeight.w900))),
               ]),
               const SizedBox(height: 19),
-              Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\${(double.tryParse(value.toString()) ?? 0).toStringAsFixed(2)}',
+              Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\$${(double.tryParse(value.toString()) ?? 0).toStringAsFixed(2)}',
                 style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.1)),
               if (snapshot.hasError) Padding(padding: const EdgeInsets.only(top: 7), child: Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C), fontSize: 11))),
             ]),
@@ -2392,7 +2392,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             Wrap(spacing: 8, runSpacing: 8, children: [
               for (final preset in <double>[1, 5, 10, 25, 50].where((value) => value >= _minTopupUsd && value <= _maxTopupUsd))
                 ChoiceChip(
-                  label: Text('\${preset.toStringAsFixed(0)}'),
+                  label: Text('\$${preset.toStringAsFixed(0)}'),
                   selected: (_selectedUsd - preset).abs() < 0.001,
                   onSelected: _creating ? null : (selected) { if (selected) { _amountController.text = preset.toStringAsFixed(2); setState(() {}); } },
                   selectedColor: const Color(0xFF123C62),
