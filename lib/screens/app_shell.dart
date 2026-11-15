@@ -2003,8 +2003,9 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     final repo = NumelixaRepository();
     repo.ethiopiaPaymentMethods().then((data) {
       final methods = data['methods'] is Map ? Map<String, dynamic>.from(data['methods']) : <String, dynamic>{};
-      final available = data['ok'] == true && (double.tryParse((data['etbPerUsd'] ?? '0').toString()) ?? 0) > 0 && methods.values.any((value) => value is Map && value['open'] == true && (value['receiver'] ?? '').toString().trim().isNotEmpty);
-      if (mounted) setState(() { _ethiopiaMethods = methods; _ethiopiaPaymentsOpen = available; });
+      final availableMethods = methods.entries.where((entry) => entry.value is Map && entry.value['open'] == true && (entry.value['receiver'] ?? '').toString().trim().isNotEmpty).map((entry) => entry.key).toList();
+      final available = data['ok'] == true && (double.tryParse((data['etbPerUsd'] ?? '0').toString()) ?? 0) > 0 && availableMethods.isNotEmpty;
+      if (mounted) setState(() { _ethiopiaMethods = methods; _ethiopiaPaymentsOpen = available; if (availableMethods.isNotEmpty && !availableMethods.contains(_ethiopiaMethod)) _ethiopiaMethod = availableMethods.first; });
     }).catchError((_) { if (mounted) setState(() => _ethiopiaPaymentsOpen = false); });
     _transactions = repo.transactions(token: token);
     _balance = repo.balance(token: token);
@@ -3784,7 +3785,7 @@ class _LoginApprovalPageState extends State<_LoginApprovalPage> {
  + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontWeight: FontWeight.w800)),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _ethiopiaMethods.containsKey(_ethiopiaMethod) && (_ethiopiaMethods[_ethiopiaMethod] is Map) && _ethiopiaMethods[_ethiopiaMethod]['open'] == true ? _ethiopiaMethod : _ethiopiaMethods.entries.where((entry) => entry.value is Map && entry.value['open'] == true).map((entry) => entry.key).firstOrNull,
+                value: _ethiopiaMethods.containsKey(_ethiopiaMethod) && (_ethiopiaMethods[_ethiopiaMethod] is Map) && _ethiopiaMethods[_ethiopiaMethod]['open'] == true ? _ethiopiaMethod : null,
                 decoration: const InputDecoration(labelText: 'Payment service'),
                 items: _ethiopiaMethods.entries.where((entry) => entry.value is Map && entry.value['open'] == true && (entry.value['receiver'] ?? '').toString().trim().isNotEmpty).map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text((entry.value['name'] ?? entry.key).toString()))).toList(),
                 onChanged: _creating ? null : (value) { if (value != null) setState(() => _ethiopiaMethod = value); },
