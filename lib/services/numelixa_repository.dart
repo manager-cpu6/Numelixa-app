@@ -75,6 +75,15 @@ class NumelixaRepository {
   Future<Map<String, dynamic>> localPaymentStatus() =>
       _paymentApi.get('/api/payments/sifalo/status');
 
+  Future<Map<String, dynamic>> ethiopiaPaymentMethods() =>
+      _api.get('/api/payments/ethiopia/methods');
+
+  Future<Map<String, dynamic>> createEthiopiaPayment({required String token, required double amountUsd, required String method, required String payerPhone, String payerName = ''}) =>
+      _api.post('/api/payments/ethiopia/create', accessToken: token, body: {'amountUsd': amountUsd, 'method': method, 'payerPhone': payerPhone, 'payerName': payerName});
+
+  Future<Map<String, dynamic>> ethiopiaPaymentStatus({required String token, required String orderId}) =>
+      _api.get('/api/payments/ethiopia/status?orderId=${Uri.encodeQueryComponent(orderId)}', accessToken: token);
+
   Future<Map<String, dynamic>> createLocalPayment({required String token, required double amountUsd, required String method, required String phone}) =>
       _paymentApi.post('/api/payments/sifalo/create', accessToken: token, body: {'amountUsd': amountUsd, 'method': method, 'phone': phone});
 
