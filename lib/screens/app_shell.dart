@@ -2350,14 +2350,32 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
       padding: const EdgeInsets.all(14), children: [
         FutureBuilder<Map<String, dynamic>>(future: _balance, builder: (context, snapshot) {
           final value = snapshot.data?['balance'];
-          return Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Available balance', style: TextStyle(color: Color(0xFFA7B7D0))),
-            const SizedBox(height: 6),
-            Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\$${(double.tryParse(value.toString()) ?? 0).toStringAsFixed(2)} USD',
-              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.mint)),
-            if (snapshot.hasError) Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C))),
-          ])));
-        }),
+          return Container(
+            padding: const EdgeInsets.all(21),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF174477), Color(0xFF0C2749), Color(0xFF07162B)]),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF2C659B)),
+              boxShadow: const [BoxShadow(color: Color(0x331677FF), blurRadius: 26, offset: Offset(0, 12))],
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0x2237DFFF), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.cyan)),
+                const SizedBox(width: 11),
+                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('NUMELIXA WALLET', style: TextStyle(color: Color(0xFF8FDFFF), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+                  SizedBox(height: 4),
+                  Text('Available balance', style: TextStyle(color: Color(0xFFB5C9E2), fontSize: 12, fontWeight: FontWeight.w600)),
+                ])),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7), decoration: BoxDecoration(color: const Color(0x2237DFFF), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0x554FCBFF))), child: const Text('USD', style: TextStyle(color: Color(0xFFB9EFFF), fontSize: 10, fontWeight: FontWeight.w900))),
+              ]),
+              const SizedBox(height: 19),
+              Text(snapshot.connectionState == ConnectionState.waiting ? 'Loading…' : value == null ? '—' : '\$\${(double.tryParse(value.toString()) ?? 0).toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.1)),
+              if (snapshot.hasError) Padding(padding: const EdgeInsets.only(top: 7), child: Text(snapshot.error.toString(), style: const TextStyle(color: Color(0xFFFF788C), fontSize: 11))),
+            ]),
+          );
+        })
         const SizedBox(height: 8),
         const Text('Add funds', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
         const SizedBox(height: 5),
@@ -2368,6 +2386,23 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             const Text('1. Enter your top-up amount', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             const SizedBox(height: 10),
             TextField(controller: _amountController, keyboardType: const TextInputType.numberWithOptions(decimal: true), enabled: !_creating, onChanged: (_) => setState(() {}), decoration: InputDecoration(prefixText: '\$ ', suffixText: 'USD', labelText: 'Amount you want to add', hintText: _minTopupUsd.toStringAsFixed(2), helperText: 'Minimum \$' + _minTopupUsd.toStringAsFixed(2) + ' · Maximum \$' + _maxTopupUsd.toStringAsFixed(2), errorText: _validAmount ? null : 'Enter an amount within the allowed limits.')),
+            const SizedBox(height: 12),
+            const Text('Quick amounts', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 11, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final preset in <double>[1, 5, 10, 25, 50].where((value) => value >= _minTopupUsd && value <= _maxTopupUsd))
+                ChoiceChip(
+                  label: Text('\$\${preset.toStringAsFixed(0)}'),
+                  selected: (_selectedUsd - preset).abs() < 0.001,
+                  onSelected: _creating ? null : (selected) { if (selected) { _amountController.text = preset.toStringAsFixed(2); setState(() {}); } },
+                  selectedColor: const Color(0xFF123C62),
+                  backgroundColor: const Color(0xFF091A30),
+                  labelStyle: TextStyle(color: (_selectedUsd - preset).abs() < 0.001 ? AppTheme.cyan : const Color(0xFFA7B7D0), fontWeight: FontWeight.w800, fontSize: 12),
+                  side: BorderSide(color: (_selectedUsd - preset).abs() < 0.001 ? AppTheme.cyan : const Color(0xFF29435F)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+            ]),
+            const SizedBox(height: 10),
             const SizedBox(height: 8),
             Text('Your top-up: \$' + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
           ]))),
@@ -2451,7 +2486,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               if (_ethiopiaOrder == null) ...[
                 const SizedBox(height: 14),
                 Text('Swipe to prepare payment · \$' + _selectedUsd.toStringAsFixed(2), style: const TextStyle(fontWeight: FontWeight.w800)),
-                Slider(value: _ethiopiaSwipe, min: 0, max: 1, onChanged: _creating ? null : (value) => setState(() => _ethiopiaSwipe = value), onChangeEnd: (value) { if (value >= .98) _createEthiopiaPayment(); }),
+                SliderTheme(data: SliderTheme.of(context).copyWith(activeTrackColor: AppTheme.cyan, inactiveTrackColor: const Color(0xFF243A56), thumbColor: AppTheme.mint, overlayColor: AppTheme.cyan.withOpacity(.14), trackHeight: 8, thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 11), overlayShape: const RoundSliderOverlayShape(overlayRadius: 20)), child: Slider(value: _ethiopiaSwipe, min: 0, max: 1, onChanged: _creating ? null : (value) => setState(() => _ethiopiaSwipe = value), onChangeEnd: (value) { if (value >= .98) _createEthiopiaPayment(); })),
                 const Text('Once the order is created, SMS matching runs automatically. No manual confirmation is required when your payment arrives.', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.45)),
               ] else ...[
                 const Divider(height: 24),
@@ -2535,19 +2570,34 @@ class _PaymentChoiceCard extends StatelessWidget {
   final String title, subtitle;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Card(
-    color: selected ? const Color(0xFF0D2345) : const Color(0xFF071329),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: selected ? AppTheme.cyan : const Color(0xFF1A3658), width: selected ? 1.5 : 1)),
-    child: InkWell(borderRadius: BorderRadius.circular(15), onTap: onTap, child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 23),
-        const SizedBox(height: 8),
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 3),
-        Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
-      ]),
-    )),
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF102D4E) : const Color(0xFF08182D),
+          gradient: selected ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF153F68), Color(0xFF0B203A)]) : null,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF203A57), width: selected ? 1.5 : 1),
+          boxShadow: selected ? const [BoxShadow(color: Color(0x2237DFFF), blurRadius: 18, offset: Offset(0, 6))] : const [],
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(width: 39, height: 39, decoration: BoxDecoration(color: selected ? const Color(0x3337DFFF) : const Color(0xFF10233B), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 21)),
+            const Spacer(),
+            if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.mint, size: 18),
+          ]),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+          const SizedBox(height: 4),
+          Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, height: 1.35, color: Color(0xFF91A8C4))),
+        ]),
+      ),
+    ),
   );
 }
 
