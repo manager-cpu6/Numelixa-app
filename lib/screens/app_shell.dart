@@ -2724,14 +2724,42 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
           final items = _asMaps(snapshot.data?['transactions']);
           if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions found yet.')));
-          return Column(children: items.map((item) => Card(child: ListTile(
-            leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
-            title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
-            subtitle: Text('${item['createdAt'] ?? ''}'),
-            trailing: Text('\$${(double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
-            onTap: item['type'] == 'credit' && (item['reference'] ?? '').toString().isNotEmpty ? () => _showOfficialReceipt(item['reference'].toString()) : null,
-          ))).toList());
-        }),
+          return Column(children: items.map((item) {
+            final isCredit = item['type'] == 'credit';
+            final amount = double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0;
+            final reference = (item['reference'] ?? '').toString();
+            final date = (item['createdAt'] ?? '').toString();
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: isCredit && reference.isNotEmpty ? () => _showOfficialReceipt(reference) : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
+                  child: Row(children: [
+                    Container(width: 44, height: 44, decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: isCredit
+                        ? const [Color(0xFF087D75), Color(0xFF12B99B)]
+                        : const [Color(0xFF285B9E), Color(0xFF5140B8)]),
+                      borderRadius: BorderRadius.circular(14),
+                    ), child: Icon(isCredit ? Icons.south_west_rounded : Icons.north_east_rounded, color: Colors.white, size: 21)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text((item['description'] ?? item['type'] ?? 'Transaction').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Text(date, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 10)),
+                      if (isCredit && reference.isNotEmpty) const Padding(padding: EdgeInsets.only(top: 4), child: Text('Tap to view official receipt', style: TextStyle(color: AppTheme.cyan, fontSize: 9, fontWeight: FontWeight.w800))),
+                    ])),
+                    const SizedBox(width: 8),
+                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      Text((isCredit ? '+' : '−') + 'USD ' + amount.toStringAsFixed(2), style: TextStyle(color: isCredit ? AppTheme.mint : const Color(0xFFFFA5B4), fontWeight: FontWeight.w900, fontSize: 12)),
+                      const SizedBox(height: 5),
+                      Text((item['type'] ?? 'transaction').toString().toUpperCase(), style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: .7)),
+                    ]),
+                  ]),
+                ),
+              ),
+            );
+          }).toList());        }),
       ],
     )),
   );
