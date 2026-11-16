@@ -15,6 +15,7 @@ import '../services/notification_service.dart';
 import '../services/numelixa_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
+import '../widgets/payment_receipt_dialog.dart';
 import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
 
@@ -1975,16 +1976,20 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   bool _checkingEthiopiaPayment = false;
   Timer? _ethiopiaPaymentTimer;
   String _paymentMethod = 'crypto';
+  bool _cryptoStep = false;
   String? _pendingLocalOrderId;
   bool _checkingLocalPayment = false;
   Timer? _localPaymentTimer;
   final ScreenshotController _qrScreenshot = ScreenshotController();
   Timer? _depositTimer;
+  Timer? _depositStatusTimer;
+  bool _checkingDepositStatus = false;
+  String _depositStatus = 'pending';
   int _depositSecondsLeft = 0;
   StateSetter? _updateDepositDialog;
 
   @override
-  void dispose() { _localPhone.dispose(); _ethiopiaPhone.dispose(); _ethiopiaPayerName.dispose(); _amountController.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _localPaymentTimer?.cancel(); _ethiopiaPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
+  void dispose() { _localPhone.dispose(); _ethiopiaPhone.dispose(); _ethiopiaPayerName.dispose(); _amountController.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _depositStatusTimer?.cancel(); _localPaymentTimer?.cancel(); _ethiopiaPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
 
   @override
   void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _load(); }
@@ -2054,6 +2059,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
         if (mounted) {
           setState(() { _balance = NumelixaRepository().balance(token: auth.accessToken!); _transactions = NumelixaRepository().transactions(token: auth.accessToken!); });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment confirmed. Your USD wallet has been updated.')));
+          await _showOfficialReceipt(orderId);
         }
         return;
       }
@@ -2088,6 +2094,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             _transactions = repo.transactions(token: token);
           });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local payment confirmed. Your wallet has been refreshed.')));
+          await _showOfficialReceipt(orderId);
         }
       } else if (result['ok'] == true && result['status'] == 'failed') {
         _localPaymentTimer?.cancel();
@@ -2103,6 +2110,22 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   }
 
   Widget _receiptLine(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 112, child: Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w800))), Expanded(child: Text(value.isEmpty ? '—' : value, textAlign: TextAlign.right, style: const TextStyle(color: Color(0xFF102A4C), fontSize: 10, fontWeight: FontWeight.w800)))]));
+  Future<void> _showOfficialReceipt(String reference) async {
+    final token = context.read<AuthService>().accessToken;
+    if (token == null || reference.trim().isEmpty || !mounted) return;
+    try {
+      final response = await NumelixaRepository().walletReceipt(token: token, reference: reference.trim());
+      final raw = response['receipt'];
+      if (response['ok'] != true || raw is! Map) throw const ApiException('The verified receipt is not available yet.');
+      if (!mounted) return;
+      await showPaymentReceipt(context, receipt: Map<String, dynamic>.from(raw), fallbackReference: reference);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your payment is confirmed, but the official receipt could not be loaded. Open Wallet history and try again.')));
+    }
+  }
+
 
   Future<void> _createEthiopiaPayment() async {
     if (_creating || !_validAmount) return;
@@ -2148,6 +2171,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
         if (mounted) {
           setState(() { _ethiopiaOrder = {...?_ethiopiaOrder, 'status': 'paid'}; _balance = repo.balance(token: token); _transactions = repo.transactions(token: token); });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment verified. Your wallet has been credited.')));
+          _showOfficialReceipt(orderId);
         }
       } else if (result['ok'] == true && (result['status'] == 'rejected' || result['status'] == 'failed')) {
         _ethiopiaPaymentTimer?.cancel();
@@ -2392,7 +2416,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             const Text('Quick amounts', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 11, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final preset in <double>[1, 5, 10, 25, 50].where((value) => value >= _minTopupUsd && value <= _maxTopupUsd))
+              for (final preset in <double>[5, 10, 25, 50].where((value) => value >= _minTopupUsd && value <= _maxTopupUsd))
                 ChoiceChip(
                   label: Text('\$${preset.toStringAsFixed(0)}'),
                   selected: (_selectedUsd - preset).abs() < 0.001,
@@ -2535,7 +2559,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 const SizedBox(height: 12),
                 Row(children: [Icon(_ethiopiaOrder!['status'] == 'paid' ? Icons.check_circle_rounded : Icons.sync_rounded, color: _ethiopiaOrder!['status'] == 'paid' ? AppTheme.mint : AppTheme.cyan), const SizedBox(width: 8), Expanded(child: Text(_ethiopiaOrder!['status'] == 'paid' ? 'Payment verified · Wallet credited' : 'Waiting for payment SMS verification', style: const TextStyle(fontWeight: FontWeight.w800)))]),
                 if (_ethiopiaOrder!['verification'] is Map && _ethiopiaOrder!['status'] != 'paid') Padding(padding: const EdgeInsets.only(top: 8), child: Text('Latest check: ' + ((_ethiopiaOrder!['verification'] as Map)['reason'] ?? 'Checking').toString().replaceAll('_', ' '), style: const TextStyle(color: Color(0xFFFFCA78), fontSize: 12))),
-                if (_ethiopiaOrder!['status'] == 'paid') TextButton.icon(onPressed: () => launchUrl(Uri.parse('https://numelixa.com/wallet/receipt?reference=' + Uri.encodeComponent((_ethiopiaOrder!['orderId'] ?? '').toString())), mode: LaunchMode.externalApplication), icon: const Icon(Icons.receipt_long_rounded), label: const Text('View / email official receipt')),
+                if (_ethiopiaOrder!['status'] == 'paid') FilledButton.icon(onPressed: () => _showOfficialReceipt((_ethiopiaOrder!['orderId'] ?? '').toString()), icon: const Icon(Icons.receipt_long_rounded), label: const Text('View official payment receipt')),
                 if (_ethiopiaOrder!['status'] == 'paid') TextButton.icon(onPressed: () => setState(() { _ethiopiaOrder = null; _load(); }), icon: const Icon(Icons.check_circle_outline), label: const Text('Start another top-up')),
               ],
             ]))),
