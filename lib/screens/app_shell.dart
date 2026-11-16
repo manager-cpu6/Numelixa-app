@@ -2576,7 +2576,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 const SizedBox(height: 12),
                 Row(children: [Icon(_ethiopiaOrder!['status'] == 'paid' ? Icons.check_circle_rounded : Icons.sync_rounded, color: _ethiopiaOrder!['status'] == 'paid' ? AppTheme.mint : AppTheme.cyan), const SizedBox(width: 8), Expanded(child: Text(_ethiopiaOrder!['status'] == 'paid' ? 'Payment verified · Wallet credited' : 'Waiting for payment SMS verification', style: const TextStyle(fontWeight: FontWeight.w800)))]),
                 if (_ethiopiaOrder!['verification'] is Map && _ethiopiaOrder!['status'] != 'paid') Padding(padding: const EdgeInsets.only(top: 8), child: Text('Latest check: ' + ((_ethiopiaOrder!['verification'] as Map)['reason'] ?? 'Checking').toString().replaceAll('_', ' '), style: const TextStyle(color: Color(0xFFFFCA78), fontSize: 12))),
-                if (_ethiopiaOrder!['status'] == 'paid') TextButton.icon(onPressed: () => launchUrl(Uri.parse('https://numelixa.com/wallet/receipt?reference=' + Uri.encodeComponent((_ethiopiaOrder!['orderId'] ?? '').toString())), mode: LaunchMode.externalApplication), icon: const Icon(Icons.receipt_long_rounded), label: const Text('View / email official receipt')),
+                if (_ethiopiaOrder!['status'] == 'paid') FilledButton.icon(onPressed: () => _showOfficialReceipt((_ethiopiaOrder!['orderId'] ?? '').toString()), icon: const Icon(Icons.receipt_long_rounded), label: const Text('View official payment receipt')),
                 if (_ethiopiaOrder!['status'] == 'paid') TextButton.icon(onPressed: () => setState(() { _ethiopiaOrder = null; _load(); }), icon: const Icon(Icons.check_circle_outline), label: const Text('Start another top-up')),
               ],
             ]))),
@@ -2636,6 +2636,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
             subtitle: Text('${item['createdAt'] ?? ''}'),
             trailing: Text('\$${(double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
+            onTap: item['type'] == 'credit' && (item['reference'] ?? '').toString().isNotEmpty ? () => _showOfficialReceipt(item['reference'].toString()) : null,
           ))).toList());
         }),
       ],
