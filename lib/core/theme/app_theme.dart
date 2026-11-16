@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   AppTheme._();
-  static const navy = Color(0xFF030817);
-  static const panel = Color(0xFF0A1830);
-  static const panelRaised = Color(0xFF102344);
-  static const blue = Color(0xFF1677FF);
-  static const cyan = Color(0xFF00D9FF);
-  static const violet = Color(0xFF713BFF);
-  static const magenta = Color(0xFFE83AA8);
-  static const mint = Color(0xFF00E5C3);
-  static const muted = Color(0xFF9DB1CE);
+
+  static const navy = Color(0xFF050B19);
+  static const panel = Color(0xB8122547);
+  static const panelRaised = Color(0xE6192D52);
+  static const blue = Color(0xFF438CFF);
+  static const cyan = Color(0xFF36E4ED);
+  static const violet = Color(0xFF9872FF);
+  static const magenta = Color(0xFFE66AC4);
+  static const mint = Color(0xFF4CE8C4);
+  static const muted = Color(0xFF9AACC9);
+  static const glassBorder = Color(0x2EAECFFF);
 
   static ThemeData get dark => ThemeData(
     brightness: Brightness.dark,
@@ -39,12 +41,12 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF07152B),
+      fillColor: const Color(0xB808162E),
       contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 17),
       hintStyle: const TextStyle(color: muted),
       labelStyle: const TextStyle(color: Color(0xFFCDDAEC), fontWeight: FontWeight.w600),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(17), borderSide: const BorderSide(color: Color(0xFF263F62))),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(17), borderSide: const BorderSide(color: Color(0xFF263F62))),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(17), borderSide: const BorderSide(color: glassBorder)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(17), borderSide: const BorderSide(color: glassBorder)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(17), borderSide: const BorderSide(color: cyan, width: 1.5)),
       errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(17), borderSide: const BorderSide(color: Color(0xFFFF647C))),
       focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(17), borderSide: const BorderSide(color: Color(0xFFFF647C), width: 1.5)),
@@ -55,7 +57,7 @@ class AppTheme {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(23),
-        side: const BorderSide(color: Color(0xFF263F62)),
+        side: const BorderSide(color: glassBorder),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -79,6 +81,6 @@ class AppTheme {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: cyan, textStyle: const TextStyle(fontWeight: FontWeight.w700)),
     ),
-    dividerColor: const Color(0xFF263F62),
+    dividerColor: glassBorder,
   );
 }
