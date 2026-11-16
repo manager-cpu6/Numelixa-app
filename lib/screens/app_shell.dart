@@ -2092,6 +2092,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             _transactions = repo.transactions(token: token);
           });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local payment confirmed. Your wallet has been refreshed.')));
+          await _showOfficialReceipt(orderId);
         }
       } else if (result['ok'] == true && result['status'] == 'failed') {
         _localPaymentTimer?.cancel();
