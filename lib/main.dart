@@ -15,13 +15,23 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   const android = AndroidInitializationSettings('@drawable/ic_stat_numelixa');
   final local = FlutterLocalNotificationsPlugin();
   await local.initialize(const InitializationSettings(android: android));
-  const channel = AndroidNotificationChannel(
-    'verification', 'SMS and verification codes',
-    description: 'Incoming SMS codes and verification updates',
-    importance: Importance.max,
-  );
-  await local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
   final data = Map<String, dynamic>.from(message.data);
+  final type = (data['type'] ?? '').toString().toLowerCase();
+  final channelId = type == 'sms' || type == 'verification' || type == 'verification_code'
+      ? 'verification'
+      : type.contains('security') || type.contains('login')
+          ? 'security'
+          : type == 'admin' || type == 'announcement' || type == 'push_test'
+              ? 'admin'
+              : 'general';
+  const channels = <AndroidNotificationChannel>[
+    AndroidNotificationChannel('general', 'Numelixa notifications', description: 'Account, wallet and payment updates', importance: Importance.max),
+    AndroidNotificationChannel('verification', 'SMS and verification codes', description: 'Incoming SMS codes and verification updates', importance: Importance.max),
+    AndroidNotificationChannel('security', 'Account security', description: 'Login and account security alerts', importance: Importance.max),
+    AndroidNotificationChannel('admin', 'Numelixa announcements', description: 'Important Numelixa announcements', importance: Importance.max),
+  ];
+  final androidNotifications = local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  for (final channel in channels) { await androidNotifications?.createNotificationChannel(channel); }
   final title = (data['title'] ?? 'Numelixa').toString();
   final body = (data['body'] ?? data['message'] ?? '').toString();
   final rawCode = (data['code'] ?? data['otp'] ?? data['verificationCode'] ?? data['smsCode'] ?? '').toString();
