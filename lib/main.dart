@@ -43,8 +43,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     title,
     body,
     NotificationDetails(android: AndroidNotificationDetails(
-      'verification', 'SMS and verification codes',
-      channelDescription: 'Incoming SMS codes and verification updates',
+      channelId,
+      channelId == 'verification' ? 'SMS and verification codes' : channelId == 'security' ? 'Account security' : channelId == 'admin' ? 'Numelixa announcements' : 'Numelixa notifications',
+      channelDescription: channelId == 'verification' ? 'Incoming SMS codes and verification updates' : 'Account, wallet and payment updates',
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
