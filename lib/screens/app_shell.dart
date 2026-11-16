@@ -2661,8 +2661,9 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
 }
 
 class _PaymentChoiceCard extends StatelessWidget {
-  const _PaymentChoiceCard({required this.selected, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _PaymentChoiceCard({required this.selected, required this.icon, required this.title, required this.subtitle, required this.onTap, this.enabled = true});
   final bool selected;
+  final bool enabled;
   final IconData icon;
   final String title, subtitle;
   final VoidCallback onTap;
@@ -2671,12 +2672,12 @@ class _PaymentChoiceCard extends StatelessWidget {
     color: Colors.transparent,
     child: InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF102D4E) : const Color(0xFF08182D),
+          color: !enabled ? const Color(0xFF071426) : selected ? const Color(0xFF102D4E) : const Color(0xFF08182D),
           gradient: selected ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF153F68), Color(0xFF0B203A)]) : null,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF203A57), width: selected ? 1.5 : 1),
@@ -2684,7 +2685,7 @@ class _PaymentChoiceCard extends StatelessWidget {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Container(width: 39, height: 39, decoration: BoxDecoration(color: selected ? const Color(0x3337DFFF) : const Color(0xFF10233B), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 21)),
+            Container(width: 39, height: 39, decoration: BoxDecoration(color: selected ? const Color(0x3337DFFF) : const Color(0xFF10233B), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: !enabled ? const Color(0xFF60748D) : selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 21)),
             const Spacer(),
             if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.mint, size: 18),
           ]),
@@ -2846,8 +2847,8 @@ class _AccountPageState extends State<_AccountPage> {
       Card(child: ListTile(
         leading: const Icon(Icons.fingerprint_rounded, color: AppTheme.cyan),
         title: const Text('Your Numelixa ID'),
-        subtitle: SelectableText((user['id'] ?? 'ID unavailable').toString(), style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: .4)),
-        trailing: IconButton(tooltip: 'Copy account ID', icon: const Icon(Icons.copy_rounded), onPressed: () async { await Clipboard.setData(ClipboardData(text: (user['id'] ?? '').toString())); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.'))); }),
+        subtitle: SelectableText((user['publicId'] ?? 'ID unavailable').toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2)),
+        trailing: IconButton(tooltip: 'Copy account ID', icon: const Icon(Icons.copy_rounded), onPressed: () async { await Clipboard.setData(ClipboardData(text: (user['publicId'] ?? '').toString())); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.'))); }),
       )),
       Card(child: ListTile(leading: const Icon(Icons.card_giftcard_rounded, color: AppTheme.violet), title: const Text('Referral rewards'), subtitle: const Text('Invite friends and withdraw earned rewards.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _ReferralRewardsPage(accessToken: auth.accessToken!))))),
       if ((user['role'] ?? '').toString() == 'admin')
