@@ -2583,6 +2583,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           ],
           if (_paymentMethod == 'crypto' && _cryptoStep) ...[
             const SizedBox(height: 12),
+            Align(alignment: Alignment.centerLeft,child:TextButton.icon(onPressed: _creating ? null : () => setState(() { _cryptoStep = false; }),icon:const Icon(Icons.arrow_back_rounded),label:const Text('Back to payment options'))),
             FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
               if (snapshot.hasError) return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
