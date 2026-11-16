@@ -2456,16 +2456,16 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             const SizedBox(height: 8),
             Text('Your top-up: \$' + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
           ]))),
-          if (_localPaymentsOpen || _ethiopiaPaymentsOpen) ...[
+          if (_localPaymentsOpen || _ethiopiaPaymentsOpen || _paymentMethod == 'crypto') ...[
             const SizedBox(height: 12),
             Card(child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('2. Choose payment type', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               const SizedBox(height: 9),
               Row(children: [
-                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() => _paymentMethod = 'crypto'))),
-                if (_localPaymentsOpen) ...[const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local Payment', subtitle: 'Somalia mobile money', onTap: () => setState(() => _paymentMethod = 'local')))],
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() { _paymentMethod = 'crypto'; _cryptoStep = false; }))),
+                const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', enabled: _localPaymentsOpen, icon: Icons.account_balance_wallet_rounded, title: 'Somalia · Sifalo', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab · Premier' : 'Somalia mobile money is currently closed', onTap: () => setState(() { _paymentMethod = 'local'; _cryptoStep = false; }))),
               ]),
-              if (_ethiopiaPaymentsOpen) ...[const SizedBox(height: 10), _PaymentChoiceCard(selected: _paymentMethod == 'ethiopia', icon: Icons.account_balance_rounded, title: 'Ethiopia Payment', subtitle: 'eBirr and Ethiopian bank transfers', onTap: () => setState(() => _paymentMethod = 'ethiopia'))],
+              if (_ethiopiaPaymentsOpen) ...[const SizedBox(height: 10), _PaymentChoiceCard(selected: _paymentMethod == 'ethiopia', icon: Icons.account_balance_rounded, title: 'Ethiopia Payment', subtitle: 'eBirr and Ethiopian bank transfers', onTap: () => setState(() { _paymentMethod = 'ethiopia'; _cryptoStep = false; }))],
               const SizedBox(height: 10),
               Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12), decoration: BoxDecoration(color: const Color(0xFF091A30), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF243A56))), child: Row(children: [
                 Image.network('https://cdn.simpleicons.org/visa/1A1F71', width: 34, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('VISA', style: TextStyle(fontWeight: FontWeight.w900))),
@@ -2479,6 +2479,15 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 ])),
                 const Text('COMING SOON', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFFFCF83))),
               ])),
+              if (_paymentMethod == 'crypto' && !_cryptoStep) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _creating ? null : () => setState(() { _cryptoStep = true; _currency = null; _network = null; }),
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: const Text('Continue to coins & networks'),
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), backgroundColor: AppTheme.cyan, foregroundColor: const Color(0xFF031021), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                ),
+              ],
             ]))),
           ],
           if (_localPaymentsOpen && _paymentMethod == 'local') ...[
@@ -2588,8 +2597,9 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               ],
             ]))),
           ],
-          if (_paymentMethod == 'crypto' || (!_localPaymentsOpen && !_ethiopiaPaymentsOpen)) ...[
+          if (_paymentMethod == 'crypto' && _cryptoStep) ...[
             const SizedBox(height: 12),
+            Align(alignment: Alignment.centerLeft, child: TextButton.icon(onPressed: _creating ? null : () => setState(() { _cryptoStep = false; }), icon: const Icon(Icons.arrow_back_rounded), label: const Text('Back to payment options'))),
             FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
               if (snapshot.hasError) return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
