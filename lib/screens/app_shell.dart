@@ -2102,6 +2102,8 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     }
   }
 
+  Widget _receiptLine(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 112, child: Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w800))), Expanded(child: Text(value.isEmpty ? '—' : value, textAlign: TextAlign.right, style: const TextStyle(color: Color(0xFF102A4C), fontSize: 10, fontWeight: FontWeight.w800)))]));
+
   Future<void> _createEthiopiaPayment() async {
     if (_creating || !_validAmount) return;
     final phone = _ethiopiaPhone.text.replaceAll(RegExp(r'[^0-9]'), '').replaceFirst(RegExp(r'^251'), '0');
@@ -2490,6 +2492,42 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 const Text('Once the order is created, SMS matching runs automatically. No manual confirmation is required when your payment arrives.', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.45)),
               ] else ...[
                 const Divider(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(17),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFD7E0EA)), boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 18, offset: Offset(0, 7))]),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Container(width: 36, height: 36, decoration: BoxDecoration(color: const Color(0xFF102A4C), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.verified_rounded, color: Colors.white, size: 22)),
+                      const SizedBox(width: 9),
+                      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('NUMELIXA', style: TextStyle(color: Color(0xFF102A4C), fontWeight: FontWeight.w900, letterSpacing: 1.4)), Text('PAYMENT ACKNOWLEDGEMENT', style: TextStyle(color: Color(0xFF64748B), fontSize: 9, letterSpacing: 1.1, fontWeight: FontWeight.w800))])),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: const Color(0xFFFFF3D8), borderRadius: BorderRadius.circular(30)), child: const Text('PENDING', style: TextStyle(color: Color(0xFF98620B), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .7))),
+                    ]),
+                    const Divider(height: 24, color: Color(0xFFE2E8F0)),
+                    const Text('PAYMENT SUBMITTED', style: TextStyle(color: Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                    Text(((_ethiopiaOrder!['amountEtb'] ?? '0').toString()) + ' ETB', style: const TextStyle(color: Color(0xFF102A4C), fontSize: 29, fontWeight: FontWeight.w900)),
+                    Text('USD ' + ((_ethiopiaOrder!['amountUsd'] ?? _selectedUsd).toString()), style: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 12),
+                    _receiptLine('PAYMENT METHOD', (_ethiopiaOrder!['methodName'] ?? 'Ethiopia local payment').toString()),
+                    _receiptLine('SENDER NUMBER', (_ethiopiaOrder!['payerPhone'] ?? _ethiopiaPhone.text).toString()),
+                    _receiptLine('RECEIVER NUMBER', (_ethiopiaOrder!['receiverPhone'] ?? '').toString()),
+                    _receiptLine('REFERENCE', (_ethiopiaOrder!['orderId'] ?? '').toString()),
+                    _receiptLine('DATE', DateTime.now().toLocal().toString().split('.').first),
+                    const Divider(height: 22, color: Color(0xFFE2E8F0)),
+                    Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Text('NUMELIXA REVIEW SEAL', style: TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .8)),
+                        const SizedBox(height: 5),
+                        Text(_ethiopiaOrder!['status'] == 'paid' ? 'Verified and credited' : 'Awaiting automatic SMS verification', style: const TextStyle(color: Color(0xFF102A4C), fontWeight: FontWeight.w800, fontSize: 12)),
+                        const Text('This acknowledgement is not a final payment confirmation until verification succeeds.', style: TextStyle(color: Color(0xFF64748B), fontSize: 9, height: 1.4)),
+                      ])),
+                      Container(width: 76, height: 76, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF1677FF), width: 2.2), color: const Color(0xFFEFF6FF)), child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.verified_user_rounded, color: Color(0xFF1677FF), size: 25), Text('NUMELIXA', style: TextStyle(color: Color(0xFF1677FF), fontSize: 7, fontWeight: FontWeight.w900)), Text('SEAL', style: TextStyle(color: Color(0xFF1677FF), fontSize: 7, fontWeight: FontWeight.w900))])),
+                    ]),
+                    const SizedBox(height: 12),
+                    Center(child: QrImageView(data: (_ethiopiaOrder!['orderId'] ?? '').toString(), size: 62, backgroundColor: Colors.white)),
+                    const Center(child: Text('KEEP THIS PAYMENT REFERENCE', style: TextStyle(color: Color(0xFF64748B), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .8))),
+                  ]),
+                ),
+                const SizedBox(height: 14),
                 Text((_ethiopiaOrder!['methodName'] ?? 'Ethiopia payment').toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
                 Text(((_ethiopiaOrder!['amountEtb'] ?? '').toString()) + ' ETB', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: AppTheme.mint)),
                 SelectableText('Receiver: ' + (_ethiopiaOrder!['receiverPhone'] ?? '').toString(), style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w800)),
