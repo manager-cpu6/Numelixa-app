@@ -2439,7 +2439,15 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               const SizedBox(height: 9),
               Row(children: [
                 Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() { _paymentMethod = 'crypto'; _cryptoStep = false; }))),
-                if (_localPaymentsOpen) ...[const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local Payment', subtitle: 'Somalia mobile money', onTap: () => setState(() { _paymentMethod = 'local'; _cryptoStep = false; })))],
+                const SizedBox(width: 10),
+                Expanded(child: _PaymentChoiceCard(
+                  selected: _paymentMethod == 'local',
+                  enabled: _localPaymentsOpen,
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Somalia · Sifalo',
+                  subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab · Premier' : 'Somalia mobile money is currently closed',
+                  onTap: () => setState(() { _paymentMethod = 'local'; _cryptoStep = false; }),
+                )),
               ]),
               if (_ethiopiaPaymentsOpen) ...[const SizedBox(height: 10), _PaymentChoiceCard(selected: _paymentMethod == 'ethiopia', icon: Icons.account_balance_rounded, title: 'Ethiopia Payment', subtitle: 'eBirr and Ethiopian bank transfers', onTap: () => setState(() { _paymentMethod = 'ethiopia'; _cryptoStep = false; }))],
               const SizedBox(height: 10),
@@ -2636,8 +2644,9 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
 }
 
 class _PaymentChoiceCard extends StatelessWidget {
-  const _PaymentChoiceCard({required this.selected, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _PaymentChoiceCard({required this.selected, required this.icon, required this.title, required this.subtitle, required this.onTap, this.enabled = true});
   final bool selected;
+  final bool enabled;
   final IconData icon;
   final String title, subtitle;
   final VoidCallback onTap;
@@ -2646,12 +2655,12 @@ class _PaymentChoiceCard extends StatelessWidget {
     color: Colors.transparent,
     child: InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF102D4E) : const Color(0xFF08182D),
+          color: !enabled ? const Color(0xFF071426) : selected ? const Color(0xFF102D4E) : const Color(0xFF08182D),
           gradient: selected ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF153F68), Color(0xFF0B203A)]) : null,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF203A57), width: selected ? 1.5 : 1),
@@ -2659,7 +2668,7 @@ class _PaymentChoiceCard extends StatelessWidget {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Container(width: 39, height: 39, decoration: BoxDecoration(color: selected ? const Color(0x3337DFFF) : const Color(0xFF10233B), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 21)),
+            Container(width: 39, height: 39, decoration: BoxDecoration(color: selected ? const Color(0x3337DFFF) : const Color(0xFF10233B), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: !enabled ? const Color(0xFF60748D) : selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 21)),
             const Spacer(),
             if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.mint, size: 18),
           ]),
