@@ -6,7 +6,7 @@ import 'api_client.dart';
 class NumelixaRepository {
   NumelixaRepository({ApiClient? client, ApiClient? paymentClient})
       : _api = client ?? ApiClient(),
-        _paymentApi = paymentClient ?? (client ?? ApiClient(baseUrl: 'https://payment.numelixa.com'));
+        _paymentApi = paymentClient ?? (client ?? ApiClient(baseUrl: 'https://www.numelixa.com'));
   final ApiClient _api;
   final ApiClient _paymentApi;
 
@@ -105,6 +105,12 @@ class NumelixaRepository {
     required String token,
     required String orderId,
   }) => _paymentApi.get('/api/payments/binance/status?orderId=${Uri.encodeQueryComponent(orderId)}',
+      accessToken: token);
+
+  Future<Map<String, dynamic>> walletReceipt({
+    required String token,
+    required String reference,
+  }) => _api.get('/api/wallet/receipt?reference=${Uri.encodeQueryComponent(reference)}',
       accessToken: token);
 
   Future<Map<String, dynamic>> notifications({required String token}) =>

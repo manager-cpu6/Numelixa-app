@@ -15,6 +15,7 @@ import '../services/notification_service.dart';
 import '../services/numelixa_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
+import '../widgets/payment_receipt_dialog.dart';
 import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
 
@@ -1975,16 +1976,20 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   bool _checkingEthiopiaPayment = false;
   Timer? _ethiopiaPaymentTimer;
   String _paymentMethod = 'crypto';
+  bool _cryptoStep = false;
   String? _pendingLocalOrderId;
   bool _checkingLocalPayment = false;
   Timer? _localPaymentTimer;
   final ScreenshotController _qrScreenshot = ScreenshotController();
   Timer? _depositTimer;
+  Timer? _depositStatusTimer;
+  bool _checkingDepositStatus = false;
+  String _depositStatus = 'pending';
   int _depositSecondsLeft = 0;
   StateSetter? _updateDepositDialog;
 
   @override
-  void dispose() { _localPhone.dispose(); _ethiopiaPhone.dispose(); _ethiopiaPayerName.dispose(); _amountController.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _localPaymentTimer?.cancel(); _ethiopiaPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
+  void dispose() { _localPhone.dispose(); _ethiopiaPhone.dispose(); _ethiopiaPayerName.dispose(); _amountController.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _depositStatusTimer?.cancel(); _localPaymentTimer?.cancel(); _ethiopiaPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
 
   @override
   void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); _load(); }
@@ -2054,6 +2059,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
         if (mounted) {
           setState(() { _balance = NumelixaRepository().balance(token: auth.accessToken!); _transactions = NumelixaRepository().transactions(token: auth.accessToken!); });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment confirmed. Your USD wallet has been updated.')));
+          await _showOfficialReceipt(orderId);
         }
         return;
       }
@@ -2088,6 +2094,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             _transactions = repo.transactions(token: token);
           });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local payment confirmed. Your wallet has been refreshed.')));
+          await _showOfficialReceipt(orderId);
         }
       } else if (result['ok'] == true && result['status'] == 'failed') {
         _localPaymentTimer?.cancel();
@@ -2103,6 +2110,22 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   }
 
   Widget _receiptLine(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 112, child: Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w800))), Expanded(child: Text(value.isEmpty ? '—' : value, textAlign: TextAlign.right, style: const TextStyle(color: Color(0xFF102A4C), fontSize: 10, fontWeight: FontWeight.w800)))]));
+  Future<void> _showOfficialReceipt(String reference) async {
+    final token = context.read<AuthService>().accessToken;
+    if (token == null || reference.trim().isEmpty || !mounted) return;
+    try {
+      final response = await NumelixaRepository().walletReceipt(token: token, reference: reference.trim());
+      final raw = response['receipt'];
+      if (response['ok'] != true || raw is! Map) throw const ApiException('The verified receipt is not available yet.');
+      if (!mounted) return;
+      await showPaymentReceipt(context, receipt: Map<String, dynamic>.from(raw), fallbackReference: reference);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your payment is confirmed, but the official receipt could not be loaded. Open Wallet history and try again.')));
+    }
+  }
+
 
   Future<void> _createEthiopiaPayment() async {
     if (_creating || !_validAmount) return;
@@ -2148,6 +2171,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
         if (mounted) {
           setState(() { _ethiopiaOrder = {...?_ethiopiaOrder, 'status': 'paid'}; _balance = repo.balance(token: token); _transactions = repo.transactions(token: token); });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment verified. Your wallet has been credited.')));
+          _showOfficialReceipt(orderId);
         }
       } else if (result['ok'] == true && (result['status'] == 'rejected' || result['status'] == 'failed')) {
         _ethiopiaPaymentTimer?.cancel();
@@ -2184,6 +2208,33 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _checkCryptoDeposit(String orderId) async {
+    final token = context.read<AuthService>().accessToken;
+    if (token == null || orderId.isEmpty || _checkingDepositStatus || _depositStatus == 'paid') return;
+    _checkingDepositStatus = true;
+    try {
+      final repo = NumelixaRepository();
+      final result = await repo.depositStatus(token: token, orderId: orderId);
+      final status = (result['status'] ?? 'pending').toString();
+      if (!mounted) return;
+      if (status == 'paid') {
+        _depositStatus = 'paid';
+        _depositStatusTimer?.cancel();
+        setState(() { _balance = repo.balance(token: token); _transactions = repo.transactions(token: token); });
+        _updateDepositDialog?.call(() {});
+        if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        await _showOfficialReceipt(orderId);
+      } else {
+        _depositStatus = status;
+        _updateDepositDialog?.call(() {});
+      }
+    } catch (_) {
+      // A temporary status lookup failure is never treated as payment success.
+    } finally {
+      _checkingDepositStatus = false;
+    }
+  }
+
   Future<void> _showDeposit(Map<String, dynamic> payment) async {
     final address = (payment['address'] ?? '').toString();
     final amount = (payment['amount'] ?? '').toString();
@@ -2192,6 +2243,8 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     final orderId = (payment['orderId'] ?? '').toString();
     final expiresAt = DateTime.tryParse((payment['expiresAt'] ?? '').toString());
     _depositTimer?.cancel();
+    _depositStatusTimer?.cancel();
+    _depositStatus = 'pending';
     void refreshTimer() {
       final left = expiresAt == null ? 0 : expiresAt.difference(DateTime.now()).inSeconds;
       final next = left.clamp(0, 86400);
@@ -2202,6 +2255,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     }
     refreshTimer();
     _depositTimer = Timer.periodic(const Duration(seconds: 1), (_) => refreshTimer());
+    _depositStatusTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkCryptoDeposit(orderId));
     String amountText() => amount;
     String timerText() => '${(_depositSecondsLeft ~/ 60).toString().padLeft(2, '0')}:${(_depositSecondsLeft % 60).toString().padLeft(2, '0')}';
     await showDialog<void>(context: context, barrierDismissible: false, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) {
@@ -2252,27 +2306,21 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           const SizedBox(height: 8),
           Text('Request: $orderId', style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
           const Text('The wallet is credited only after the payment is confirmed.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
+          if (_depositStatus == 'paid') const Padding(padding: EdgeInsets.only(top: 10), child: Text('Payment verified · Your wallet has been credited.', style: TextStyle(color: AppTheme.mint, fontWeight: FontWeight.w900))),
         ])),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
-          FilledButton(onPressed: () async {
-            final token = context.read<AuthService>().accessToken!;
-            final messenger = ScaffoldMessenger.of(context);
-            final navigator = Navigator.of(dialogContext);
-            try {
-              final status = await NumelixaRepository().depositStatus(token: token, orderId: orderId);
-              final state = (status['status'] ?? 'pending').toString();
-              if (!mounted) return;
-              messenger.showSnackBar(SnackBar(content: Text(state == 'paid' ? 'Payment confirmed. Your wallet is being updated.' : 'Payment status: $state. Check again after sending.')));
-              if (state == 'paid') { navigator.pop(); setState(_load); }
-            } catch (_) {
-              if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
-            }
-          }, child: const Text('Check payment')),
+          FilledButton(
+            onPressed: _depositStatus == 'paid'
+              ? () async { Navigator.of(dialogContext).pop(); await _showOfficialReceipt(orderId); }
+              : _checkingDepositStatus ? null : () => _checkCryptoDeposit(orderId),
+            child: Text(_depositStatus == 'paid' ? 'View official payment receipt' : _checkingDepositStatus ? 'Checking payment…' : 'Check payment'),
+          ),
         ],
       );
     }));
     _depositTimer?.cancel();
+    _depositStatusTimer?.cancel();
     _updateDepositDialog = null;
   }
 
@@ -2392,7 +2440,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             const Text('Quick amounts', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 11, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final preset in <double>[1, 5, 10, 25, 50].where((value) => value >= _minTopupUsd && value <= _maxTopupUsd))
+              for (final preset in <double>[5, 10, 25, 50].where((value) => value >= _minTopupUsd && value <= _maxTopupUsd))
                 ChoiceChip(
                   label: Text('\$${preset.toStringAsFixed(0)}'),
                   selected: (_selectedUsd - preset).abs() < 0.001,
@@ -2408,16 +2456,16 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             const SizedBox(height: 8),
             Text('Your top-up: \$' + _selectedUsd.toStringAsFixed(2) + ' USD', style: const TextStyle(color: Color(0xFFA7B7D0), fontSize: 12)),
           ]))),
-          if (_localPaymentsOpen || _ethiopiaPaymentsOpen) ...[
+          if (_localPaymentsOpen || _ethiopiaPaymentsOpen || _paymentMethod == 'crypto') ...[
             const SizedBox(height: 12),
             Card(child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('2. Choose payment type', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               const SizedBox(height: 9),
               Row(children: [
-                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() => _paymentMethod = 'crypto'))),
-                if (_localPaymentsOpen) ...[const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', icon: Icons.account_balance_wallet_rounded, title: 'Local Payment', subtitle: 'Somalia mobile money', onTap: () => setState(() => _paymentMethod = 'local')))],
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() { _paymentMethod = 'crypto'; _cryptoStep = false; }))),
+                const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', enabled: _localPaymentsOpen, icon: Icons.account_balance_wallet_rounded, title: 'Somalia · Sifalo', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab · Premier' : 'Somalia mobile money is currently closed', onTap: () => setState(() { _paymentMethod = 'local'; _cryptoStep = false; }))),
               ]),
-              if (_ethiopiaPaymentsOpen) ...[const SizedBox(height: 10), _PaymentChoiceCard(selected: _paymentMethod == 'ethiopia', icon: Icons.account_balance_rounded, title: 'Ethiopia Payment', subtitle: 'eBirr and Ethiopian bank transfers', onTap: () => setState(() => _paymentMethod = 'ethiopia'))],
+              if (_ethiopiaPaymentsOpen) ...[const SizedBox(height: 10), _PaymentChoiceCard(selected: _paymentMethod == 'ethiopia', icon: Icons.account_balance_rounded, title: 'Ethiopia Payment', subtitle: 'eBirr and Ethiopian bank transfers', onTap: () => setState(() { _paymentMethod = 'ethiopia'; _cryptoStep = false; }))],
               const SizedBox(height: 10),
               Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12), decoration: BoxDecoration(color: const Color(0xFF091A30), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF243A56))), child: Row(children: [
                 Image.network('https://cdn.simpleicons.org/visa/1A1F71', width: 34, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('VISA', style: TextStyle(fontWeight: FontWeight.w900))),
@@ -2431,6 +2479,15 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 ])),
                 const Text('COMING SOON', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFFFCF83))),
               ])),
+              if (_paymentMethod == 'crypto' && !_cryptoStep) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _creating ? null : () => setState(() { _cryptoStep = true; _currency = null; _network = null; }),
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: const Text('Continue to coins & networks'),
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), backgroundColor: AppTheme.cyan, foregroundColor: const Color(0xFF031021), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                ),
+              ],
             ]))),
           ],
           if (_localPaymentsOpen && _paymentMethod == 'local') ...[
@@ -2535,13 +2592,14 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 const SizedBox(height: 12),
                 Row(children: [Icon(_ethiopiaOrder!['status'] == 'paid' ? Icons.check_circle_rounded : Icons.sync_rounded, color: _ethiopiaOrder!['status'] == 'paid' ? AppTheme.mint : AppTheme.cyan), const SizedBox(width: 8), Expanded(child: Text(_ethiopiaOrder!['status'] == 'paid' ? 'Payment verified · Wallet credited' : 'Waiting for payment SMS verification', style: const TextStyle(fontWeight: FontWeight.w800)))]),
                 if (_ethiopiaOrder!['verification'] is Map && _ethiopiaOrder!['status'] != 'paid') Padding(padding: const EdgeInsets.only(top: 8), child: Text('Latest check: ' + ((_ethiopiaOrder!['verification'] as Map)['reason'] ?? 'Checking').toString().replaceAll('_', ' '), style: const TextStyle(color: Color(0xFFFFCA78), fontSize: 12))),
-                if (_ethiopiaOrder!['status'] == 'paid') TextButton.icon(onPressed: () => launchUrl(Uri.parse('https://numelixa.com/wallet/receipt?reference=' + Uri.encodeComponent((_ethiopiaOrder!['orderId'] ?? '').toString())), mode: LaunchMode.externalApplication), icon: const Icon(Icons.receipt_long_rounded), label: const Text('View / email official receipt')),
+                if (_ethiopiaOrder!['status'] == 'paid') FilledButton.icon(onPressed: () => _showOfficialReceipt((_ethiopiaOrder!['orderId'] ?? '').toString()), icon: const Icon(Icons.receipt_long_rounded), label: const Text('View official payment receipt')),
                 if (_ethiopiaOrder!['status'] == 'paid') TextButton.icon(onPressed: () => setState(() { _ethiopiaOrder = null; _load(); }), icon: const Icon(Icons.check_circle_outline), label: const Text('Start another top-up')),
               ],
             ]))),
           ],
-          if (_paymentMethod == 'crypto' || (!_localPaymentsOpen && !_ethiopiaPaymentsOpen)) ...[
+          if (_paymentMethod == 'crypto' && _cryptoStep) ...[
             const SizedBox(height: 12),
+            Align(alignment: Alignment.centerLeft, child: TextButton.icon(onPressed: _creating ? null : () => setState(() { _cryptoStep = false; }), icon: const Icon(Icons.arrow_back_rounded), label: const Text('Back to payment options'))),
             FutureBuilder<Map<String, dynamic>>(future: _assets, builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) return const Card(child: Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())));
               if (snapshot.hasError) return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
@@ -2590,12 +2648,40 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
           final items = _asMaps(snapshot.data?['transactions']);
           if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions found yet.')));
-          return Column(children: items.map((item) => Card(child: ListTile(
-            leading: const Icon(Icons.receipt_long_rounded, color: AppTheme.cyan),
-            title: Text((item['description'] ?? item['type'] ?? 'Transaction').toString()),
-            subtitle: Text('${item['createdAt'] ?? ''}'),
-            trailing: Text('\$${(double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0).toStringAsFixed(2)} USD', style: const TextStyle(fontWeight: FontWeight.w800)),
-          ))).toList());
+          return Column(children: items.map((item) {
+            final isCredit = item['type'] == 'credit';
+            final amount = double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0;
+            final reference = (item['reference'] ?? '').toString();
+            final date = (item['createdAt'] ?? '').toString();
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: isCredit && reference.isNotEmpty ? () => _showOfficialReceipt(reference) : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
+                  child: Row(children: [
+                    Container(width: 44, height: 44, decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: isCredit ? const [Color(0xFF087D75), Color(0xFF12B99B)] : const [Color(0xFF285B9E), Color(0xFF5140B8)]),
+                      borderRadius: BorderRadius.circular(14),
+                    ), child: Icon(isCredit ? Icons.south_west_rounded : Icons.north_east_rounded, color: Colors.white, size: 21)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text((item['description'] ?? item['type'] ?? 'Transaction').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Text(date, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 10)),
+                      if (isCredit && reference.isNotEmpty) const Padding(padding: EdgeInsets.only(top: 4), child: Text('Tap to view official receipt', style: TextStyle(color: AppTheme.cyan, fontSize: 9, fontWeight: FontWeight.w800))),
+                    ])),
+                    const SizedBox(width: 8),
+                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      Text((isCredit ? '+' : '−') + 'USD ' + amount.toStringAsFixed(2), style: TextStyle(color: isCredit ? AppTheme.mint : const Color(0xFFFFA5B4), fontWeight: FontWeight.w900, fontSize: 12)),
+                      const SizedBox(height: 5),
+                      Text((item['type'] ?? 'transaction').toString().toUpperCase(), style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: .7)),
+                    ]),
+                  ]),
+                ),
+              ),
+            );
+          }).toList());
         }),
       ],
     )),
@@ -2603,8 +2689,9 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
 }
 
 class _PaymentChoiceCard extends StatelessWidget {
-  const _PaymentChoiceCard({required this.selected, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _PaymentChoiceCard({required this.selected, required this.icon, required this.title, required this.subtitle, required this.onTap, this.enabled = true});
   final bool selected;
+  final bool enabled;
   final IconData icon;
   final String title, subtitle;
   final VoidCallback onTap;
@@ -2613,12 +2700,12 @@ class _PaymentChoiceCard extends StatelessWidget {
     color: Colors.transparent,
     child: InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF102D4E) : const Color(0xFF08182D),
+          color: !enabled ? const Color(0xFF071426) : selected ? const Color(0xFF102D4E) : const Color(0xFF08182D),
           gradient: selected ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF153F68), Color(0xFF0B203A)]) : null,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: selected ? AppTheme.cyan : const Color(0xFF203A57), width: selected ? 1.5 : 1),
@@ -2626,7 +2713,7 @@ class _PaymentChoiceCard extends StatelessWidget {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Container(width: 39, height: 39, decoration: BoxDecoration(color: selected ? const Color(0x3337DFFF) : const Color(0xFF10233B), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 21)),
+            Container(width: 39, height: 39, decoration: BoxDecoration(color: selected ? const Color(0x3337DFFF) : const Color(0xFF10233B), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: !enabled ? const Color(0xFF60748D) : selected ? AppTheme.cyan : const Color(0xFFA7B7D0), size: 21)),
             const Spacer(),
             if (selected) const Icon(Icons.check_circle_rounded, color: AppTheme.mint, size: 18),
           ]),
@@ -2788,8 +2875,8 @@ class _AccountPageState extends State<_AccountPage> {
       Card(child: ListTile(
         leading: const Icon(Icons.fingerprint_rounded, color: AppTheme.cyan),
         title: const Text('Your Numelixa ID'),
-        subtitle: SelectableText((user['id'] ?? 'ID unavailable').toString(), style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: .4)),
-        trailing: IconButton(tooltip: 'Copy account ID', icon: const Icon(Icons.copy_rounded), onPressed: () async { await Clipboard.setData(ClipboardData(text: (user['id'] ?? '').toString())); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.'))); }),
+        subtitle: SelectableText((user['publicId'] ?? 'ID unavailable').toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2)),
+        trailing: IconButton(tooltip: 'Copy account ID', icon: const Icon(Icons.copy_rounded), onPressed: () async { await Clipboard.setData(ClipboardData(text: (user['publicId'] ?? '').toString())); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.'))); }),
       )),
       Card(child: ListTile(leading: const Icon(Icons.card_giftcard_rounded, color: AppTheme.violet), title: const Text('Referral rewards'), subtitle: const Text('Invite friends and withdraw earned rewards.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _ReferralRewardsPage(accessToken: auth.accessToken!))))),
       if ((user['role'] ?? '').toString() == 'admin')
