@@ -2208,6 +2208,33 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _checkCryptoDeposit(String orderId) async {
+    final token = context.read<AuthService>().accessToken;
+    if (token == null || orderId.isEmpty || _checkingDepositStatus || _depositStatus == 'paid') return;
+    _checkingDepositStatus = true;
+    try {
+      final repo = NumelixaRepository();
+      final result = await repo.depositStatus(token: token, orderId: orderId);
+      final status = (result['status'] ?? 'pending').toString();
+      if (!mounted) return;
+      if (status == 'paid') {
+        _depositStatus = 'paid';
+        _depositStatusTimer?.cancel();
+        setState(() { _balance = repo.balance(token: token); _transactions = repo.transactions(token: token); });
+        _updateDepositDialog?.call(() {});
+        if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        await _showOfficialReceipt(orderId);
+      } else {
+        _depositStatus = status;
+        _updateDepositDialog?.call(() {});
+      }
+    } catch (_) {
+      // A temporary status lookup failure is never treated as payment success.
+    } finally {
+      _checkingDepositStatus = false;
+    }
+  }
+
   Future<void> _showDeposit(Map<String, dynamic> payment) async {
     final address = (payment['address'] ?? '').toString();
     final amount = (payment['amount'] ?? '').toString();
@@ -2216,6 +2243,8 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     final orderId = (payment['orderId'] ?? '').toString();
     final expiresAt = DateTime.tryParse((payment['expiresAt'] ?? '').toString());
     _depositTimer?.cancel();
+    _depositStatusTimer?.cancel();
+    _depositStatus = 'pending';
     void refreshTimer() {
       final left = expiresAt == null ? 0 : expiresAt.difference(DateTime.now()).inSeconds;
       final next = left.clamp(0, 86400);
@@ -2226,6 +2255,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
     }
     refreshTimer();
     _depositTimer = Timer.periodic(const Duration(seconds: 1), (_) => refreshTimer());
+    _depositStatusTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkCryptoDeposit(orderId));
     String amountText() => amount;
     String timerText() => '${(_depositSecondsLeft ~/ 60).toString().padLeft(2, '0')}:${(_depositSecondsLeft % 60).toString().padLeft(2, '0')}';
     await showDialog<void>(context: context, barrierDismissible: false, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) {
@@ -2276,27 +2306,21 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           const SizedBox(height: 8),
           Text('Request: $orderId', style: const TextStyle(fontSize: 11, color: Color(0xFF91A8C4))),
           const Text('The wallet is credited only after the payment is confirmed.', style: TextStyle(fontSize: 12, color: Color(0xFF91A8C4))),
+          if (_depositStatus == 'paid') const Padding(padding: EdgeInsets.only(top: 10), child: Text('Payment verified · Your wallet has been credited.', style: TextStyle(color: AppTheme.mint, fontWeight: FontWeight.w900))),
         ])),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
-          FilledButton(onPressed: () async {
-            final token = context.read<AuthService>().accessToken!;
-            final messenger = ScaffoldMessenger.of(context);
-            final navigator = Navigator.of(dialogContext);
-            try {
-              final status = await NumelixaRepository().depositStatus(token: token, orderId: orderId);
-              final state = (status['status'] ?? 'pending').toString();
-              if (!mounted) return;
-              messenger.showSnackBar(SnackBar(content: Text(state == 'paid' ? 'Payment confirmed. Your wallet is being updated.' : 'Payment status: $state. Check again after sending.')));
-              if (state == 'paid') { navigator.pop(); setState(_load); }
-            } catch (_) {
-              if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Could not refresh payment status. Try again shortly.')));
-            }
-          }, child: const Text('Check payment')),
+          FilledButton(
+            onPressed: _depositStatus == 'paid'
+              ? () async { Navigator.of(dialogContext).pop(); await _showOfficialReceipt(orderId); }
+              : _checkingDepositStatus ? null : () => _checkCryptoDeposit(orderId),
+            child: Text(_depositStatus == 'paid' ? 'View official payment receipt' : _checkingDepositStatus ? 'Checking payment…' : 'Check payment'),
+          ),
         ],
       );
     }));
     _depositTimer?.cancel();
+    _depositStatusTimer?.cancel();
     _updateDepositDialog = null;
   }
 
