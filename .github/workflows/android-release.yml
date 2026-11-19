@@ -423,7 +423,7 @@ jobs:
           fi
           "$APKSIGNER" verify --verbose "$APK"
           "$APKSIGNER" verify --print-certs "$APK" 2>&1 | tee /tmp/numelixa-new-signature.txt
-          NEW_CERT="$(awk 'tolower($0) ~ /sha-256 digest/ {sub(/^.*:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}' /tmp/numelixa-new-signature.txt)"
+          NEW_CERT="$(awk 'tolower($0) ~ /sha-256 digest/ {sub(/^.*digest:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}' /tmp/numelixa-new-signature.txt)"
           if [ -z "$NEW_CERT" ]; then
             echo "::error::Could not read the new APK signer certificate fingerprint."
             cat /tmp/numelixa-new-signature.txt
@@ -436,7 +436,7 @@ jobs:
           test -s "$OLD_APK"
           "$APKSIGNER" verify --verbose "$OLD_APK"
           "$APKSIGNER" verify --print-certs "$OLD_APK" 2>&1 | tee /tmp/numelixa-old-signature.txt
-          OLD_CERT="$(awk 'tolower($0) ~ /sha-256 digest/ {sub(/^.*:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}' /tmp/numelixa-old-signature.txt)"
+          OLD_CERT="$(awk 'tolower($0) ~ /sha-256 digest/ {sub(/^.*digest:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}' /tmp/numelixa-old-signature.txt)"
           if [ -z "$OLD_CERT" ] || [ "$NEW_CERT" != "$OLD_CERT" ]; then
             echo "::error::The new APK signing certificate differs from the currently published APK. Refusing to publish an incompatible update."
             echo "New certificate: $NEW_CERT"
