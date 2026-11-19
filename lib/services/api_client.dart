@@ -88,10 +88,13 @@ class ApiClient {
 
   Future<Map<String, dynamic>> _request(String method, String path,
       {Map<String, dynamic>? body, String? accessToken}) async {
-    final uri = Uri.parse(_baseUrl ?? AppConfig.apiBase).resolve(path);
-    // Never send account credentials over cleartext HTTP.
-    if (uri.scheme != 'https') {
-      throw const ApiException('Numelixa API requests must use a secure HTTPS connection.');
+    final baseUri = Uri.parse(_baseUrl ?? AppConfig.apiBase);
+    final uri = baseUri.resolve(path);
+    // Never send account credentials over cleartext HTTP or to another origin.
+    // This prevents a malformed or future caller-supplied path from redirecting
+    // bearer credentials to an attacker-controlled host or port.
+    if (uri.scheme != 'https' || uri.host != baseUri.host || uri.port != baseUri.port) {
+      throw const ApiException('Numelixa API requests must stay on the official secure HTTPS origin.');
     }
     final deviceLabel = await _deviceLabel;
     final deviceId = await _deviceId;
