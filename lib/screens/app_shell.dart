@@ -1631,7 +1631,7 @@ class _OrdersPageState extends State<_OrdersPage> {
 
   bool _isFailed(Map<String, dynamic> order) {
     final status = (order['status'] ?? '').toString().toLowerCase();
-    return ['failed', 'failure', 'error', 'expired', 'rejected'].any(status.contains);
+    return ['failed', 'failure', 'error', 'expired', 'rejected'].any((value) => status.contains(value));
   }
 
   bool _isActive(Map<String, dynamic> order) =>
