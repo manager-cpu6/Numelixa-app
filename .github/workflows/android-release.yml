@@ -7,7 +7,7 @@ name: Numelixa Android CI
 permissions:
   contents: write
 concurrency:
-  group: numelixa-android-release-${{ github.ref }}-${{ github.sha }}
+  group: numelixa-android-release-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   android:
