@@ -3569,7 +3569,7 @@ class _SupportCenterPage extends StatefulWidget {
 class _SupportCenterPageState extends State<_SupportCenterPage> {
   final _contact = TextEditingController(), _subject = TextEditingController(), _message = TextEditingController();
   String _channel = 'email', _category = 'Account';
-  bool _loading = false, _sending = false;
+  bool _loading = false, _sending = false, _canSubmit = true;
   Map<String, dynamic>? _ticket;
   String? _error, _notice;
   @override
@@ -3579,7 +3579,7 @@ class _SupportCenterPageState extends State<_SupportCenterPage> {
   Future<void> _refreshTicket() async {
     if (_loading) return;
     setState(() { _loading = true; _error = null; });
-    try { final d = await ApiClient().get('/api/support', accessToken: context.read<AuthService>().accessToken); if (mounted) setState(() => _ticket = d['ticket'] is Map ? Map<String,dynamic>.from(d['ticket']) : null); }
+    try { final d = await ApiClient().get('/api/support', accessToken: context.read<AuthService>().accessToken); if (mounted) setState(() { _ticket = d['ticket'] is Map ? Map<String,dynamic>.from(d['ticket']) : null; _canSubmit = d['canSubmit'] != false; }); }
     on ApiException catch (e) { if (mounted) setState(() => _error = e.message); }
     catch (_) { if (mounted) setState(() => _error = 'Support status is temporarily unavailable.'); }
     finally { if (mounted) setState(() => _loading = false); }
@@ -3615,7 +3615,8 @@ class _SupportCenterPageState extends State<_SupportCenterPage> {
         TextField(controller:_contact,enabled:!_sending,keyboardType:_channel=='email'?TextInputType.emailAddress:TextInputType.text,decoration:InputDecoration(labelText:_channel=='email'?'Email address':_channel=='whatsapp'?'WhatsApp number with country code':'Telegram username')),
         const SizedBox(height:10),TextField(controller:_subject,enabled:!_sending,maxLength:120,decoration:const InputDecoration(labelText:'Subject')),
         TextField(controller:_message,enabled:!_sending,minLines:4,maxLines:7,maxLength:3000,decoration:const InputDecoration(labelText:'Describe the issue',hintText:'Include an order or payment reference if relevant. Never include your password or OTP code.')),
-        const SizedBox(height:10),FilledButton.icon(onPressed:_sending?null:_submit,icon:_sending?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(_sending?'Sending request…':'Submit support request')),
+        const SizedBox(height:10),if (!_canSubmit) const Padding(padding: EdgeInsets.only(bottom: 10), child: Text('You already have an active support request. Continue the conversation in Help Team Chat or wait for the current request to close.', style: TextStyle(color: AppTheme.warning, fontSize: 12, height: 1.4))),
+        FilledButton.icon(onPressed:_sending || !_canSubmit ? null : _submit,icon:_sending?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(_sending?'Sending request…':_canSubmit?'Submit support request':'Active ticket already open')),
       ]))),
       Card(child:ListTile(leading:const Icon(Icons.forum_rounded,color:AppTheme.cyan),title:const Text('Private Help Team Chat'),subtitle:const Text('Continue a support conversation inside Numelixa.'),trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>HelpTeamScreen(accessToken:context.read<AuthService>().accessToken))))),
       Card(child:ListTile(leading:const Icon(Icons.chat_rounded,color:Color(0xFF25D366)),title:const Text('WhatsApp Support'),subtitle:const Text('+252 907 868526'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri.parse('https://wa.me/252907868526'),mode:LaunchMode.externalApplication))),
