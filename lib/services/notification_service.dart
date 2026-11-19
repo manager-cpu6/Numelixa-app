@@ -29,7 +29,7 @@ const _notificationIconNames = <String, String>{
   'announcement': 'ic_notification_announcement', 'success': 'ic_notification_success',
 };
 String _notificationIcon(Map<String, dynamic> data) {
-  final requested = (data['iconType'] ?? data['notificationIcon'] ?? '').toString().toLowerCase().trim();
+  final requested = (data['iconType'] ?? data['notificationCategory'] ?? data['notificationIcon'] ?? '').toString().toLowerCase().trim();
   if (_notificationIconNames.containsKey(requested)) return '@drawable/${_notificationIconNames[requested]}';
   final type = (data['type'] ?? '').toString().toLowerCase();
   if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
@@ -231,12 +231,15 @@ class NotificationService {
   Future<void> _showForeground(RemoteMessage message) async {
     final notification = message.notification;
     final channelId = _channelFor(message.data);
-    final body = notification?.body ?? (message.data['body'] ?? message.data['message'] ?? '').toString();
-    final notificationData = {...message.data, 'body': body};
+    final rawBody = notification?.body ?? (message.data['body'] ?? message.data['message'] ?? '').toString();
+    final body = rawBody.trim().isEmpty ? 'You have a new update from Numelixa.' : rawBody;
+    final rawTitle = notification?.title ?? (message.data['title'] ?? '').toString();
+    final title = rawTitle.trim().isEmpty ? 'Numelixa' : rawTitle;
+    final notificationData = {...message.data, 'title': title, 'body': body};
     final code = _notificationCode(notificationData);
     await _local.show(
       notification?.hashCode ?? message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
-      notification?.title ?? (message.data['title'] ?? 'Numelixa').toString(),
+      title,
       body,
       NotificationDetails(
         android: AndroidNotificationDetails(channelId, _channelNameFor(channelId),
