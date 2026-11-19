@@ -77,6 +77,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       channelDescription: channelId == 'verification' ? 'Incoming SMS codes and verification updates' : 'Account, wallet and payment updates',
       importance: Importance.max,
       priority: Priority.high,
+      visibility: NotificationVisibility.private,
       playSound: true,
       icon: notificationIconFor(data),
       largeIcon: DrawableResourceAndroidBitmap(notificationIconFor(data).replaceFirst('@drawable/', '') + '_color'),
