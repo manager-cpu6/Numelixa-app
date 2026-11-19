@@ -2463,7 +2463,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               const SizedBox(height: 9),
               Row(children: [
                 Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() { _paymentMethod = 'crypto'; _cryptoStep = false; }))),
-                const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', enabled: _localPaymentsOpen, icon: Icons.account_balance_wallet_rounded, title: 'Somalia · Sifalo', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab · Premier' : 'Somalia mobile money is currently closed', onTap: () => setState(() { _paymentMethod = 'local'; _cryptoStep = false; }))),
+                const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', enabled: _localPaymentsOpen, icon: Icons.account_balance_wallet_rounded, title: 'Somalia', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab · Premier' : 'Somalia mobile money is currently closed', onTap: () => setState(() { _paymentMethod = 'local'; _cryptoStep = false; }))),
               ]),
               if (_ethiopiaPaymentsOpen) ...[const SizedBox(height: 10), _PaymentChoiceCard(selected: _paymentMethod == 'ethiopia', icon: Icons.account_balance_rounded, title: 'Ethiopia Payment', subtitle: 'eBirr and Ethiopian bank transfers', onTap: () => setState(() { _paymentMethod = 'ethiopia'; _cryptoStep = false; }))],
               const SizedBox(height: 10),
@@ -2873,7 +2873,7 @@ class _AccountPageState extends State<_AccountPage> {
         subtitle: Text((user['phone'] ?? user['email'] ?? 'Account verified by Numelixa').toString()),
       )),
       Card(child: ListTile(
-        leading: const Icon(Icons.fingerprint_rounded, color: AppTheme.cyan),
+        leading: const Icon(Icons.badge_rounded, color: AppTheme.cyan),
         title: const Text('Your Numelixa ID'),
         subtitle: SelectableText((user['publicId'] ?? 'ID unavailable').toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 19, letterSpacing: 1.2)),
         trailing: IconButton(tooltip: 'Copy account ID', icon: const Icon(Icons.copy_rounded), onPressed: () async { await Clipboard.setData(ClipboardData(text: (user['publicId'] ?? '').toString())); if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.'))); }),
