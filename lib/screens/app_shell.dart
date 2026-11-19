@@ -260,6 +260,19 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       final auth = context.read<AuthService>();
       await auth.restore();
       if (!mounted) return;
+      // Maintenance is checked before the mandatory-update prompt so the
+      // maintenance-only Chat screen always takes priority.
+      try {
+        final earlyAccess = await ApiClient().get('/api/mobile/access-check');
+        if (earlyAccess['reason'] == 'maintenance') {
+          if (auth.isSignedIn) {
+            if (mounted) setState(() => _accessBlock = Map<String, dynamic>.from(earlyAccess));
+            return;
+          }
+          _maintenancePending = true;
+          return;
+        }
+      } catch (_) {}
       await _checkForAppUpdate();
       if (!mounted) return;
       try {
