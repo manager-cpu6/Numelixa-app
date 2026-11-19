@@ -123,6 +123,15 @@ class NotificationService {
         }
       },
     );
+    final launchDetails = await _local.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp == true) {
+      try {
+        final decoded = jsonDecode(launchDetails?.notificationResponse?.payload ?? '');
+        if (decoded is Map) appNotificationRoute.value = _routeFor(Map<String, dynamic>.from(decoded));
+      } catch (_) {
+        appNotificationRoute.value = 'notifications';
+      }
+    }
     final androidNotifications = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     const channels = <AndroidNotificationChannel>[
       AndroidNotificationChannel('general', 'Numelixa notifications',
