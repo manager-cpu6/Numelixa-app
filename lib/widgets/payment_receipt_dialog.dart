@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../core/theme/app_theme.dart';
 
 Future<void> showPaymentReceipt(
   BuildContext context, {
@@ -27,9 +28,9 @@ Future<void> showPaymentReceipt(
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FBFF),
+            color: AppTheme.panel,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFB8D6F3)),
+            border: Border.all(color: AppTheme.glassBorder),
             boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 32, offset: Offset(0, 16))],
           ),
           child: SingleChildScrollView(
@@ -41,7 +42,7 @@ Future<void> showPaymentReceipt(
                   Container(
                     width: 43, height: 43,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF087CFF), Color(0xFF642BDF)]),
+                      color: AppTheme.blue,
                       borderRadius: BorderRadius.circular(13),
                     ),
                     child: const Icon(Icons.verified_rounded, color: Colors.white, size: 26),
@@ -53,7 +54,7 @@ Future<void> showPaymentReceipt(
                   ])),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(color: const Color(0xFFDDF8ED), borderRadius: BorderRadius.circular(30)),
+                    decoration: BoxDecoration(color: AppTheme.mint.withValues(alpha: .14), borderRadius: BorderRadius.circular(30)),
                     child: const Text('VERIFIED', style: TextStyle(color: Color(0xFF087D58), fontSize: 9, fontWeight: FontWeight.w900)),
                   ),
                 ]),
@@ -61,7 +62,7 @@ Future<void> showPaymentReceipt(
                 const Text('PAYMENT RECEIVED', style: TextStyle(color: Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
                 Text('USD ' + amount.toStringAsFixed(2), style: const TextStyle(color: Color(0xFF102A4C), fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1.1)),
                 const Text('Wallet credit confirmed', style: TextStyle(color: Color(0xFF0B9870), fontSize: 12, fontWeight: FontWeight.w800)),
-                const Divider(height: 26, color: Color(0xFFDCE6F0)),
+                const Divider(height: 26, color: AppTheme.glassBorder),
                 line('RECEIPT NUMBER', value('receiptId')),
                 line('PAYMENT METHOD', value('service')),
                 line('SENDER NUMBER', value('payerPhone')),
@@ -74,7 +75,7 @@ Future<void> showPaymentReceipt(
                 const SizedBox(height: 16),
                 Center(child: Container(
                   width: 118, height: 118, padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFDCE6F0))),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.glassBorder)),
                   child: QrImageView(data: value('receiptId').isEmpty ? fallbackReference : value('receiptId'), size: 100, backgroundColor: Colors.white),
                 )),
                 const SizedBox(height: 7),
