@@ -46,6 +46,10 @@ The public account and balance values are calculated from the account wallet and
 
 The stock response includes `available`, `count`, `country`, `service`, `price` and `currency`. The countries route filters out unavailable countries. Provider configuration or upstream failures may return 503/502. Inventory and prices can change between lookup and purchase; the purchase route re-quotes before charging.
 
+### Country identifiers and dialing codes
+
+Use the provider country identifier returned by the countries endpoint (for example, `usa`) as the `country` / `countryCode` value when purchasing. This identifier is not necessarily the international phone dialing prefix (such as `+1`). Do not derive provider identifiers from dialing codes; use the exact server-returned identifier. Mobile catalogue records may additionally expose `callingCode` or `dialCode` for display.
+
 ## 4. Number acquisition and order lifecycle
 
 | Method | Route | Authentication | Verified behavior |
@@ -170,7 +174,90 @@ These routes are verified in the backend source but are not advertised here as a
 
 The Flutter repository calls Sifalo, Binance and Ethiopia payment endpoints. Their backend implementations, full schemas, idempotency behavior and user-facing payment-history contract still require a separate route-by-route review before third-party publication. Do not infer webhook payloads or provider behavior from app code alone.
 
-## 11. Security checklist
+## 11. Integration examples
+
+All examples below call verified read endpoints. Supply the API key through an environment variable or trusted secret manager.
+
+### cURL
+
+```bash
+curl --fail-with-body 'https://www.numelixa.com/api/v1/balance' \
+  -H 'Accept: application/json' \
+  -H "Authorization: Bearer $NUMELIXA_API_KEY"
+```
+
+### JavaScript (fetch)
+
+```js
+const response = await fetch('https://www.numelixa.com/api/v1/balance', {
+  headers: { Authorization: 'Bearer ' + process.env.NUMELIXA_API_KEY },
+});
+if (!response.ok) throw new Error('HTTP ' + response.status);
+const balance = await response.json();
+console.log(balance.balance, balance.currency);
+```
+
+### Node.js
+
+```js
+import 'dotenv/config';
+
+const response = await fetch('https://www.numelixa.com/api/v1/orders?limit=25', {
+  headers: { Authorization: 'Bearer ' + process.env.NUMELIXA_API_KEY },
+});
+if (!response.ok) throw new Error('HTTP ' + response.status);
+console.log(await response.json());
+```
+
+### Python
+
+```python
+import os
+import requests
+
+response = requests.get(
+    'https://www.numelixa.com/api/v1/balance',
+    headers={'Authorization': 'Bearer ' + os.environ['NUMELIXA_API_KEY']},
+    timeout=20,
+)
+response.raise_for_status()
+print(response.json())
+```
+
+### PHP
+
+```php
+<?php
+$ch = curl_init('https://www.numelixa.com/api/v1/balance');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 20,
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer ' . getenv('NUMELIXA_API_KEY'),
+    ],
+]);
+$body = curl_exec($ch);
+$status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+if ($body === false || $status < 200 || $status >= 300) {
+    throw new RuntimeException('Numelixa API request failed: HTTP ' . $status);
+}
+$data = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+curl_close($ch);
+print_r($data);
+```
+
+## 12. Troubleshooting
+
+- **401:** check that the API key is active and sent in the Bearer header.
+- **402:** confirm the account has enough available wallet balance for the current price.
+- **409:** refresh countries/stock and re-check order status before retrying.
+- **429:** slow requests and use bounded exponential backoff; exact quotas are not published.
+- **502/503:** check service/provider availability and retry only safe read requests.
+- **Purchase timeout:** query order history before submitting again to avoid a duplicate purchase.
+- **SMS not received:** check order status and expiry, then call the SMS-check endpoint; do not repeatedly create new orders.
+- **Webhook not received:** inspect the dashboard's last delivery status, verify HMAC against the raw body and timestamp, and reconcile through order polling because automatic retries are not implemented.
+
+## 13. Security checklist
 
 - Use HTTPS only.
 - Store API keys and mobile tokens in a trusted secret store.
@@ -181,7 +268,7 @@ The Flutter repository calls Sifalo, Binance and Ethiopia payment endpoints. The
 - Do not blindly retry order/payment creation after a timeout.
 - Scope all order and account lookups to the authenticated user.
 
-## 12. Items requiring API-owner confirmation
+## 14. Items requiring API-owner confirmation
 
 1. Numeric rate quotas, reset windows and rate-limit headers.
 2. A unified payment history including pending, failed, rejected and refunded provider attempts.
