@@ -457,6 +457,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Prevent stale main builds from replacing the rolling update release
+        id: release_guard
         if: github.ref == 'refs/heads/main'
         shell: bash
         run: |
@@ -464,9 +465,11 @@ jobs:
           git fetch origin main --depth=1
           MAIN_SHA="$(git rev-parse FETCH_HEAD)"
           if [ "$MAIN_SHA" != "$GITHUB_SHA" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
             echo "::notice::This build is not the current main HEAD. Its APK artifact is retained, but it will not replace android-latest."
             exit 0
           fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
       - name: Read app version for release metadata
         id: app_version
         shell: bash
@@ -474,7 +477,7 @@ jobs:
           VERSION=$(sed -n 's/^version: *//p' pubspec.yaml | tr -d '"' | head -n 1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Remove stale legacy APK from rolling release
-        if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && steps.signing.outputs.configured == 'true'
+        if: (startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && steps.release_guard.outputs.publish == 'true')) && steps.signing.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -490,11 +493,10 @@ jobs:
             done
           fi
       - name: Publish GitHub release assets
-        if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && steps.signing.outputs.configured == 'true'
+        if: (startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && steps.release_guard.outputs.publish == 'true')) && steps.signing.outputs.configured == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'android-latest' }}
-          target_commitish: ${{ github.sha }}
           name: Numelixa Android ${{ steps.app_version.outputs.version }}
           make_latest: true
           generate_release_notes: false
