@@ -270,9 +270,9 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppTheme.navy,
+      backgroundColor: AppTheme.navy,
       appBar: AppBar(
-        backgroundColor: const AppTheme.backgroundElevated,
+        backgroundColor: AppTheme.backgroundElevated,
         title: const Row(
           children: [
             Icon(Icons.support_agent_rounded, color: AppTheme.cyan),
@@ -356,7 +356,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
                               margin: const EdgeInsets.symmetric(vertical: 5),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: mine ? const AppTheme.panelRaised : const AppTheme.glassBorder,
+                                color: mine ? AppTheme.panelRaised : AppTheme.glassBorder,
                                 borderRadius: BorderRadius.circular(17),
                                 border: Border.all(color: AppTheme.cyan.withOpacity(.18)),
                               ),
@@ -430,7 +430,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
                       decoration: InputDecoration(
                         hintText: recording ? 'Recording voice note…' : 'Message Help Team',
                         filled: true,
-                        fillColor: const AppTheme.panel,
+                        fillColor: AppTheme.panel,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
