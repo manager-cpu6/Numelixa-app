@@ -75,5 +75,25 @@ for name, paths in icons.items():
     ET.ElementTree(root).write(res / f"ic_notification_{name}.xml", encoding="unicode", xml_declaration=True)
     ET.parse(res / f"ic_notification_{name}.xml")
 
+    # Full-colour artwork is used only as the expanded notification's large icon.
+    colour_dir = Path("android/app/src/main/res/drawable-nodpi")
+    colour_dir.mkdir(parents=True, exist_ok=True)
+    colour_root = ET.Element("vector", {
+        f"{{{ns}}}width": "64dp", f"{{{ns}}}height": "64dp",
+        f"{{{ns}}}viewportWidth": "24", f"{{{ns}}}viewportHeight": "24",
+    })
+    for path in paths:
+        ET.SubElement(colour_root, "path", {
+            f"{{{ns}}}fillColor": "#FF0D63E8",
+            f"{{{ns}}}strokeColor": "#FF16D8FF",
+            f"{{{ns}}}strokeWidth": "0.7",
+            f"{{{ns}}}strokeLineCap": "round",
+            f"{{{ns}}}strokeLineJoin": "round",
+            f"{{{ns}}}pathData": path,
+        })
+    colour_file = colour_dir / f"ic_notification_{name}_color.xml"
+    ET.ElementTree(colour_root).write(colour_file, encoding="unicode", xml_declaration=True)
+    ET.parse(colour_file)
+
 assert len(icons) == 12
-print("Generated and XML-validated 12 monochrome notification drawables.")
+print("Generated and XML-validated 12 monochrome icons and 12 large-icon assets.")
