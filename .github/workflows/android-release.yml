@@ -185,6 +185,49 @@ jobs:
               s = s[:end + 1] + '\\n        ' + meta + s[end + 1:]
           p.write_text(s)
           PY
+      - name: Install full-colour Numelixa notification artwork
+        shell: bash
+        run: |
+          mkdir -p android/app/src/main/res/drawable-nodpi
+          cat > android/app/src/main/res/drawable-nodpi/ic_notification_admin_color.xml <<'XML'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
+            <path android:fillColor="#071B62" android:strokeColor="#08BFFF" android:strokeWidth="3" android:pathData="M32,9 L55,18 V31 C55,45 45,55 32,61 C19,55 9,45 9,31 V18 Z"/>
+            <path android:fillColor="#173DAB" android:strokeColor="#20E7FF" android:strokeWidth="2" android:pathData="M32,17 L48,23 V32 C48,42 41,49 32,54 C23,49 16,42 16,32 V23 Z"/>
+            <path android:fillColor="#FFFFFF" android:pathData="M32,25 L36,33 H45 L38,39 L41,48 L32,43 L23,48 L26,39 L19,33 H28 Z"/>
+            <path android:fillColor="#FFB51B" android:strokeColor="#8A4A00" android:strokeWidth="1.4" android:pathData="M10,12 L17,18 L32,6 L47,18 L54,12 L50,25 L14,25 Z"/>
+            <circle android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:cx="10" android:cy="12" android:r="4"/>
+            <circle android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:cx="32" android:cy="6" android:r="4"/>
+            <circle android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:cx="54" android:cy="12" android:r="4"/>
+          </vector>
+          XML
+          cat > android/app/src/main/res/drawable-nodpi/ic_notification_number_color.xml <<'XML'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
+            <path android:fillColor="#082D9C" android:strokeColor="#11DFFF" android:strokeWidth="3" android:pathData="M14,5 H50 C57,5 60,9 60,16 V48 C60,55 56,59 49,59 H15 C8,59 4,55 4,48 V16 C4,9 8,5 14,5 Z"/>
+            <path android:fillColor="#0647D7" android:strokeColor="#168DFF" android:strokeWidth="1.5" android:pathData="M15,10 H49 C54,10 55,13 55,18 V46 C55,51 53,54 48,54 H16 C11,54 9,51 9,46 V18 C9,13 11,10 15,10 Z"/>
+            <path android:fillColor="#FFFFFF" android:pathData="M25,17 L30,17 L25,46 L20,46 Z M43,17 L48,17 L43,46 L38,46 Z M16,27 H49 V32 H15 Z M14,37 H47 V42 H13 Z"/>
+            <path android:fillColor="#FFB51B" android:pathData="M42,43 H57 V58 H42 Z"/>
+            <path android:fillColor="#FFE06B" android:pathData="M44,45 H49 V50 H44 Z M51,45 H55 V50 H51 Z M44,52 H49 V56 H44 Z M51,52 H55 V56 H51 Z"/>
+          </vector>
+          XML
+          cat > android/app/src/main/res/drawable-nodpi/ic_notification_otp_color.xml <<'XML'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
+            <path android:fillColor="#F4F8FF" android:strokeColor="#0A55D9" android:strokeWidth="3" android:pathData="M8,8 H43 C49,8 53,12 53,18 V35 C53,41 49,45 43,45 H25 L12,56 V45 H8 C4,45 2,41 2,37 V18 C2,12 4,8 8,8 Z"/>
+            <circle android:fillColor="#123B9D" android:cx="16" android:cy="27" android:r="3.5"/>
+            <circle android:fillColor="#123B9D" android:cx="27" android:cy="27" android:r="3.5"/>
+            <circle android:fillColor="#123B9D" android:cx="38" android:cy="27" android:r="3.5"/>
+            <path android:fillColor="#0755E8" android:strokeColor="#13D8FF" android:strokeWidth="2.5" android:pathData="M45,32 L61,38 V48 C61,56 55,61 45,64 C35,61 29,56 29,48 V38 Z"/>
+            <path android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M37,48 L43,54 L54,41"/>
+          </vector>
+          XML
+          cat > android/app/src/main/res/drawable-nodpi/ic_notification_auto_color.xml <<'XML'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
+            <path android:fillColor="#00000000" android:strokeColor="#087BFF" android:strokeWidth="9" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M52,25 C49,13 40,7 29,7 C18,7 10,14 7,25"/>
+            <path android:fillColor="#087BFF" android:pathData="M5,12 L5,31 L23,31 Z"/>
+            <path android:fillColor="#00000000" android:strokeColor="#B43BFF" android:strokeWidth="9" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M12,39 C15,51 24,57 35,57 C46,57 54,50 57,39"/>
+            <path android:fillColor="#B43BFF" android:pathData="M59,52 L59,33 L41,33 Z"/>
+            <path android:fillColor="#00000000" android:strokeColor="#16D8FF" android:strokeWidth="2" android:pathData="M32,15 A17,17 0,0 1,49 32 M32,49 A17,17 0,0 1,15 32"/>
+          </vector>
+          XML
       - name: Configure Firebase (optional)
         env:
           FIREBASE_CONFIG_B64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
