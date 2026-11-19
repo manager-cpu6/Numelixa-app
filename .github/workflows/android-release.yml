@@ -190,6 +190,8 @@ jobs:
               s = s[:end + 1] + '\\n        ' + meta + s[end + 1:]
           p.write_text(s)
           PY
+      - name: Generate all twelve monochrome notification icons
+        run: python3 scripts/generate_notification_icons.py
       - name: Install full-colour Numelixa notification artwork
         shell: bash
         run: |
