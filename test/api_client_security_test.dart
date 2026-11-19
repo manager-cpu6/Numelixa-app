@@ -16,6 +16,18 @@ void main() {
     );
   });
 
+  test('API client refuses cross-origin targets before sending bearer credentials', () async {
+    final client = ApiClient(
+      baseUrl: 'https://www.numelixa.com',
+      client: MockClient((_) async => throw StateError('Network must not be called')),
+    );
+
+    await expectLater(
+      client.get('//untrusted.example/collect', accessToken: 'test-session'),
+      throwsA(isA<ApiException>()),
+    );
+  });
+
   test('API client does not follow redirects with authorization attached', () async {
     var called = false;
     final client = ApiClient(
