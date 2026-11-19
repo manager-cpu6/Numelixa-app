@@ -3145,6 +3145,7 @@ class _AccountPageState extends State<_AccountPage> {
       ]),
       Text((user['email'] ?? user['phone'] ?? 'Phone number not added').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 22),
+      const Padding(padding: EdgeInsets.only(bottom: 7), child: Text('ACCOUNT INFORMATION', style: TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2))),
       Card(child: ListTile(
         leading: const Icon(Icons.verified_user_outlined, color: AppTheme.cyan),
         title: Text((user['phone'] ?? '').toString().isNotEmpty ? 'Verified phone account' : 'Secure email account'),
@@ -3159,6 +3160,7 @@ class _AccountPageState extends State<_AccountPage> {
       Card(child: ListTile(leading: const Icon(Icons.card_giftcard_rounded, color: AppTheme.violet), title: const Text('Referral rewards'), subtitle: const Text('Invite friends and withdraw earned rewards.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _ReferralRewardsPage(accessToken: auth.accessToken!))))),
       if ((user['role'] ?? '').toString() == 'admin')
         Card(child: ListTile(leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.mint), title: const Text('Admin control center'), subtitle: const Text('Users, payments, referrals and system overview.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _AdminControlPage(accessToken: auth.accessToken!))))),
+      const Padding(padding: EdgeInsets.fromLTRB(4, 16, 4, 7), child: Text('SECURITY & DEVICES', style: TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2))),
       Card(child: ListTile(leading: const Icon(Icons.devices_other_rounded, color: AppTheme.cyan), title: const Text('Your devices'), subtitle: const Text('View signed-in devices, location and recent activity.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DevicesPage())))),
       if ((user['email'] ?? '').toString().isNotEmpty)
         Card(child: ListTile(leading: const Icon(Icons.password_rounded, color: AppTheme.cyan), title: const Text('Change password'), subtitle: const Text('Verify a code sent to your email.'), trailing: const Icon(Icons.chevron_right_rounded), onTap: _changePassword)),
@@ -3188,8 +3190,7 @@ class _AccountPageState extends State<_AccountPage> {
       Card(child: ListTile(leading: const Icon(Icons.code_rounded, color: AppTheme.cyan), title: const Text('Developer Center'), subtitle: const Text('API documentation and integration portal'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DeveloperCenterPage())))),
       Card(child: ListTile(leading: const Icon(Icons.handshake_outlined, color: AppTheme.violet), title: const Text('For Partners'), subtitle: const Text('Business and technical partnership enquiries'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _PartnerCenterPage())))),
       Card(child: ListTile(leading: const Icon(Icons.gavel_rounded, color: AppTheme.cyan), title: const Text('Legal Center'), subtitle: const Text('Terms, privacy, refunds, acceptable use and account deletion'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _LegalCenterPage())))),
-      Card(child: ListTile(leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan), title: const Text('Help Team Chat'), subtitle: const Text('Open your private support conversation'), trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16), onTap: () { final token = context.read<AuthService>().accessToken; Navigator.of(context).push(MaterialPageRoute(builder: (_) => HelpTeamScreen(accessToken: token))); })),
-      Card(child: ListTile(leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)), title: const Text('WhatsApp support'), subtitle: const Text('Chat with us · +252 907 868526'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication))),
+      const Padding(padding: EdgeInsets.fromLTRB(4, 16, 4, 7), child: Text('APP PREFERENCES', style: TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2))),
       Card(child: ValueListenableBuilder<String>(
         valueListenable: context.read<NotificationService>().registrationStatus,
         builder: (context, status, _) => ListTile(
