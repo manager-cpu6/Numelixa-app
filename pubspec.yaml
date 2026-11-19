@@ -1,7 +1,7 @@
 name: numelixa_app
 description: Standalone native Numelixa mobile application.
 publish_to: "none"
-version: 1.0.24+25
+version: 1.0.25+26
 environment:
   sdk: ">=3.4.0 <4.0.0"
 dependencies:
