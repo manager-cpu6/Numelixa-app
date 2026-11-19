@@ -16,6 +16,7 @@ import '../services/numelixa_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
 import '../widgets/payment_receipt_dialog.dart';
+import '../widgets/numelixa_verified_badge.dart';
 import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
 
@@ -972,7 +973,16 @@ class _HomePage extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('GLOBAL VIRTUAL NUMBERS', style: TextStyle(color: AppTheme.mint, fontSize: 10, letterSpacing: 1.8, fontWeight: FontWeight.w800)),
           const SizedBox(height: 13),
-          Text('Welcome back, $name', style: const TextStyle(fontSize: 25, height: 1.15, fontWeight: FontWeight.w800)),
+          Text.rich(
+            TextSpan(children: [
+              TextSpan(text: 'Welcome back, $name'),
+              if (auth.user?['badgeVerifiedAt'] != null)
+                const WidgetSpan(alignment: PlaceholderAlignment.middle, child: Padding(padding: EdgeInsets.only(left: 6), child: NumelixaVerifiedBadge(verified: true, size: 19))),
+            ]),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 25, height: 1.15, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 10),
           const Text('Numbers, without the noise.', style: TextStyle(color: Color(0xFFB2C7DD), height: 1.45)),
         ]),
@@ -2896,7 +2906,11 @@ class _AccountPageState extends State<_AccountPage> {
         )),
       ])),
       const SizedBox(height: 12),
-      Text((user['name'] ?? 'Numelixa user').toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Flexible(child: Text((user['name'] ?? 'Numelixa user').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800))),
+        if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
+        NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 19),
+      ]),
       Text((user['email'] ?? user['phone'] ?? 'Phone number not added').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 22),
       Card(child: ListTile(
