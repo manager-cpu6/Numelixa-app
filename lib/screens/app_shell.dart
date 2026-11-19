@@ -3512,40 +3512,69 @@ class _ResourcePageFrame extends StatelessWidget {
   );
 }
 
-class _SupportCenterPage extends StatelessWidget {
+class _SupportCenterPage extends StatefulWidget {
   const _SupportCenterPage();
   @override
-  Widget build(BuildContext context) => _ResourcePageFrame(
-    title: 'Support Center',
-    subtitle: 'Get help from the official Numelixa support team.',
-    icon: Icons.support_agent_rounded,
-    children: [
-      Card(child: ListTile(
-        leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan),
-        title: const Text('Private Help Team Chat'),
-        subtitle: const Text('Continue a support conversation inside Numelixa.'),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () {
-          final token = context.read<AuthService>().accessToken;
-          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: token)));
-        },
-      )),
-      Card(child: ListTile(
-        leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)),
-        title: const Text('WhatsApp support'),
-        subtitle: const Text('+252 907 868526 · Open official support chat'),
-        trailing: const Icon(Icons.open_in_new_rounded),
-        onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication),
-      )),
-      Card(child: ListTile(
-        leading: const Icon(Icons.help_outline_rounded, color: AppTheme.cyan),
-        title: const Text('Online Help Center'),
-        subtitle: const Text('Open the official Numelixa support website.'),
-        trailing: const Icon(Icons.open_in_new_rounded),
-        onTap: () => launchUrl(Uri.parse('https://support.numelixa.com/'), mode: LaunchMode.externalApplication),
-      )),
-      const Padding(padding: EdgeInsets.fromLTRB(4, 8, 4, 0), child: Text('Support availability and ticket options are shown by the official support service. The app does not display invented ticket statuses.', style: TextStyle(color: AppTheme.muted, height: 1.5, fontSize: 12))),
-    ],
+  State<_SupportCenterPage> createState() => _SupportCenterPageState();
+}
+class _SupportCenterPageState extends State<_SupportCenterPage> {
+  final _contact = TextEditingController(), _subject = TextEditingController(), _message = TextEditingController();
+  String _channel = 'email', _category = 'Account';
+  bool _loading = false, _sending = false;
+  Map<String, dynamic>? _ticket;
+  String? _error, _notice;
+  @override
+  void initState() { super.initState(); _contact.text = (context.read<AuthService>().user?['email'] ?? '').toString(); _refreshTicket(); }
+  @override
+  void dispose() { _contact.dispose(); _subject.dispose(); _message.dispose(); super.dispose(); }
+  Future<void> _refreshTicket() async {
+    if (_loading) return;
+    setState(() { _loading = true; _error = null; });
+    try { final d = await ApiClient().get('/api/support', accessToken: context.read<AuthService>().accessToken); if (mounted) setState(() => _ticket = d['ticket'] is Map ? Map<String,dynamic>.from(d['ticket']) : null); }
+    on ApiException catch (e) { if (mounted) setState(() => _error = e.message); }
+    catch (_) { if (mounted) setState(() => _error = 'Support status is temporarily unavailable.'); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
+  Future<void> _submit() async {
+    if (_sending) return;
+    if (_contact.text.trim().isEmpty || _subject.text.trim().length < 4 || _message.text.trim().length < 15) { setState(() => _error = 'Enter contact details, a subject and at least 15 characters describing the issue.'); return; }
+    setState(() { _sending = true; _error = null; _notice = null; });
+    try {
+      final d = await ApiClient().post('/api/support', accessToken: context.read<AuthService>().accessToken, body: {'channel':_channel,'contact':_contact.text.trim(),'subject':'$_category · ${_subject.text.trim()}','message':_message.text.trim()});
+      if (d['ok'] != true) throw ApiException((d['error'] ?? 'The request was not confirmed.').toString());
+      if (!mounted) return;
+      setState(() { _subject.clear(); _message.clear(); _notice = 'Your support request was received.'; });
+      await _refreshTicket();
+    } on ApiException catch (e) { if (mounted) setState(() => _error = e.message); }
+    catch (_) { if (mounted) setState(() => _error = 'Could not confirm the request. Check your connection and try again.'); }
+    finally { if (mounted) setState(() => _sending = false); }
+  }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Support Center'), actions:[IconButton(tooltip:'Refresh ticket status',onPressed:_loading?null:_refreshTicket,icon:const Icon(Icons.refresh_rounded))]),
+    body: ListView(padding: const EdgeInsets.fromLTRB(16,10,16,28), children:[
+      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:AppTheme.panel,borderRadius:BorderRadius.circular(22),border:Border.all(color:AppTheme.glassBorder)),child:const Row(children:[Icon(Icons.support_agent_rounded,color:AppTheme.cyan,size:34),SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('We are here to help',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)),SizedBox(height:4),Text('Send a private request or use an official support channel.',style:TextStyle(color:AppTheme.muted,height:1.4,fontSize:12))]))])),
+      if(_ticket!=null) Card(child:ListTile(leading:const Icon(Icons.confirmation_number_outlined,color:AppTheme.cyan),title:Text((_ticket!['subject']??'Your support request').toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text('Ticket ${(_ticket!['id']??'').toString()} · ${(_ticket!['status']??'received').toString()}'))),
+      if(_notice!=null) Padding(padding:const EdgeInsets.all(8),child:Text(_notice!,style:const TextStyle(color:AppTheme.mint,fontWeight:FontWeight.w700))),
+      if(_error!=null) Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:AppTheme.error))),
+      const SizedBox(height:8),const Text('Contact Support',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+      Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        DropdownButtonFormField<String>(initialValue:_category,decoration:const InputDecoration(labelText:'Issue category'),items:const ['Account','Number activation','SMS delivery','Wallet / payment','Orders','Other'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:_sending?null:(v){if(v!=null)setState(()=>_category=v);}),
+        const SizedBox(height:10),
+        DropdownButtonFormField<String>(initialValue:_channel,decoration:const InputDecoration(labelText:'Preferred reply channel'),items:const [DropdownMenuItem(value:'email',child:Text('Email')),DropdownMenuItem(value:'whatsapp',child:Text('WhatsApp')),DropdownMenuItem(value:'telegram',child:Text('Telegram'))],onChanged:_sending?null:(v){if(v!=null)setState(()=>_channel=v);}),
+        const SizedBox(height:10),
+        TextField(controller:_contact,enabled:!_sending,keyboardType:_channel=='email'?TextInputType.emailAddress:TextInputType.text,decoration:InputDecoration(labelText:_channel=='email'?'Email address':_channel=='whatsapp'?'WhatsApp number with country code':'Telegram username')),
+        const SizedBox(height:10),TextField(controller:_subject,enabled:!_sending,maxLength:120,decoration:const InputDecoration(labelText:'Subject')),
+        TextField(controller:_message,enabled:!_sending,minLines:4,maxLines:7,maxLength:3000,decoration:const InputDecoration(labelText:'Describe the issue',hintText:'Include an order or payment reference if relevant. Never include your password or OTP code.')),
+        const SizedBox(height:10),FilledButton.icon(onPressed:_sending?null:_submit,icon:_sending?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.send_rounded),label:Text(_sending?'Sending request…':'Submit support request')),
+      ]))),
+      Card(child:ListTile(leading:const Icon(Icons.forum_rounded,color:AppTheme.cyan),title:const Text('Private Help Team Chat'),subtitle:const Text('Continue a support conversation inside Numelixa.'),trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>HelpTeamScreen(accessToken:context.read<AuthService>().accessToken))))),
+      Card(child:ListTile(leading:const Icon(Icons.chat_rounded,color:Color(0xFF25D366)),title:const Text('WhatsApp Support'),subtitle:const Text('+252 907 868526'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri.parse('https://wa.me/252907868526'),mode:LaunchMode.externalApplication))),
+      Card(child:ListTile(leading:const Icon(Icons.help_outline_rounded,color:AppTheme.cyan),title:const Text('Online Help Center & FAQ'),subtitle:const Text('Open official support articles and troubleshooting.'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri.parse('https://support.numelixa.com/'),mode:LaunchMode.externalApplication))),
+      const SizedBox(height:10),const Text('Troubleshooting',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),
+      const Card(child:Column(children:[ListTile(leading:Icon(Icons.sms_failed_outlined,color:AppTheme.warning),title:Text('Activation or SMS problem'),subtitle:Text('Refresh the activation, check its expiry and use Check for SMS before submitting a request.')),Divider(height:1),ListTile(leading:Icon(Icons.account_balance_wallet_outlined,color:AppTheme.cyan),title:Text('Wallet or payment issue'),subtitle:Text('Keep your payment reference, amount and approximate payment time. Do not submit a duplicate while the first payment is pending.')),Divider(height:1),ListTile(leading:Icon(Icons.person_outline_rounded,color:AppTheme.cyan),title:Text('Account issue'),subtitle:Text('Never send your password, one-time code or recovery code to support.'))])),
+      const Text('Ticket details appear only when returned by the existing authenticated support API.',style:TextStyle(color:AppTheme.muted,fontSize:11,height:1.5)),
+    ]),
   );
 }
 
@@ -3594,6 +3623,7 @@ class _DeveloperCenterPage extends StatelessWidget {
     subtitle: 'Build with the Numelixa API using the official developer resources.',
     icon: Icons.code_rounded,
     children: [
+      Card(child: ListTile(leading: const Icon(Icons.phone_android_rounded,color:AppTheme.cyan),title: const Text('Read API docs in Numelixa'),subtitle: const Text('Search verified endpoints, examples and integration notes.'),trailing: const Icon(Icons.chevron_right_rounded),onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _DeveloperDocsPage())))),
       Card(child: ListTile(
         leading: const Icon(Icons.menu_book_rounded, color: AppTheme.cyan),
         title: const Text('API Documentation'),
@@ -3619,6 +3649,31 @@ class _DeveloperCenterPage extends StatelessWidget {
 
 class _PartnerCenterPage extends StatelessWidget {
   const _PartnerCenterPage();
+  static const _email='support@numelixa.com';
+  Future<void> _emailTeam(BuildContext context) async {
+    final uri=Uri(scheme:'mailto',path:_email,queryParameters:{'subject':'Numelixa partnership enquiry'});
+    if(!await launchUrl(uri)&&context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('No email app is available. Copy the address or use Support online.')));
+  }
+  @override
+  Widget build(BuildContext context)=>_ResourcePageFrame(title:'For Partners',subtitle:'Explore business, technical and integration opportunities with Numelixa.',icon:Icons.handshake_outlined,children:[
+    for(final item in const [(Icons.business_outlined,'Business partnerships','For organizations interested in collaboration and platform services.'),(Icons.settings_ethernet_rounded,'API partnerships','For products and platforms evaluating server-to-server integration.'),(Icons.storefront_outlined,'Reseller opportunities','For businesses interested in discussing distribution opportunities.'),(Icons.hub_outlined,'Technical partnerships','For infrastructure, telecom and technology integration enquiries.')])
+      Card(child:ListTile(leading:Icon(item.$1,color:AppTheme.cyan),title:Text(item.$2,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(item.$3,style:const TextStyle(color:AppTheme.muted,height:1.4)),isThreeLine:true)),
+    const Card(child:Padding(padding:EdgeInsets.all(15),child:Text('Affiliate programme availability is not confirmed. Contact the team to ask whether a programme is available; this page does not promise commissions or approval.',style:TextStyle(color:AppTheme.muted,height:1.5)))),
+    Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      const Row(children:[Icon(Icons.email_outlined,color:AppTheme.cyan),SizedBox(width:9),Text('Official contact',style:TextStyle(fontWeight:FontWeight.w900))]),
+      const SizedBox(height:8),const SelectableText(_email,style:TextStyle(color:AppTheme.cyan,fontWeight:FontWeight.w800)),
+      const SizedBox(height:10),Row(children:[
+        Expanded(child:OutlinedButton.icon(onPressed:()async{await Clipboard.setData(const ClipboardData(text:_email));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Email address copied.')));},icon:const Icon(Icons.copy_rounded),label:const Text('Copy email'))),
+        const SizedBox(width:9),Expanded(child:FilledButton.icon(onPressed:()=>_emailTeam(context),icon:const Icon(Icons.mail_outline_rounded),label:const Text('Email team'))),
+      ]),
+      const Text('This is the verified public support address; no separate partner or affiliate email was found.',style:TextStyle(color:AppTheme.muted,fontSize:11,height:1.4)),
+    ]))),
+    FilledButton.icon(onPressed:()=>launchUrl(Uri.parse('https://support.numelixa.com/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.support_agent_rounded),label:const Text('Open Support Center')),
+  ]);
+}
+
+
+  const _PartnerCenterPage();
   @override
   Widget build(BuildContext context) => _ResourcePageFrame(
     title: 'For Partners',
@@ -3641,4 +3696,87 @@ class _PartnerCenterPage extends StatelessWidget {
       FilledButton.icon(onPressed: () => launchUrl(Uri.parse('https://support.numelixa.com/'), mode: LaunchMode.externalApplication), icon: const Icon(Icons.open_in_new_rounded), label: const Text('Contact Numelixa')),
     ],
   );
+}
+
+
+class _LegalCenterPage extends StatelessWidget {
+  const _LegalCenterPage();
+  Future<void> _open(String path) async { await launchUrl(Uri.parse('https://www.numelixa.com'+path),mode:LaunchMode.externalApplication); }
+  @override
+  Widget build(BuildContext context)=>_ResourcePageFrame(title:'Legal Center',subtitle:'Read the current official Numelixa policies. Published policy text is linked without rewriting it.',icon:Icons.gavel_rounded,children:[
+    for(final item in const [(Icons.description_outlined,'Terms of Service','/terms'),(Icons.privacy_tip_outlined,'Privacy Policy','/privacy'),(Icons.currency_exchange_rounded,'Refund Policy','/refund-policy'),(Icons.cookie_outlined,'Cookie Policy','/cookie-policy'),(Icons.rule_rounded,'Rules & Acceptable Use','/rules'),(Icons.delete_outline_rounded,'Account Deletion Policy','/account-deletion')])
+      Card(child:ListTile(leading:Icon(item.$1,color:AppTheme.cyan),title:Text(item.$2,style:const TextStyle(fontWeight:FontWeight.w800)),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>_open(item.$3))),
+    const Card(child:Padding(padding:EdgeInsets.all(15),child:Text('No account-deletion API or in-app deletion operation was verified. Follow the official Account Deletion Policy and contact support@numelixa.com from the email associated with your account. Review remaining balance, active orders and pending payments before requesting deletion.',style:TextStyle(color:AppTheme.muted,height:1.5)))),
+    Card(child:ListTile(leading:const Icon(Icons.email_outlined,color:AppTheme.cyan),title:const Text('Policy and privacy questions'),subtitle:const Text('support@numelixa.com'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri(scheme:'mailto',path:'support@numelixa.com',queryParameters:{'subject':'Numelixa legal or privacy enquiry'})))),
+  ]);
+}
+
+class _LegalCenterPage extends StatelessWidget {
+  const _LegalCenterPage();
+  Future<void> _open(String path) async { await launchUrl(Uri.parse('https://www.numelixa.com'+path),mode:LaunchMode.externalApplication); }
+  @override
+  Widget build(BuildContext context)=>_ResourcePageFrame(title:'Legal Center',subtitle:'Read the current official Numelixa policies. Published policy text is linked without rewriting it.',icon:Icons.gavel_rounded,children:[
+    for(final item in const [(Icons.description_outlined,'Terms of Service','/terms'),(Icons.privacy_tip_outlined,'Privacy Policy','/privacy'),(Icons.currency_exchange_rounded,'Refund Policy','/refund-policy'),(Icons.cookie_outlined,'Cookie Policy','/cookie-policy'),(Icons.rule_rounded,'Rules & Acceptable Use','/rules'),(Icons.delete_outline_rounded,'Account Deletion Policy','/account-deletion')])
+      Card(child:ListTile(leading:Icon(item.$1,color:AppTheme.cyan),title:Text(item.$2,style:const TextStyle(fontWeight:FontWeight.w800)),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>_open(item.$3))),
+    const Card(child:Padding(padding:EdgeInsets.all(15),child:Text('No account-deletion API or in-app deletion operation was verified. Follow the official Account Deletion Policy and contact support@numelixa.com from the email associated with your account. Review remaining balance, active orders and pending payments before requesting deletion.',style:TextStyle(color:AppTheme.muted,height:1.5)))),
+    Card(child:ListTile(leading:const Icon(Icons.email_outlined,color:AppTheme.cyan),title:const Text('Policy and privacy questions'),subtitle:const Text('support@numelixa.com'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri(scheme:'mailto',path:'support@numelixa.com',queryParameters:{'subject':'Numelixa legal or privacy enquiry'})))),
+  ]);
+}
+
+class _DeveloperDocsPage extends StatefulWidget {
+  const _DeveloperDocsPage();
+  @override
+  State<_DeveloperDocsPage> createState()=>_DeveloperDocsPageState();
+}
+class _DeveloperDocsPageState extends State<_DeveloperDocsPage>{
+  String _query=''; int _active=0;
+  static const _sections=<Map<String,String>>[
+    {'title':'Overview','body':'Base URL: https://www.numelixa.com. Use HTTPS and JSON. This reference documents routes verified in accessible backend source; it does not claim every mobile payment route is a public developer API.'},
+    {'title':'Authentication','body':'Protected routes accept Authorization: Bearer <credential>. The backend validates a Numelixa API key or a valid opaque mobile session token. X-API-Key is also accepted. Never put production credentials in a public app, browser code, source control or logs. API-key creation, refresh-token rotation and mobile token revocation contracts require confirmation.'},
+    {'title':'Services & countries','body':'GET /api/catalog/services returns the live service catalog. GET /api/catalog/countries?service=<service> returns live country availability. Verified country fields may include name, id/code, callingCode/dialCode, stock.count, stock.sellCoins and stock.usdPrice. Inventory and prices can change; the server validates purchases.'},
+    {'title':'Number acquisition','body':'POST /api/v1/orders accepts JSON {"service":"whatsapp","countryCode":"usa"}. Purchase requires an eligible verified account, sufficient wallet credits, live stock and provider success. The server is authoritative for final pricing and allocation.'},
+    {'title':'Orders & lifecycle','body':'GET /api/v1/orders?limit=25&status=waiting lists the authenticated user orders. GET /api/v1/orders/{id} reads one owned order. POST /api/v1/orders/code with {"orderId":"..."} checks SMS. POST /api/v1/orders/cancel with {"orderId":"..."} requests cancellation. Rules depend on provider and order age.'},
+    {'title':'Balance & transactions','body':'GET /api/v1/balance returns balance, currency and accountId. GET /api/v1/transactions returns up to 100 wallet ledger entries. GET /api/wallet/receipt?reference=<reference> returns a verified receipt. The ledger is not a unified list of pending/failed payment-provider events.'},
+    {'title':'Notifications','body':'GET /api/notifications returns user notifications and unread count. POST /api/notifications with {"id":"..."} marks one notification read; an empty body marks all unread read. POST /api/notifications/register registers an FCM token, platform and optional deviceId/appVersion. A mobile unlink endpoint was not verified.'},
+    {'title':'Support tickets','body':'GET /api/support returns the latest active ticket and canSubmit. POST /api/support accepts channel (email, whatsapp or telegram), contact, subject (4–120 chars) and message (15–3000 chars). A successful response includes ticket id, status and createdAt. Never send passwords or OTPs.'},
+    {'title':'Errors & retries','body':'The Android client maps 401 to sign-in required, 403 to permission denied and 5xx to temporary service failure. The complete backend error schema is not published in the inspected contract. Never blindly retry a purchase or payment after a timeout; query its reference first.'},
+    {'title':'Security, limits & webhooks','body':'Use HTTPS. Keep API keys and mobile tokens secret. Treat SMS codes and full SMS bodies as sensitive. Numeric rate limits, webhook registration, event names, signatures and retry policies were not verified and require API-owner confirmation.'},
+    {'title':'Requires confirmation','body':'The Flutter app calls Sifalo, Binance and Ethiopia payment routes, but their backend implementations and full schemas were not included in this source audit. API key creation/rotation, payment history states, rate limits, public webhooks, account deletion API and formal API versioning also require confirmation.'},
+  ];
+  static const _examples=<Map<String,String>>[
+    {'title':'cURL','code':"curl --fail-with-body 'https://www.numelixa.com/api/v1/orders?limit=25' \\\n  -H 'Accept: application/json' \\\n  -H 'Authorization: Bearer \$NUMELIXA_API_KEY'"},
+    {'title':'JavaScript','code':"const response = await fetch('https://www.numelixa.com/api/v1/balance', {\n  headers: { Authorization: 'Bearer ' + process.env.NUMELIXA_API_KEY }\n});\nif (!response.ok) throw new Error('HTTP ' + response.status);\nconst data = await response.json();"},
+    {'title':'Node.js','code':"import 'dotenv/config';\nconst r = await fetch('https://www.numelixa.com/api/v1/orders?limit=25', {\n  headers: { Authorization: 'Bearer ' + process.env.NUMELIXA_API_KEY }\n});\nif (!r.ok) throw new Error('HTTP ' + r.status);\nconsole.log(await r.json());"},
+    {'title':'Python','code':"import os, requests\nr = requests.get('https://www.numelixa.com/api/v1/balance', headers={\n  'Authorization': 'Bearer ' + os.environ['NUMELIXA_API_KEY']\n}, timeout=20)\nr.raise_for_status()\nprint(r.json())"},
+    {'title':'PHP','code':"$ch = curl_init('https://www.numelixa.com/api/v1/balance');\ncurl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => [\n  'Authorization: Bearer ' . getenv('NUMELIXA_API_KEY')\n]]);\n$result = curl_exec($ch);\nif ($result === false || curl_getinfo($ch, CURLINFO_HTTP_CODE) >= 400) throw new RuntimeException('API request failed');\n$data = json_decode($result, true, 512, JSON_THROW_ON_ERROR);\ncurl_close($ch);"},
+  ];
+  @override
+  Widget build(BuildContext context){
+    final q=_query.trim().toLowerCase();
+    final visible=_sections.asMap().entries.where((e)=>q.isEmpty||('${e.value['title']} ${e.value['body']}').toLowerCase().contains(q)).toList();
+    final active=visible.isEmpty?null:visible.firstWhere((e)=>e.key==_active,orElse:()=>visible.first);
+    return Scaffold(appBar:AppBar(title:const Text('Developer documentation'),actions:[IconButton(tooltip:'Official developer portal',onPressed:()=>launchUrl(Uri.parse('https://www.numelixa.com/developers'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new_rounded))]),body:Column(children:[
+      Padding(padding:const EdgeInsets.fromLTRB(14,8,14,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Developer Center  /  API reference',style:TextStyle(color:AppTheme.muted,fontSize:11)),const SizedBox(height:9),
+        TextField(onChanged:(v)=>setState(()=>_query=v),decoration:const InputDecoration(prefixIcon:Icon(Icons.search_rounded),hintText:'Search endpoints, authentication, errors…')),
+        const SizedBox(height:9),SizedBox(height:42,child:ListView(scrollDirection:Axis.horizontal,children:[for(final e in visible)Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(e.value['title']!),selected:active?.key==e.key,onSelected:(_)=>setState(()=>_active=e.key)))])),
+      ])),
+      Expanded(child:active==null?const Center(child:Text('No documentation sections match your search.')):ListView(padding:const EdgeInsets.fromLTRB(16,8,16,24),children:[
+        Text(active.value['title']!,style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),const SizedBox(height:10),
+        Card(child:Padding(padding:const EdgeInsets.all(16),child:SelectableText(active.value['body']!,style:const TextStyle(color:AppTheme.textSecondary,height:1.6)))),
+        if(active.key==0||active.key==1||active.key==4||active.key==5||active.key==7)...[
+          const SizedBox(height:12),const Text('Integration examples',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
+          for(final ex in _examples)Card(child:Padding(padding:const EdgeInsets.all(13),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[Expanded(child:Text(ex['title']!,style:const TextStyle(fontWeight:FontWeight.w800))),IconButton(tooltip:'Copy code',onPressed:()async{await Clipboard.setData(ClipboardData(text:ex['code']!));if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Code copied.')));},icon:const Icon(Icons.copy_rounded,size:18))]),
+            SelectableText(ex['code']!,style:const TextStyle(fontFamily:'monospace',fontSize:11,height:1.5,color:AppTheme.cyan)),
+          ]))),
+        ],
+        const SizedBox(height:14),Row(children:[
+          Expanded(child:OutlinedButton.icon(onPressed:active.key==0?null:()=>setState(()=>_active=active.key-1),icon:const Icon(Icons.chevron_left_rounded),label:const Text('Previous'))),
+          const SizedBox(width:9),Expanded(child:FilledButton.icon(onPressed:active.key>=_sections.length-1?null:()=>setState(()=>_active=active.key+1),icon:const Icon(Icons.chevron_right_rounded),label:const Text('Next'))),
+        ]),
+        const Padding(padding:EdgeInsets.only(top:14),child:Text('Verified-source reference. Payment schemas, public webhooks and rate limits marked unconfirmed must be checked with the API owner.',style:TextStyle(color:AppTheme.muted,fontSize:11,height:1.5))),
+      ])),
+    ]));
+  }
 }
