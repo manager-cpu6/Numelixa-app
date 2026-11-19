@@ -70,17 +70,37 @@ Artifacts are uploaded by the workflow as `numelixa-android-builds`.
 
 ## Mobile redesign implementation
 
-The current native UI refresh adds a centralized Numelixa dark design system, consistent card/input/navigation styling, a five-destination mobile navigation bar, in-app notification entry, and first-party brand-icon assets ahead of favicon fallbacks. Unknown service logos use a neutral app icon rather than fabricated initials.
+The native app now includes a unified dark Numelixa design system, five-destination navigation, first-party service icon mappings with neutral fallbacks, searchable country selection and availability only when supplied by the server.
 
-The Home and Account areas now expose native entry points for:
-- Support Center (private Help Team Chat, configured WhatsApp support and official support site)
-- For Clients (onboarding steps and practical troubleshooting)
-- Developer Center (official API documentation and developer portal)
-- For Partners (business, reseller and technical enquiry guidance)
+### Wallet and Orders
+- Wallet transaction ledger has search, credit/debit/refund filters, transaction detail sheets and verified receipt access.
+- The wallet explicitly identifies that pending/failed payment-provider requests are not part of the current ledger endpoint; a unified provider-payment history needs backend support.
+- Orders has search and Active/Completed/Cancelled/Failed filters, service logo, country, number, server-provided USD price, SMS code copy, refresh and cancellation through the verified `POST /api/v1/orders/cancel` contract.
+- Remaining activation time is displayed from the server-provided expiry timestamp.
 
-These resource pages deliberately link to the existing official support/developer services instead of inventing backend ticketing, partnership email addresses, API key operations or programme status. Live catalog, wallet, orders, SMS, notifications and session management remain connected to the existing repository/API services.
+### Support and help
+- Native Support Center submits and refreshes real tickets through the existing authenticated `GET/POST /api/support` routes.
+- Includes private Help Team Chat, configured WhatsApp support (+252 907 868526) and the official Help Center.
+- For Clients now includes getting started, service/country selection, SMS and activation guidance, refund information and FAQs.
+- For Partners uses the verified public contact `support@numelixa.com`, with copy and pre-addressed email actions. No separate partner/affiliate address or active affiliate program is claimed.
 
-Country search now includes API-provided calling/dial codes, and country availability is only displayed when the API supplies a quantity. Unknown country flags use a neutral icon rather than a globe emoji.
+### Developer and Legal centers
+- In-app Developer Center includes searchable public API v1 topics, a mobile-friendly table of contents, endpoint descriptions, code-copy actions and cURL, JavaScript, Node.js, Python and PHP examples.
+- `docs/DEVELOPER_API_REFERENCE.md` documents source-verified public API routes, API key management, order lifecycle, webhook signatures and documented HTTP status codes. Unverified payment contracts and numeric rate limits are explicitly marked for confirmation.
+- Legal Center links to the actual published Terms, Privacy, Refund, Cookie, Rules & Acceptable Use and Account Deletion pages without rewriting policy text.
+- `docs/LEGAL_POLICY_AUDIT.md` lists owner/legal review items.
+
+### Security review
+- ApiClient enforces HTTPS and does not follow redirects with Authorization headers.
+- Google callback exceptions no longer write raw error contents to logs.
+- Foreground/background local notifications use private lock-screen visibility.
+- `docs/ANDROID_SECURITY_REVIEW.md` documents verified controls, legacy API-key sign-in risk and remaining security decisions.
+- Added `test/api_client_security_test.dart` for HTTPS and redirect behavior.
+
+### API contract and limitations
+- `docs/MOBILE_API_CONTRACT.md` reflects the verified native session, device, password, support and notification routes.
+- No website/backend files were changed.
+- No fake ticket states, payment history, policies, partnership emails, stock or balances were introduced.
 
 ## In-app APK updates
 
