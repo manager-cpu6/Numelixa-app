@@ -1084,8 +1084,16 @@ class _HomePage extends StatelessWidget {
       const _ActionTile(icon: Icons.public_rounded, title: 'Browse services', subtitle: 'Explore the live catalog', destination: 'catalog'),
       const _ActionTile(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Manage waiting activations', destination: 'active'),
       const _ActionTile(icon: Icons.sms_outlined, title: 'Your orders', subtitle: 'View activations and SMS status', destination: 'orders'),
+      const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
+      const SizedBox(height: 18),
+      const Text('Help & resources', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 10),
+      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Support Center', subtitle: 'Chat with the Numelixa Help Team', destination: 'support'),
+      const _ActionTile(icon: Icons.menu_book_rounded, title: 'For Clients', subtitle: 'Getting started and practical help', destination: 'clients'),
+      const _ActionTile(icon: Icons.code_rounded, title: 'Developer Center', subtitle: 'API documentation and integration guides', destination: 'developer'),
+      const _ActionTile(icon: Icons.handshake_outlined, title: 'For Partners', subtitle: 'Business and integration enquiries', destination: 'partners'),
       const SizedBox(height: 14),
-      const Text('Information shown here is retrieved from Numelixa APIs. If the service is unavailable, no example balance or order is substituted.', style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 12)),
+      const Text('Balances, orders and availability are loaded from Numelixa services. If a service is unavailable, no demo data is substituted.', style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 12)),
     ]);
   }
 }
@@ -1141,6 +1149,11 @@ class _ActionTile extends StatelessWidget {
           'catalog' => const _CatalogPage(),
           'orders' => const _OrdersPage(),
           'active' => const _ActiveNumbersPage(),
+          'notifications' => const _NotificationsPage(),
+          'support' => const _SupportCenterPage(),
+          'clients' => const _ClientHelpPage(),
+          'developer' => const _DeveloperCenterPage(),
+          'partners' => const _PartnerCenterPage(),
           _ => const _NotificationsPage(),
         };
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -3036,8 +3049,11 @@ class _AccountPageState extends State<_AccountPage> {
           }
         },
       )),
-      Card(child: ListTile(leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan), title: const Text('Help Team Chat'), subtitle: const Text('Chat with Numelixa support'), trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16), onTap: () { final token = context.read<AuthService>().accessToken; Navigator.of(context).push(MaterialPageRoute(builder: (_) => HelpTeamScreen(accessToken: token))); })),
-      Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Help & support'), subtitle: const Text('support.numelixa.com'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://support.numelixa.com'), mode: LaunchMode.externalApplication))),
+      Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Support Center'), subtitle: const Text('Chat, help articles and contact options'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage())))),
+      Card(child: ListTile(leading: const Icon(Icons.menu_book_rounded, color: AppTheme.cyan), title: const Text('For Clients'), subtitle: const Text('Getting started and troubleshooting'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _ClientHelpPage())))),
+      Card(child: ListTile(leading: const Icon(Icons.code_rounded, color: AppTheme.cyan), title: const Text('Developer Center'), subtitle: const Text('API documentation and integration portal'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DeveloperCenterPage())))),
+      Card(child: ListTile(leading: const Icon(Icons.handshake_outlined, color: AppTheme.violet), title: const Text('For Partners'), subtitle: const Text('Business and technical partnership enquiries'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _PartnerCenterPage())))),
+      Card(child: ListTile(leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan), title: const Text('Help Team Chat'), subtitle: const Text('Open your private support conversation'), trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16), onTap: () { final token = context.read<AuthService>().accessToken; Navigator.of(context).push(MaterialPageRoute(builder: (_) => HelpTeamScreen(accessToken: token))); })),
       Card(child: ListTile(leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)), title: const Text('WhatsApp support'), subtitle: const Text('Chat with us · +252 907 868526'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication))),
       Card(child: ValueListenableBuilder<String>(
         valueListenable: context.read<NotificationService>().registrationStatus,
@@ -3375,3 +3391,167 @@ class _AdminUserDetailsPageState extends State<_AdminUserDetailsPage>{
  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('User history')),body:FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final d=s.data??{};if(d['ok']!=true)return _RetryState(message:(d['error']??'Unable to load user history').toString(),onRetry:()=>setState(_load));final u=d['user'] as Map<String,dynamic>;final payments=d['payments'] is List?d['payments'] as List:const [],transactions=d['transactions'] is List?d['transactions'] as List:const [],orders=d['orders'] is List?d['orders'] as List:const [];return ListView(padding:const EdgeInsets.all(16),children:[Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text((u['name']??'User').toString(),style:const TextStyle(fontSize:21,fontWeight:FontWeight.w900)),SelectableText('Numelixa ID: '+widget.userId),Text((u['email']??'').toString()),Text('Wallet: '+(NumberFormatHelper.money((double.tryParse((u['coins']??0).toString())??0)/100))),Text('Referral balance: '+(NumberFormatHelper.money((double.tryParse((u['referralBalanceCents']??0).toString())??0)/100)))]))),const Text('PAYMENTS',style:TextStyle(fontWeight:FontWeight.w900)),for(final p in payments.whereType<Map>())Card(child:ListTile(title:Text((p['method']??'Payment').toString()+' · '+NumberFormatHelper.money(double.tryParse((p['amountUsd']??0).toString())??0)),subtitle:Text((p['status']??'').toString()+' · '+(p['orderId']??'').toString()))),const Text('WALLET LEDGER',style:TextStyle(fontWeight:FontWeight.w900)),for(final t in transactions.whereType<Map>())Card(child:ListTile(title:Text((t['type']??'Transaction').toString()+' · '+(t['amount']??0).toString()+' credits'),subtitle:Text((t['description']??'').toString()+' · '+(t['reference']??'').toString()))),const Text('NUMBER ORDERS',style:TextStyle(fontWeight:FontWeight.w900)),for(final o in orders.whereType<Map>())Card(child:ListTile(title:Text((o['service']??'Service').toString()+' · '+(o['country']??'').toString()),subtitle:Text((o['phone']??'').toString()+' · '+(o['status']??'').toString()))) ]);}));
 }
 class NumberFormatHelper { static String money(double value)=>'\$'+value.toStringAsFixed(2)+' USD'; }
+
+
+class _ResourcePageFrame extends StatelessWidget {
+  const _ResourcePageFrame({required this.title, required this.subtitle, required this.icon, required this.children});
+  final String title, subtitle;
+  final IconData icon;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(title)),
+    body: ListView(padding: const EdgeInsets.fromLTRB(18, 12, 18, 28), children: [
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.panel,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppTheme.glassBorder),
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: AppTheme.blue.withValues(alpha: .16), borderRadius: BorderRadius.circular(15)), child: Icon(icon, color: AppTheme.cyan, size: 25)),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -.4)),
+            const SizedBox(height: 5),
+            Text(subtitle, style: const TextStyle(color: AppTheme.muted, height: 1.45)),
+          ])),
+        ]),
+      ),
+      const SizedBox(height: 18),
+      ...children,
+    ]),
+  );
+}
+
+class _SupportCenterPage extends StatelessWidget {
+  const _SupportCenterPage();
+  @override
+  Widget build(BuildContext context) => _ResourcePageFrame(
+    title: 'Support Center',
+    subtitle: 'Get help from the official Numelixa support team.',
+    icon: Icons.support_agent_rounded,
+    children: [
+      Card(child: ListTile(
+        leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan),
+        title: const Text('Private Help Team Chat'),
+        subtitle: const Text('Continue a support conversation inside Numelixa.'),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () {
+          final token = context.read<AuthService>().accessToken;
+          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: token)));
+        },
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)),
+        title: const Text('WhatsApp support'),
+        subtitle: const Text('+252 907 868526 · Open official support chat'),
+        trailing: const Icon(Icons.open_in_new_rounded),
+        onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.help_outline_rounded, color: AppTheme.cyan),
+        title: const Text('Online Help Center'),
+        subtitle: const Text('Open the official Numelixa support website.'),
+        trailing: const Icon(Icons.open_in_new_rounded),
+        onTap: () => launchUrl(Uri.parse('https://support.numelixa.com/'), mode: LaunchMode.externalApplication),
+      )),
+      const Padding(padding: EdgeInsets.fromLTRB(4, 8, 4, 0), child: Text('Support availability and ticket options are shown by the official support service. The app does not display invented ticket statuses.', style: TextStyle(color: AppTheme.muted, height: 1.5, fontSize: 12))),
+    ],
+  );
+}
+
+class _ClientHelpPage extends StatelessWidget {
+  const _ClientHelpPage();
+  @override
+  Widget build(BuildContext context) => _ResourcePageFrame(
+    title: 'For Clients',
+    subtitle: 'A practical guide to using Numelixa virtual numbers.',
+    icon: Icons.menu_book_rounded,
+    children: [
+      const Text('Getting started', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8),
+      for (final item in const [
+        ('01', 'Create your account', 'Register or sign in with an available authentication method. Complete any requested email verification.'),
+        ('02', 'Add funds', 'Open Wallet, choose an amount and select one of the payment methods currently available to your account.'),
+        ('03', 'Choose a service', 'Open Numbers and search the live service catalog. Only services returned by Numelixa are shown.'),
+        ('04', 'Select a country', 'Choose a country from the live availability list. The server validates the current price and stock when you place an order.'),
+        ('05', 'Receive your SMS', 'Open Orders to view your activation. Check for an SMS code while the activation is waiting.'),
+        ('06', 'Review your order', 'Use the activation details to see its current status and available actions.'),
+      ])
+        Card(child: Padding(padding: const EdgeInsets.all(14), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(item.$1, style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w900, fontSize: 15)),
+          const SizedBox(width: 13),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(item.$2, style: const TextStyle(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text(item.$3, style: const TextStyle(color: AppTheme.muted, height: 1.45, fontSize: 12)),
+          ])),
+        ]))),
+      const SizedBox(height: 12),
+      const Text('Need troubleshooting?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+      Card(child: ListTile(leading: const Icon(Icons.sms_failed_outlined, color: AppTheme.warning), title: const Text('SMS has not arrived'), subtitle: const Text('Check the activation status and use Check for SMS code. If it remains unresolved, contact Support.'), isThreeLine: true)),
+      Card(child: ListTile(leading: const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.cyan), title: const Text('Payment is pending'), subtitle: const Text('Refresh the payment status in Wallet. Do not submit a duplicate payment while the first request is pending.'), isThreeLine: true)),
+      Card(child: ListTile(leading: const Icon(Icons.public_off_rounded, color: AppTheme.muted), title: const Text('No country or number available'), subtitle: const Text('Availability can change. Refresh the country list and try again later.'), isThreeLine: true)),
+      FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage())), icon: const Icon(Icons.support_agent_rounded), label: const Text('Contact Support')),
+    ],
+  );
+}
+
+class _DeveloperCenterPage extends StatelessWidget {
+  const _DeveloperCenterPage();
+  @override
+  Widget build(BuildContext context) => _ResourcePageFrame(
+    title: 'Developer Center',
+    subtitle: 'Build with the Numelixa API using the official developer resources.',
+    icon: Icons.code_rounded,
+    children: [
+      Card(child: ListTile(
+        leading: const Icon(Icons.menu_book_rounded, color: AppTheme.cyan),
+        title: const Text('API Documentation'),
+        subtitle: const Text('Authentication, endpoints, examples, errors and security.'),
+        trailing: const Icon(Icons.open_in_new_rounded),
+        onTap: () => launchUrl(Uri.parse('https://docs.numelixa.com/'), mode: LaunchMode.externalApplication),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.key_rounded, color: AppTheme.violet),
+        title: const Text('Developer Portal & API keys'),
+        subtitle: const Text('Manage your production API key and webhook settings on the official website.'),
+        trailing: const Icon(Icons.open_in_new_rounded),
+        onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/developers'), mode: LaunchMode.externalApplication),
+      )),
+      const Card(child: Padding(padding: EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Keep API credentials private', style: TextStyle(fontWeight: FontWeight.w900)),
+        SizedBox(height: 6),
+        Text('Do not embed production API keys in an Android app, browser code or public repository. Use a trusted server to make authenticated API requests.', style: TextStyle(color: AppTheme.muted, height: 1.5, fontSize: 12)),
+      ]))),
+    ],
+  );
+}
+
+class _PartnerCenterPage extends StatelessWidget {
+  const _PartnerCenterPage();
+  @override
+  Widget build(BuildContext context) => _ResourcePageFrame(
+    title: 'For Partners',
+    subtitle: 'Explore business, technical and integration opportunities with Numelixa.',
+    icon: Icons.handshake_outlined,
+    children: [
+      for (final item in const [
+        (Icons.business_outlined, 'Business partnerships', 'For organizations interested in collaboration and platform services.'),
+        (Icons.api_rounded, 'API integrations', 'For products and platforms evaluating a server-to-server integration.'),
+        (Icons.storefront_outlined, 'Reseller enquiries', 'For businesses interested in discussing distribution opportunities.'),
+        (Icons.hub_outlined, 'Technical partnerships', 'For infrastructure, telecom and technology integration enquiries.'),
+      ])
+        Card(child: ListTile(
+          leading: Icon(item.$1, color: AppTheme.cyan),
+          title: Text(item.$2, style: const TextStyle(fontWeight: FontWeight.w800)),
+          subtitle: Text(item.$3, style: const TextStyle(color: AppTheme.muted, height: 1.4)),
+          isThreeLine: true,
+        )),
+      const Card(child: Padding(padding: EdgeInsets.all(15), child: Text('For verified partnership contact details, use the official Numelixa Support Center. This app does not publish an unverified business email or claim an affiliate programme is active.', style: TextStyle(color: AppTheme.muted, height: 1.5)))),
+      FilledButton.icon(onPressed: () => launchUrl(Uri.parse('https://support.numelixa.com/'), mode: LaunchMode.externalApplication), icon: const Icon(Icons.open_in_new_rounded), label: const Text('Contact Numelixa')),
+    ],
+  );
+}
