@@ -1637,6 +1637,18 @@ class _OrdersPageState extends State<_OrdersPage> {
       !_isCanceled((order['status'] ?? '').toString()) &&
       !_isSuccessful(order) && !_isFailed(order);
 
+  String _remainingTime(Map<String, dynamic> order) {
+    final raw = order['expiresAt'] ?? order['expires_at'];
+    if (raw == null) return '';
+    final expires = DateTime.tryParse(raw.toString())?.toLocal();
+    if (expires == null) return '';
+    final seconds = expires.difference(DateTime.now()).inSeconds;
+    if (seconds <= 0) return 'Activation expired';
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    return hours > 0 ? 'Expires in ${hours}h ${minutes}m' : 'Expires in ${minutes}m ${seconds % 60}s';
+  }
+
   Future<void> _copyText(String value, String successMessage) async {
     if (value.trim().isEmpty || value == 'Number unavailable') return;
     await Clipboard.setData(ClipboardData(text: value));
@@ -1838,6 +1850,8 @@ class _OrdersPageState extends State<_OrdersPage> {
                                 ]),
                                 const SizedBox(height: 5),
                                 Row(children: [const Text('Country: '), Expanded(child: Text((order['country'] ?? order['countryCode'] ?? '—').toString()))]),
+                                if (_remainingTime(order).isNotEmpty)
+                                  Padding(padding: const EdgeInsets.only(top: 5), child: Text(_remainingTime(order), style: const TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700))),
                                 if (_smsCode(order).isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   Row(children: [
@@ -2153,6 +2167,8 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   String _depositStatus = 'pending';
   int _depositSecondsLeft = 0;
   StateSetter? _updateDepositDialog;
+  String _transactionFilter = 'all';
+  String _transactionSearch = '';
 
   @override
   void dispose() { _localPhone.dispose(); _ethiopiaPhone.dispose(); _ethiopiaPayerName.dispose(); _amountController.dispose(); _cryptoSearch.dispose(); _depositTimer?.cancel(); _depositStatusTimer?.cancel(); _localPaymentTimer?.cancel(); _ethiopiaPaymentTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
@@ -2841,12 +2857,24 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
         const SizedBox(height: 20),
         const Text('Transaction history', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
+        TextField(onChanged: (value) => setState(() => _transactionSearch = value), decoration: InputDecoration(hintText: 'Search description or reference', prefixIcon: const Icon(Icons.search_rounded), suffixIcon: _transactionSearch.isEmpty ? null : IconButton(onPressed: () => setState(() => _transactionSearch = ''), icon: const Icon(Icons.close_rounded)))),
+        const SizedBox(height: 8),
+        Wrap(spacing: 7, children: [for (final option in const [('all','All'),('credit','Added'),('debit','Spent')]) ChoiceChip(label: Text(option.$2), selected: _transactionFilter == option.$1, onSelected: (_) => setState(() => _transactionFilter = option.$1))]),
+        const SizedBox(height: 8),
         FutureBuilder<Map<String, dynamic>>(future: _transactions, builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()));
           if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
           final items = _asMaps(snapshot.data?['transactions']);
-          if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions found yet.')));
-          return Column(children: items.map((item) {
+          final query = _transactionSearch.trim().toLowerCase();
+          final filteredItems = items.where((item) {
+            final type = (item['type'] ?? '').toString().toLowerCase();
+            if (_transactionFilter != 'all' && type != _transactionFilter) return false;
+            final searchable = '${item['description'] ?? ''} ${item['reference'] ?? ''} ${item['createdAt'] ?? ''}'.toLowerCase();
+            return query.isEmpty || searchable.contains(query);
+          }).toList();
+          if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No wallet ledger transactions have been recorded yet.')));
+          if (filteredItems.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions match these filters.')));
+          return Column(children: filteredItems.map((item) {
             final isCredit = item['type'] == 'credit';
             final amount = double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0;
             final reference = (item['reference'] ?? '').toString();
@@ -3106,10 +3134,12 @@ class _AccountPageState extends State<_AccountPage> {
           }
         },
       )),
+      const Padding(padding: EdgeInsets.fromLTRB(4, 16, 4, 7), child: Text('HELP & RESOURCES', style: TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2))),
       Card(child: ListTile(leading: const Icon(Icons.support_agent_rounded, color: AppTheme.cyan), title: const Text('Support Center'), subtitle: const Text('Chat, help articles and contact options'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage())))),
       Card(child: ListTile(leading: const Icon(Icons.menu_book_rounded, color: AppTheme.cyan), title: const Text('For Clients'), subtitle: const Text('Getting started and troubleshooting'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _ClientHelpPage())))),
       Card(child: ListTile(leading: const Icon(Icons.code_rounded, color: AppTheme.cyan), title: const Text('Developer Center'), subtitle: const Text('API documentation and integration portal'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _DeveloperCenterPage())))),
       Card(child: ListTile(leading: const Icon(Icons.handshake_outlined, color: AppTheme.violet), title: const Text('For Partners'), subtitle: const Text('Business and technical partnership enquiries'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _PartnerCenterPage())))),
+      Card(child: ListTile(leading: const Icon(Icons.gavel_rounded, color: AppTheme.cyan), title: const Text('Legal Center'), subtitle: const Text('Terms, privacy, refunds, acceptable use and account deletion'), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _LegalCenterPage())))),
       Card(child: ListTile(leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan), title: const Text('Help Team Chat'), subtitle: const Text('Open your private support conversation'), trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16), onTap: () { final token = context.read<AuthService>().accessToken; Navigator.of(context).push(MaterialPageRoute(builder: (_) => HelpTeamScreen(accessToken: token))); })),
       Card(child: ListTile(leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)), title: const Text('WhatsApp support'), subtitle: const Text('Chat with us · +252 907 868526'), trailing: const Icon(Icons.open_in_new_rounded), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication))),
       Card(child: ValueListenableBuilder<String>(
