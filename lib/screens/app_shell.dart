@@ -33,6 +33,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _wasBackgrounded = false;
   bool _biometricUnlockInProgress = false;
   bool _updateCheckStarted = false;
+  Timer? _accessCheckTimer;
+  bool _accessCheckInProgress = false;
   Map<String, dynamic>? _accessBlock;
 
   @override
@@ -40,6 +42,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     appNotificationRoute.addListener(_handleNotificationRoute);
+    _accessCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshAccessStatus());
   }
 
   @override
@@ -74,6 +77,28 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     }
   }
 
+
+  Future<void> _refreshAccessStatus() async {
+    if (!mounted || _accessCheckInProgress) return;
+    _accessCheckInProgress = true;
+    try {
+      final access = await ApiClient().get('/api/mobile/access-check');
+      if (!mounted) return;
+      if (access['allowed'] == false) {
+        final next = Map<String, dynamic>.from(access);
+        if (_accessBlock == null || _accessBlock?['reason'] != next['reason'] ||
+            _accessBlock?['message'] != next['message']) {
+          setState(() => _accessBlock = next);
+        }
+      } else if (_accessBlock != null) {
+        setState(() => _accessBlock = null);
+      }
+    } catch (_) {
+      // A temporary status endpoint outage must not unexpectedly lock users out.
+    } finally {
+      _accessCheckInProgress = false;
+    }
+  }
 
   Future<void> _checkForAppUpdate() async {
     if (_updateCheckStarted || !mounted) return;
@@ -200,6 +225,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _accessCheckTimer?.cancel();
     appNotificationRoute.removeListener(_handleNotificationRoute);
     super.dispose();
   }
