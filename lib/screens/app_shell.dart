@@ -3540,7 +3540,7 @@ class _PartnerCenterPage extends StatelessWidget {
     children: [
       for (final item in const [
         (Icons.business_outlined, 'Business partnerships', 'For organizations interested in collaboration and platform services.'),
-        (Icons.api_rounded, 'API integrations', 'For products and platforms evaluating a server-to-server integration.'),
+        (Icons.settings_ethernet_rounded, 'API integrations', 'For products and platforms evaluating a server-to-server integration.'),
         (Icons.storefront_outlined, 'Reseller enquiries', 'For businesses interested in discussing distribution opportunities.'),
         (Icons.hub_outlined, 'Technical partnerships', 'For infrastructure, telecom and technology integration enquiries.'),
       ])
