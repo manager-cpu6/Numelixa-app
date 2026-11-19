@@ -1462,6 +1462,7 @@ class _OrdersPage extends StatefulWidget {
 
 class _OrdersPageState extends State<_OrdersPage> {
   String _selected = 'active';
+  String _search = '';
   late Future<Map<String, dynamic>> _future;
   Timer? _refreshTimer;
   bool _loadingRefresh = false;
@@ -1627,8 +1628,14 @@ class _OrdersPageState extends State<_OrdersPage> {
     return DateTime.now().difference(receivedAt) >= const Duration(minutes: 10);
   }
 
+  bool _isFailed(Map<String, dynamic> order) {
+    final status = (order['status'] ?? '').toString().toLowerCase();
+    return ['failed', 'failure', 'error', 'expired', 'rejected'].any(status.contains);
+  }
+
   bool _isActive(Map<String, dynamic> order) =>
-      !_isCanceled((order['status'] ?? '').toString()) && !_isSuccessful(order);
+      !_isCanceled((order['status'] ?? '').toString()) &&
+      !_isSuccessful(order) && !_isFailed(order);
 
   Future<void> _copyText(String value, String successMessage) async {
     if (value.trim().isEmpty || value == 'Number unavailable') return;
@@ -1715,8 +1722,16 @@ class _OrdersPageState extends State<_OrdersPage> {
             : <Map<String, dynamic>>[];
         final filtered = orders.where((order) {
           final status = (order['status'] ?? '').toString();
+          final query = _search.trim().toLowerCase();
+          final searchable = [
+            order['service'], order['country'], order['countryCode'],
+            order['phone'], order['phoneNumber'], order['number'],
+            order['id'], order['_id'], order['status'], order['code'], order['fullSms'],
+          ].where((value) => value != null).join(' ').toLowerCase();
+          if (query.isNotEmpty && !searchable.contains(query)) return false;
           if (_selected == 'active') return _isActive(order);
           if (_selected == 'successful') return _isSuccessful(order);
+          if (_selected == 'failed') return _isFailed(order);
           return _isCanceled(status);
         }).toList()
           ..sort((a, b) {
@@ -1728,24 +1743,52 @@ class _OrdersPageState extends State<_OrdersPage> {
         return Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'active', label: Text('Activations')),
-                ButtonSegment(value: 'successful', label: Text('Successful')),
-                ButtonSegment(value: 'canceled', label: Text('Canceled')),
-              ],
-              selected: {_selected},
-              onSelectionChanged: (value) => setState(() => _selected = value.first),
-            ),
+            child: Column(children: [
+              TextField(
+                onChanged: (value) => setState(() => _search = value),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Search service, country, number or order ID',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _search.isEmpty ? null : IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: () => setState(() => _search = ''),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: [
+                  for (final option in const [
+                    ('active', 'Active'),
+                    ('successful', 'Completed'),
+                    ('canceled', 'Cancelled'),
+                    ('failed', 'Failed'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 7),
+                      child: ChoiceChip(
+                        label: Text(option.$2),
+                        selected: _selected == option.$1,
+                        onSelected: (_) => setState(() => _selected = option.$1),
+                      ),
+                    ),
+                ]),
+              ),
+            ]),
           ),
           Expanded(
             child: filtered.isEmpty
               ? _RetryState(
                   message: _selected == 'active'
-                    ? 'New numbers stay here while waiting for SMS. You can copy the number or cancel the activation.'
+                    ? 'Active numbers waiting for an SMS appear here.'
                     : _selected == 'successful'
-                      ? 'Activations with a received code older than 10 minutes appear here.'
-                      : 'Canceled activations appear here.',
+                      ? 'Completed activations appear here after the code retention period.'
+                      : _selected == 'failed'
+                        ? 'Failed or expired activations appear here when the server reports that status.'
+                        : 'Cancelled activations appear here.',
                   onRetry: () => setState(_load),
                   empty: true,
                 )
@@ -1771,7 +1814,8 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   Text(
                                     _selected == 'active'
                                       ? (_smsCode(order).isEmpty ? 'Waiting for SMS' : 'Code received')
-                                      : _selected == 'successful' ? 'Successful' : 'Canceled',
+                                      : _selected == 'successful' ? 'Completed'
+                                        : _selected == 'failed' ? 'Failed' : 'Cancelled',
                                     style: TextStyle(
                                       color: _selected == 'active'
                                         ? AppTheme.cyan
