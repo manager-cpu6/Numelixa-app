@@ -60,13 +60,14 @@ The latest GitHub combined status returned a Vercel check failure caused by a bu
 
 ## Backend / owner requirements still open
 
-1. Add a unified authenticated payment-history endpoint for pending, completed, failed, rejected and refunded provider attempts, including a stable schema and idempotency/reference behavior.
-2. Publish and verify full Sifalo, Binance and Ethiopia payment request/response contracts before documenting them for third-party developers.
-3. Confirm numeric API rate quotas and reset headers.
-4. Decide whether to retire the legacy API-key sign-in path from the Android app; signing out does not revoke a developer API key.
-5. Confirm remote FCM lock-screen redaction and Android permission manifest on physical devices.
-6. Provide a machine-readable account deletion API only if the owner wants in-app deletion; until then the app links to the published policy and support channel.
-7. Confirm mobile session refresh/rotation beyond the current 30-day expiry.
-8. Confirm affiliate programme availability before advertising an affiliate application flow.
+1. Make the existing cancellation backend provider-aware: the verified `/api/v1/orders/cancel` route currently imports the 5SIM-specific cancel function rather than the active-provider `cancel` wrapper. With TigerSMS orders this may reject otherwise eligible cancellations. The mobile app now calls the correct v1 route but cannot fix this backend behavior without a backend change.
+2. Add a unified authenticated payment-history endpoint for pending, completed, failed, rejected and refunded provider attempts, including a stable schema and idempotency/reference behavior.
+3. Publish and verify full Sifalo, Binance and Ethiopia payment request/response contracts before documenting them for third-party developers.
+4. Confirm numeric API rate quotas and reset headers.
+5. Decide whether to retire the legacy API-key sign-in path from the Android app; signing out does not revoke a developer API key.
+6. Confirm remote FCM lock-screen redaction and Android permission manifest on physical devices.
+7. Provide a machine-readable account deletion API only if the owner wants in-app deletion; until then the app links to the published policy and support channel.
+8. Confirm mobile session refresh/rotation beyond the current 30-day expiry.
+9. Confirm affiliate programme availability before advertising an affiliate application flow.
 
 No website repository, backend API implementation, Vercel configuration or unrelated project was modified.
