@@ -13,8 +13,8 @@ Future<void> showPaymentReceipt(
   Widget line(String label, String text) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 5),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SizedBox(width: 112, child: Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w800))),
-      Expanded(child: Text(text.isEmpty ? '—' : text, textAlign: TextAlign.right, style: const TextStyle(color: Color(0xFF102A4C), fontSize: 10, fontWeight: FontWeight.w800))),
+      SizedBox(width: 112, child: Text(label, style: const TextStyle(color: AppTheme.muted, fontSize: 9, fontWeight: FontWeight.w800))),
+      Expanded(child: Text(text.isEmpty ? '—' : text, textAlign: TextAlign.right, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 10, fontWeight: FontWeight.w800))),
     ]),
   );
   await showDialog<void>(
@@ -49,19 +49,19 @@ Future<void> showPaymentReceipt(
                   ),
                   const SizedBox(width: 11),
                   const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('NUMELIXA', style: TextStyle(color: Color(0xFF102A4C), fontWeight: FontWeight.w900, letterSpacing: 1.6, fontSize: 16)),
-                    Text('OFFICIAL PAYMENT RECEIPT', style: TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                    Text('NUMELIXA', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.6, fontSize: 16)),
+                    Text('OFFICIAL PAYMENT RECEIPT', style: TextStyle(color: AppTheme.muted, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
                   ])),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(color: AppTheme.mint.withValues(alpha: .14), borderRadius: BorderRadius.circular(30)),
-                    child: const Text('VERIFIED', style: TextStyle(color: Color(0xFF087D58), fontSize: 9, fontWeight: FontWeight.w900)),
+                    child: const Text('VERIFIED', style: TextStyle(color: AppTheme.mint, fontSize: 9, fontWeight: FontWeight.w900)),
                   ),
                 ]),
                 const SizedBox(height: 20),
-                const Text('PAYMENT RECEIVED', style: TextStyle(color: Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
-                Text('USD ' + amount.toStringAsFixed(2), style: const TextStyle(color: Color(0xFF102A4C), fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1.1)),
-                const Text('Wallet credit confirmed', style: TextStyle(color: Color(0xFF0B9870), fontSize: 12, fontWeight: FontWeight.w800)),
+                const Text('PAYMENT RECEIVED', style: TextStyle(color: AppTheme.muted, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+                Text('USD ' + amount.toStringAsFixed(2), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1.1)),
+                const Text('Wallet credit confirmed', style: TextStyle(color: AppTheme.mint, fontSize: 12, fontWeight: FontWeight.w800)),
                 const Divider(height: 26, color: AppTheme.glassBorder),
                 line('RECEIPT NUMBER', value('receiptId')),
                 line('PAYMENT METHOD', value('service')),
@@ -79,9 +79,9 @@ Future<void> showPaymentReceipt(
                   child: QrImageView(data: value('receiptId').isEmpty ? fallbackReference : value('receiptId'), size: 100, backgroundColor: Colors.white),
                 )),
                 const SizedBox(height: 7),
-                Center(child: Text(value('receiptId'), style: const TextStyle(color: Color(0xFF102A4C), fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 11))),
+                Center(child: Text(value('receiptId'), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 11))),
                 const SizedBox(height: 12),
-                const Text('Generated from the Numelixa wallet ledger after successful server-side payment verification.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF64748B), fontSize: 10, height: 1.45)),
+                const Text('Generated from the Numelixa wallet ledger after successful server-side payment verification.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, fontSize: 10, height: 1.45)),
                 const SizedBox(height: 16),
                 FilledButton.icon(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.check_circle_outline_rounded), label: const Text('Done')),
               ],
