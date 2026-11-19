@@ -89,6 +89,10 @@ class ApiClient {
   Future<Map<String, dynamic>> _request(String method, String path,
       {Map<String, dynamic>? body, String? accessToken}) async {
     final uri = Uri.parse(_baseUrl ?? AppConfig.apiBase).resolve(path);
+    // Never send account credentials over cleartext HTTP.
+    if (uri.scheme != 'https') {
+      throw const ApiException('Numelixa API requests must use a secure HTTPS connection.');
+    }
     final deviceLabel = await _deviceLabel;
     final deviceId = await _deviceId;
     final headers = <String, String>{
@@ -105,14 +109,21 @@ class ApiClient {
       headers['Authorization'] = 'Bearer $accessToken';
     }
     try {
-      final request = switch (method) {
-        'GET' => _client.get(uri, headers: headers),
-        'DELETE' => _client.delete(uri, headers: headers, body: body == null ? null : jsonEncode(body)),
-        'PUT' => _client.put(uri, headers: headers, body: jsonEncode(body ?? {})),
-        'PATCH' => _client.patch(uri, headers: headers, body: jsonEncode(body ?? {})),
-        _ => _client.post(uri, headers: headers, body: jsonEncode(body ?? {})),
-      };
-      final response = await request.timeout(const Duration(seconds: 20));
+      final request = http.Request(method, uri)
+        ..headers.addAll(headers)
+        ..followRedirects = false
+        ..maxRedirects = 0;
+      if (method != 'GET' && (method != 'DELETE' || body != null)) {
+        request.body = jsonEncode(body ?? <String, dynamic>{});
+      }
+      final streamed = await _client.send(request).timeout(const Duration(seconds: 20));
+      final response = await http.Response.fromStream(streamed).timeout(const Duration(seconds: 20));
+      if (response.statusCode >= 300 && response.statusCode < 400) {
+        throw ApiException(
+          'The API returned a redirect. Check the official Numelixa API address; credentials were not forwarded.',
+          statusCode: response.statusCode,
+        );
+      }
       final decoded = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException(_friendlyMessage(response.statusCode, decoded),
