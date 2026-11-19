@@ -846,6 +846,7 @@ class _AuthScreenState extends State<_AuthScreen> {
                     const SizedBox(height: 12),
                     TextField(controller: _apiKey, obscureText: !_showApiKey,
                       autocorrect: false, decoration: fieldDecoration('Numelixa API key', Icons.vpn_key_rounded)),
+                    const Padding(padding: EdgeInsets.only(top: 7), child: Text('Advanced legacy sign-in. API keys are long-lived developer secrets. Use only on a trusted personal device; signing out does not revoke this key.', style: TextStyle(color: AppTheme.warning, fontSize: 11, height: 1.4))),
                     const SizedBox(height: 9),
                     OutlinedButton(onPressed: auth.isValidating ? null : _apiKeyLogin,
                       child: const Text('Connect API key')),
