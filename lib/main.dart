@@ -9,6 +9,15 @@ import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'screens/app_shell.dart';
 
+String notificationIconFor(Map<String, dynamic> data) {
+  final type = (data['type'] ?? '').toString().toLowerCase();
+  if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
+  if (type.contains('admin') || type.contains('announcement') || type == 'push_test') return '@drawable/ic_notification_admin';
+  if (type.contains('auto') || type.contains('automation') || type.contains('background')) return '@drawable/ic_notification_auto';
+  if (type.contains('number') || type.contains('order') || type.contains('activation') || type.contains('purchase')) return '@drawable/ic_notification_number';
+  return '@drawable/ic_notification_admin';
+}
+
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -52,7 +61,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
-      icon: '@drawable/ic_stat_numelixa',
+      icon: notificationIconFor(data),
       actions: code == null ? null : const [
         AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
       ],
