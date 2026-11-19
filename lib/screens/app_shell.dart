@@ -2558,8 +2558,8 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 LayoutBuilder(builder: (context, constraints) {
                   final trackWidth = constraints.maxWidth;
                   const handleWidth = 50.0;
-                  final left = (_ethiopiaSwipe * (trackWidth - handleWidth)).clamp(0.0, trackWidth - handleWidth);
-                  void update(Offset point) { setState(() => _ethiopiaSwipe = ((point.dx - handleWidth / 2) / (trackWidth - handleWidth)).clamp(0.0, 1.0)); }
+                  final left = (_ethiopiaSwipe * (trackWidth - handleWidth)).clamp(0.0, trackWidth - handleWidth).toDouble();
+                  void update(Offset point) { setState(() => _ethiopiaSwipe = ((point.dx - handleWidth / 2) / (trackWidth - handleWidth)).clamp(0.0, 1.0).toDouble()); }
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapDown: _creating ? null : (details) => update(details.localPosition),
