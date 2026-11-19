@@ -1287,14 +1287,17 @@ class _CatalogPageState extends State<_CatalogPage> {
       backgroundColor: const Color(0xFF102844),
       child: Padding(
         padding: const EdgeInsets.all(8),
-        child: Image.network(imageUrl, fit: BoxFit.contain,
+        child: Image.network(
+          slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug',
+          fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => Image.network(
-            slug == null ? 'https://cdn.simpleicons.org/${key.isEmpty ? 'app' : key}' : 'https://cdn.simpleicons.org/$slug',
+            imageUrl,
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => const Center(
               child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
             ),
-          )),
+          ),
+        ),
       ),
     );
   }
@@ -1556,12 +1559,15 @@ class _OrdersPageState extends State<_OrdersPage> {
       backgroundColor: const Color(0xFF102844),
       child: Padding(
         padding: const EdgeInsets.all(7),
-        child: Image.network(imageUrl, width: 26, height: 26, fit: BoxFit.contain,
+        child: Image.network(
+          slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug',
+          width: 26, height: 26, fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => Image.network(
-            slug == null ? 'https://cdn.simpleicons.org/$name' : 'https://cdn.simpleicons.org/$slug',
+            imageUrl,
             width: 26, height: 26, fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21)),
-          )),
+          ),
+        ),
       ),
     );
   }
