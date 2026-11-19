@@ -195,9 +195,9 @@ jobs:
             <path android:fillColor="#173DAB" android:strokeColor="#20E7FF" android:strokeWidth="2" android:pathData="M32,17 L48,23 V32 C48,42 41,49 32,54 C23,49 16,42 16,32 V23 Z"/>
             <path android:fillColor="#FFFFFF" android:pathData="M32,25 L36,33 H45 L38,39 L41,48 L32,43 L23,48 L26,39 L19,33 H28 Z"/>
             <path android:fillColor="#FFB51B" android:strokeColor="#8A4A00" android:strokeWidth="1.4" android:pathData="M10,12 L17,18 L32,6 L47,18 L54,12 L50,25 L14,25 Z"/>
-            <circle android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:cx="10" android:cy="12" android:r="4"/>
-            <circle android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:cx="32" android:cy="6" android:r="4"/>
-            <circle android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:cx="54" android:cy="12" android:r="4"/>
+            <path android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:pathData="M10,8 A4,4 0,1 0,10 16 A4,4 0,1 0,10 8 Z"/>
+            <path android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:pathData="M32,2 A4,4 0,1 0,32 10 A4,4 0,1 0,32 2 Z"/>
+            <path android:fillColor="#FFD64A" android:strokeColor="#9A5600" android:strokeWidth="1" android:pathData="M54,8 A4,4 0,1 0,54 16 A4,4 0,1 0,54 8 Z"/>
           </vector>
           XML
           cat > android/app/src/main/res/drawable-nodpi/ic_notification_number_color.xml <<'XML'
@@ -212,9 +212,9 @@ jobs:
           cat > android/app/src/main/res/drawable-nodpi/ic_notification_otp_color.xml <<'XML'
           <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
             <path android:fillColor="#F4F8FF" android:strokeColor="#0A55D9" android:strokeWidth="3" android:pathData="M8,8 H43 C49,8 53,12 53,18 V35 C53,41 49,45 43,45 H25 L12,56 V45 H8 C4,45 2,41 2,37 V18 C2,12 4,8 8,8 Z"/>
-            <circle android:fillColor="#123B9D" android:cx="16" android:cy="27" android:r="3.5"/>
-            <circle android:fillColor="#123B9D" android:cx="27" android:cy="27" android:r="3.5"/>
-            <circle android:fillColor="#123B9D" android:cx="38" android:cy="27" android:r="3.5"/>
+            <path android:fillColor="#123B9D" android:pathData="M16,23.5 A3.5,3.5 0,1 0,16 30.5 A3.5,3.5 0,1 0,16 23.5 Z"/>
+            <path android:fillColor="#123B9D" android:pathData="M27,23.5 A3.5,3.5 0,1 0,27 30.5 A3.5,3.5 0,1 0,27 23.5 Z"/>
+            <path android:fillColor="#123B9D" android:pathData="M38,23.5 A3.5,3.5 0,1 0,38 30.5 A3.5,3.5 0,1 0,38 23.5 Z"/>
             <path android:fillColor="#0755E8" android:strokeColor="#13D8FF" android:strokeWidth="2.5" android:pathData="M45,32 L61,38 V48 C61,56 55,61 45,64 C35,61 29,56 29,48 V38 Z"/>
             <path android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M37,48 L43,54 L54,41"/>
           </vector>
