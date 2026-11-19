@@ -1637,6 +1637,14 @@ class _OrdersPageState extends State<_OrdersPage> {
       !_isCanceled((order['status'] ?? '').toString()) &&
       !_isSuccessful(order) && !_isFailed(order);
 
+  String _priceLabel(Map<String, dynamic> order) {
+    final raw = order['price'];
+    if (raw == null) return '';
+    final value = double.tryParse(raw.toString());
+    final currency = (order['currency'] ?? 'USD').toString().toUpperCase();
+    return value == null ? 'Price: $raw $currency' : 'Price: ${value.toStringAsFixed(2)} $currency';
+  }
+
   String _remainingTime(Map<String, dynamic> order) {
     final raw = order['expiresAt'] ?? order['expires_at'];
     if (raw == null) return '';
@@ -1850,6 +1858,8 @@ class _OrdersPageState extends State<_OrdersPage> {
                                 ]),
                                 const SizedBox(height: 5),
                                 Row(children: [const Text('Country: '), Expanded(child: Text((order['country'] ?? order['countryCode'] ?? '—').toString()))]),
+                                if (_priceLabel(order).isNotEmpty)
+                                  Padding(padding: const EdgeInsets.only(top: 4), child: Text(_priceLabel(order), style: const TextStyle(color: AppTheme.muted, fontSize: 12, fontWeight: FontWeight.w700))),
                                 if (_remainingTime(order).isNotEmpty)
                                   Padding(padding: const EdgeInsets.only(top: 5), child: Text(_remainingTime(order), style: const TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700))),
                                 if (_smsCode(order).isNotEmpty) ...[
@@ -2067,7 +2077,7 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
             const SizedBox(height: 14),
             _DetailLine(label: 'Country', value: (order['country'] ?? '').toString()),
             _DetailLine(label: 'Status', value: status),
-            _DetailLine(label: 'Price', value: '${order['price'] ?? 0} coins'),
+            _DetailLine(label: 'Price', value: order['price'] == null ? 'Unavailable' : '${order['price']} ${(order['currency'] ?? 'USD').toString()}'),
             _DetailLine(label: 'Created', value: (order['createdAt'] ?? '').toString()),
             _DetailLine(label: 'Expires', value: (order['expiresAt'] ?? '').toString()),
           ]))),
@@ -2302,6 +2312,41 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   }
 
   Widget _receiptLine(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 112, child: Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w800))), Expanded(child: Text(value.isEmpty ? '—' : value, textAlign: TextAlign.right, style: const TextStyle(color: Color(0xFF102A4C), fontSize: 10, fontWeight: FontWeight.w800)))]));
+  Future<void> _showTransactionDetails(Map<String, dynamic> item) async {
+    final type = (item['type'] ?? 'transaction').toString();
+    final reference = (item['reference'] ?? '').toString();
+    final amount = double.tryParse((item['amountUsd'] ?? '').toString());
+    final isCredit = type == 'credit' || type == 'refund';
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.backgroundElevated,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: AppTheme.glassBorder, borderRadius: BorderRadius.circular(8)))),
+          const SizedBox(height: 18),
+          const Text('Transaction details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 14),
+          Text((item['description'] ?? type).toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(amount == null ? 'Amount unavailable' : '${isCredit ? '+' : '−'}USD ${amount.abs().toStringAsFixed(2)}', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, color: isCredit ? AppTheme.mint : AppTheme.error)),
+          const Divider(height: 24),
+          _DetailLine(label: 'Type', value: type),
+          _DetailLine(label: 'Date', value: (item['createdAt'] ?? '').toString()),
+          _DetailLine(label: 'Currency', value: (item['currency'] ?? 'USD').toString()),
+          _DetailLine(label: 'Balance after', value: item['balanceAfterUsd'] == null ? 'Unavailable' : 'USD ${item['balanceAfterUsd']}'),
+          _DetailLine(label: 'Reference', value: reference.isEmpty ? 'Not provided' : reference),
+          if (type == 'credit' && reference.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(onPressed: () { Navigator.pop(sheetContext); _showOfficialReceipt(reference); }, icon: const Icon(Icons.receipt_long_rounded), label: const Text('View official receipt')),
+          ],
+        ]),
+      )),
+    );
+  }
+
   Future<void> _showOfficialReceipt(String reference) async {
     final token = context.read<AuthService>().accessToken;
     if (token == null || reference.trim().isEmpty || !mounted) return;
@@ -2857,9 +2902,11 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
         const SizedBox(height: 20),
         const Text('Transaction history', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
+        const Text('This is your wallet ledger. Pending and failed payment requests are not included in this transaction endpoint.', style: TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.4)),
+        const SizedBox(height: 8),
         TextField(onChanged: (value) => setState(() => _transactionSearch = value), decoration: InputDecoration(hintText: 'Search description or reference', prefixIcon: const Icon(Icons.search_rounded), suffixIcon: _transactionSearch.isEmpty ? null : IconButton(onPressed: () => setState(() => _transactionSearch = ''), icon: const Icon(Icons.close_rounded)))),
         const SizedBox(height: 8),
-        Wrap(spacing: 7, children: [for (final option in const [('all','All'),('credit','Added'),('debit','Spent')]) ChoiceChip(label: Text(option.$2), selected: _transactionFilter == option.$1, onSelected: (_) => setState(() => _transactionFilter = option.$1))]),
+        Wrap(spacing: 7, children: [for (final option in const [('all','All'),('credit','Added'),('debit','Spent'),('refund','Refunds')]) ChoiceChip(label: Text(option.$2), selected: _transactionFilter == option.$1, onSelected: (_) => setState(() => _transactionFilter = option.$1))]),
         const SizedBox(height: 8),
         FutureBuilder<Map<String, dynamic>>(future: _transactions, builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()));
@@ -2875,14 +2922,15 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
           if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No wallet ledger transactions have been recorded yet.')));
           if (filteredItems.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions match these filters.')));
           return Column(children: filteredItems.map((item) {
-            final isCredit = item['type'] == 'credit';
+            final transactionType = (item['type'] ?? '').toString().toLowerCase();
+            final isCredit = transactionType == 'credit' || transactionType == 'refund';
             final amount = double.tryParse((item['amountUsd'] ?? 0).toString()) ?? 0;
             final reference = (item['reference'] ?? '').toString();
             final date = (item['createdAt'] ?? '').toString();
             return Card(
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: isCredit && reference.isNotEmpty ? () => _showOfficialReceipt(reference) : null,
+                onTap: () => _showTransactionDetails(item),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
                   child: Row(children: [
