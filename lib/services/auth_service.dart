@@ -59,8 +59,8 @@ class AuthService extends ChangeNotifier {
           if (token.isNotEmpty) await _saveSession(token, complete['user']);
         }
       }
-    } catch (error) {
-      debugPrint('Initial Google callback could not be restored: $error');
+    } catch (_) {
+      // Do not log one-time callback tickets or authentication response details.
     }
     _biometricEnabled = (await _storage.read(key: 'numelixa_biometric_lock')) == 'true';
     _biometricLocked = _biometricEnabled && isSignedIn;
