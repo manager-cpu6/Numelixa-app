@@ -325,22 +325,38 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     ];
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 18,
         title: const Row(children: [
-          _NumelixaLogo(size: 27),
-          SizedBox(width: 9),
+          _NumelixaLogo(size: 28),
+          SizedBox(width: 10),
           Text('Numelixa', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -.5)),
         ]),
+        actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const _NotificationsPage()),
+            ),
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
+          IconButton(
+            tooltip: 'Account',
+            onPressed: () => setState(() => _index = 4),
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
+          const SizedBox(width: 5),
+        ],
       ),
       body: SafeArea(child: IndexedStack(index: _index, children: pages)),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.public_rounded), label: 'Buy'),
-          NavigationDestination(icon: Icon(Icons.sms_outlined), label: 'Orders'),
-          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), label: 'Wallet'),
-          NavigationDestination(icon: Icon(Icons.person_outline_rounded), label: 'Account'),
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.public_outlined), selectedIcon: Icon(Icons.public_rounded), label: 'Numbers'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'Orders'),
+          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallet'),
+          NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Account'),
         ],
       ),
     );
@@ -1262,11 +1278,8 @@ class _CatalogPageState extends State<_CatalogPage> {
           errorBuilder: (_, __, ___) => Image.network(
             slug == null ? 'https://cdn.simpleicons.org/${key.isEmpty ? 'app' : key}' : 'https://cdn.simpleicons.org/$slug',
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Center(
-              child: Text(
-                _serviceName(service).trim().isEmpty ? '?' : _serviceName(service).trim().characters.first.toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
-              ),
+            errorBuilder: (_, __, ___) => const Center(
+              child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
             ),
           )),
       ),
@@ -1527,7 +1540,7 @@ class _OrdersPageState extends State<_OrdersPage> {
           errorBuilder: (_, __, ___) => Image.network(
             slug == null ? 'https://cdn.simpleicons.org/$name' : 'https://cdn.simpleicons.org/$slug',
             width: 26, height: 26, fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Center(child: Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16))),
+            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21)),
           )),
       ),
     );
