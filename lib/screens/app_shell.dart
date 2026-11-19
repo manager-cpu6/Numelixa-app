@@ -3732,32 +3732,6 @@ class _PartnerCenterPage extends StatelessWidget {
 }
 
 
-  const _PartnerCenterPage();
-  @override
-  Widget build(BuildContext context) => _ResourcePageFrame(
-    title: 'For Partners',
-    subtitle: 'Explore business, technical and integration opportunities with Numelixa.',
-    icon: Icons.handshake_outlined,
-    children: [
-      for (final item in const [
-        (Icons.business_outlined, 'Business partnerships', 'For organizations interested in collaboration and platform services.'),
-        (Icons.settings_ethernet_rounded, 'API integrations', 'For products and platforms evaluating a server-to-server integration.'),
-        (Icons.storefront_outlined, 'Reseller enquiries', 'For businesses interested in discussing distribution opportunities.'),
-        (Icons.hub_outlined, 'Technical partnerships', 'For infrastructure, telecom and technology integration enquiries.'),
-      ])
-        Card(child: ListTile(
-          leading: Icon(item.$1, color: AppTheme.cyan),
-          title: Text(item.$2, style: const TextStyle(fontWeight: FontWeight.w800)),
-          subtitle: Text(item.$3, style: const TextStyle(color: AppTheme.muted, height: 1.4)),
-          isThreeLine: true,
-        )),
-      const Card(child: Padding(padding: EdgeInsets.all(15), child: Text('For verified partnership contact details, use the official Numelixa Support Center. This app does not publish an unverified business email or claim an affiliate programme is active.', style: TextStyle(color: AppTheme.muted, height: 1.5)))),
-      FilledButton.icon(onPressed: () => launchUrl(Uri.parse('https://support.numelixa.com/'), mode: LaunchMode.externalApplication), icon: const Icon(Icons.open_in_new_rounded), label: const Text('Contact Numelixa')),
-    ],
-  );
-}
-
-
 class _LegalCenterPage extends StatelessWidget {
   const _LegalCenterPage();
   Future<void> _open(String path) async { await launchUrl(Uri.parse('https://www.numelixa.com'+path),mode:LaunchMode.externalApplication); }
