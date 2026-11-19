@@ -68,6 +68,20 @@ flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.nu
 
 Artifacts are uploaded by the workflow as `numelixa-android-builds`.
 
+## Mobile redesign implementation
+
+The current native UI refresh adds a centralized Numelixa dark design system, consistent card/input/navigation styling, a five-destination mobile navigation bar, in-app notification entry, and first-party brand-icon assets ahead of favicon fallbacks. Unknown service logos use a neutral app icon rather than fabricated initials.
+
+The Home and Account areas now expose native entry points for:
+- Support Center (private Help Team Chat, configured WhatsApp support and official support site)
+- For Clients (onboarding steps and practical troubleshooting)
+- Developer Center (official API documentation and developer portal)
+- For Partners (business, reseller and technical enquiry guidance)
+
+These resource pages deliberately link to the existing official support/developer services instead of inventing backend ticketing, partnership email addresses, API key operations or programme status. Live catalog, wallet, orders, SMS, notifications and session management remain connected to the existing repository/API services.
+
+Country search now includes API-provided calling/dial codes, and country availability is only displayed when the API supplies a quantity. Unknown country flags use a neutral icon rather than a globe emoji.
+
 ## In-app APK updates
 
 The app checks `GET /api/app-update` without blocking launch, downloads a published APK with actual byte progress and optional SHA-256 validation, then opens Android's package installer. Android requires the user to approve installation. The update API/admin publishing controls must be implemented in the website/backend repository; see `docs/MOBILE_API_CONTRACT.md`. Preserve package ID `com.numelixa.app` and the same release signing keystore.
