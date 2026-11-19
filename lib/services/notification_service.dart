@@ -216,6 +216,7 @@ class NotificationService {
         android: AndroidNotificationDetails(channelId, _channelNameFor(channelId),
           channelDescription: _channelDescriptionFor(channelId),
           importance: Importance.max, priority: Priority.high, playSound: true, icon: _notificationIcon(message.data),
+          largeIcon: DrawableResourceAndroidBitmap(_notificationIcon(message.data).replaceFirst('@drawable/', '') + '_color'),
           actions: code == null ? null : const [AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false)]),
       ),
       payload: jsonEncode(notificationData),
