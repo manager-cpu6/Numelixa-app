@@ -38,7 +38,7 @@ class _SupportAdminScreenState extends State<SupportAdminScreen> {
   Widget build(BuildContext context) {
     final manager = widget.role == 'admin' || widget.role == 'support_admin';
     return Scaffold(
-      backgroundColor: const AppTheme.navy,
+      backgroundColor: AppTheme.navy,
       appBar: AppBar(
         title: const Text('Support Center'),
         actions: [IconButton(
@@ -64,7 +64,7 @@ class _SupportAdminScreenState extends State<SupportAdminScreen> {
               return SizedBox(
                 width: 210,
                 child: Card(
-                  color: active == id ? const AppTheme.panelRaised : const AppTheme.backgroundElevated,
+                  color: active == id ? AppTheme.panelRaised : AppTheme.backgroundElevated,
                   child: InkWell(
                     onTap: () { setState(() => active = id); loadMessages(id); },
                     child: Padding(
@@ -108,7 +108,7 @@ class _SupportAdminScreenState extends State<SupportAdminScreen> {
                   padding: const EdgeInsets.all(11),
                   constraints: const BoxConstraints(maxWidth: 420),
                   decoration: BoxDecoration(
-                    color: mine ? const AppTheme.panel : const AppTheme.glassBorder,
+                    color: mine ? AppTheme.panel : AppTheme.glassBorder,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Column(
