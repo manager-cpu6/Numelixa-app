@@ -172,7 +172,21 @@ These routes are verified in the backend source but are not advertised here as a
 
 ## 10. Payment routes requiring further confirmation
 
-The Flutter repository calls Sifalo, Binance and Ethiopia payment endpoints. Their backend implementations, full schemas, idempotency behavior and user-facing payment-history contract still require a separate route-by-route review before third-party publication. Do not infer webhook payloads or provider behavior from app code alone.
+The Flutter repository currently calls these payment routes, but their full backend implementations, request/response schemas, idempotency behavior and user-facing payment-history contract have not been fully source-audited for third-party publication:
+
+| Method | Route | Current status |
+|---|---|---|
+| GET | `/api/payments/sifalo/status` | App call; schema requires backend confirmation |
+| POST | `/api/payments/sifalo/create` | App call; schema requires backend confirmation |
+| GET | `/api/payments/sifalo/verify?orderId=<id>` | App call; schema requires backend confirmation |
+| GET | `/api/payments/binance/networks` | App call; schema requires backend confirmation |
+| POST | `/api/payments/binance/create` | App call; schema requires backend confirmation |
+| GET | `/api/payments/binance/status?orderId=<id>` | App call; schema requires backend confirmation |
+| GET | `/api/payments/ethiopia/methods` | App call; schema requires backend confirmation |
+| POST | `/api/payments/ethiopia/create` | App call; schema requires backend confirmation |
+| GET | `/api/payments/ethiopia/status?orderId=<id>` | App call; schema requires backend confirmation |
+
+Do not infer webhook payloads or provider behavior from app code alone.
 
 ## 11. Integration examples
 
