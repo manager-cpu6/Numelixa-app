@@ -1,59 +1,97 @@
 # Numelixa Mobile API Contract Audit
 
-Audit source: the accessible `manager-cpu6/Virt-num` repository on `main`. This document is descriptive only; the website/backend repository has not been modified.
+**Scope:** Descriptive audit only. The website/backend repository was inspected read-only and was not modified.  
+**Base URL:** `https://www.numelixa.com`.
 
-Base URL: `https://www.numelixa.com`
+## 1. Native authentication and session lifecycle
 
-## Authentication actually implemented
+All Android requests made by the current ApiClient include `x-numelixa-client: android-app`. Authenticated requests also include `Authorization: Bearer <mobile-session-token>`.
 
-The backend's `lib/auth.ts` accepts:
-- `Authorization: Bearer <Numelixa API key>` (verified with `authenticateApiKey`)
-- `X-API-Key: <Numelixa API key>`
-- Otherwise, the `numelixa_session` browser cookie.
+| Method | Route | Request / behavior |
+|---|---|---|
+| POST | `/api/auth/login` | JSON `{email,password}`; with native-client header returns `accessToken` and user |
+| POST | `/api/auth/signup` | JSON `{name,email,password}`; with native-client header returns token and user; email verification is still required |
+| POST | `/api/auth/phone/request` | JSON `{phone,name?,purpose}`; sends SMS OTP if phone sign-in is enabled |
+| PUT | `/api/auth/phone/request` | Requests voice OTP if voice verification is enabled |
+| POST | `/api/auth/phone/verify` | JSON `{phone,code,name?}`; native header returns mobile session token and user |
+| GET | `/api/auth/google/config` | Returns configured public Web OAuth client ID |
+| POST | `/api/auth/google/native/credential` | JSON `{credential: Google ID token}`; verifies Google token and returns a short-lived one-time ticket |
+| POST | `/api/auth/google/native/complete` | JSON `{ticket}`; with native header consumes ticket and returns mobile session token |
+| GET | `/api/me` | Validates the Bearer session and returns the current user |
+| POST | `/api/auth/logout` | With `x-numelixa-client: android-app` and Bearer token, revokes the current mobile session |
 
-The native app uses the bearer API-key path; it does not use WebView or browser cookies. API keys are account credentials and must be stored only in Android secure storage.
+The backend stores only a SHA-256 hash of each opaque mobile session token. Mobile sessions are created with a 30-day expiry. Google native tickets expire after three minutes and are consumed once. Browser cookie sessions remain separate.
 
-The existing email/password endpoint `POST /api/auth/login` validates credentials and calls `createSession`, which creates a database session and sets an HttpOnly cookie. It does **not** return a native access token or refresh token. `POST /api/auth/logout` clears that cookie/session; it is not a mobile token-revocation contract. `POST /api/auth/signup` creates/reuses an account, starts email verification and also sets a browser cookie, but does not return a bearer credential. `POST /api/auth/forgot` sends a password reset link; `POST /api/auth/reset` consumes a reset token from the link.
+**Legacy compatibility:** the app still exposes API-key sign-in for existing developer accounts. A developer API key is a long-lived secret, not a mobile session token; the mobile logout route revokes mobile sessions, not developer keys. This path remains a security risk on user-controlled devices and should be retired or redesigned after owner approval.
 
-Therefore, email/password sign-in, mobile registration, and native refresh-token handling cannot safely be completed entirely client-side. A supported API-key credential can authenticate existing accounts, but acquiring a new key currently depends on the existing account/developer-key flow. Do not pretend the cookie endpoints issue mobile tokens.
+## 2. Profile, password and device security
 
-## Verified existing endpoints
+| Method | Route | Verified behavior |
+|---|---|---|
+| PUT | `/api/mobile/profile/avatar` | Authenticated profile image upload; PNG/JPEG/WebP data URL, max 450 KB |
+| POST | `/api/mobile/security/password/start` | Sends a 6-digit password-change code; 60-second request cooldown; code expires after 10 minutes |
+| POST | `/api/mobile/security/password/confirm` | JSON `{code,newPassword}`; code must be six digits and password at least 8 characters |
+| GET | `/api/mobile/devices` | Lists active sessions grouped by device; current device is identified from the Bearer token |
+| DELETE | `/api/mobile/devices` | JSON `{deviceId,sessionId}`; revokes only the authenticated user's device/session |
 
-| Feature | Method and path | Auth | Contract notes |
-|---|---|---|---|
-| Current user/profile | `GET /api/me` | Bearer API key or session | Returns `{ ok, user, pricing, paymentProvider }`; user fields include id, email, name, role and coins. |
-| Balance | `GET /api/v1/balance` | Bearer API key or session | Returns `{ ok, balance, currency, accountId }`. |
-| Services | `GET /api/catalog/services` | Public | Live provider catalog; can return 503 when provider is unavailable. |
-| Countries and stock/pricing | `GET /api/catalog/countries?service=<service>` | Public | Returns live countries with `stock.count`, `stock.sellCoins`, and `stock.usdPrice`. |
-| Purchase number | `POST /api/v1/orders` | Bearer API key or session | JSON body: `{ "service": "...", "countryCode": "..." }`. Requires verified email, sufficient coins, live stock and provider success. |
-| List orders | `GET /api/v1/orders?limit=25&status=waiting` | Bearer API key or session | `status` is optional; response has an `orders` array. |
-| Order detail | `GET /api/v1/orders/<id>` | Bearer API key or session | Only returns orders belonging to the authenticated user. |
-| Check SMS | `POST /api/v1/orders/code` | Bearer API key or session | JSON body: `{ "orderId": "..." }`; may return waiting, received, or refund status. |
-| Cancel order | `POST /api/v1/orders/cancel` | Bearer API key or session | JSON body: `{ "orderId": "..." }`; cancellation rules depend on provider and order age. |
-| Transactions | `GET /api/v1/transactions` | Bearer API key or session | Returns up to 100 user coin transactions. |
-| Notification center | `GET /api/notifications` | Bearer API key or session | Returns user-specific notifications and unread count. |
-| Mark notification read | `POST /api/notifications` | Bearer API key or session | Body `{ "id": "..." }` marks one notification read; empty body marks all unread read. |
-| Register Android FCM token | `POST /api/notifications/register` | Bearer API key or session | JSON body supports `token`, `platform`, optional `deviceId`, `appVersion`. Requires an email account and configured MongoDB. Returns `registered:true, linked:true` only after storage succeeds. |
-| Login | `POST /api/auth/login` | Public | Body `{ "email": "...", "password": "..." }`; sets browser cookie, no native access/refresh token. |
-| Registration | `POST /api/auth/signup` | Public | Body `{ "name": "...", "email": "...", "password": "..." }`; verification required, no native token returned. |
-| Forgot password | `POST /api/auth/forgot` | Public | Body `{ "email": "..." }`; sends reset link. |
-| Reset password | `POST /api/auth/reset` | Public reset token | Body `{ "token": "...", "newSecret": "..." }`. |
+Device removal also disables linked push tokens when removing the whole device identity. The backend scopes session queries/deletions to the authenticated user.
 
-## Contracts that are genuinely missing
+## 3. Public developer API
 
-1. **Native login exchange:** add a dedicated backend endpoint that verifies email/password (and suspension/verification/security rules) and returns a short-lived access token plus refresh token, or a documented secure mobile token. Do not return the raw database session or rely on browser cookies.
-2. **Refresh and revoke:** token refresh, refresh-token rotation/reuse detection, and authenticated native logout/revocation endpoints.
-3. **FCM unlink on logout:** a user-authenticated endpoint to disable/unlink a device token, or an explicit documented behavior that safely revokes device association. The existing registration endpoint links tokens but does not expose a mobile unlink operation.
-4. **User settings:** no dedicated end-user settings read/update contract was found in the inspected API routes.
-5. **Native registration result:** signup currently does not return a native token/key; mobile signup should be connected after the native auth exchange exists.
+See [DEVELOPER_API_REFERENCE.md](DEVELOPER_API_REFERENCE.md) for the public REST API v1, API key management, order lifecycle, webhook signatures, examples and verified error codes.
 
-No backend changes were made as part of this audit.
+Public API base: `https://www.numelixa.com/api/v1`.
 
+The app-specific catalogue paths are distinct from public developer routes:
+- `GET /api/catalog/services`
+- `GET /api/catalog/countries?service=<service>`
 
-## Android app-update endpoint required by the standalone app
+## 4. Wallet, orders and receipts
 
-The app performs a best-effort, non-blocking check against `GET /api/app-update?platform=android&packageId=com.numelixa.app&version=<versionName>&versionCode=<buildNumber>`. If the route is absent or the request fails, app startup continues normally. Response may be the update object directly or `{ "enabled": true, "updateAvailable": true, "update": { ... } }`.
+| Method | Route | Verified behavior |
+|---|---|---|
+| GET | `/api/v1/balance` | USD balance, currency and accountId |
+| GET | `/api/v1/orders?limit=100` | Authenticated user's order list |
+| GET | `/api/v1/orders/{id}` | Single order scoped to the authenticated user |
+| POST | `/api/v1/orders` | Purchase; JSON supports `service` and `countryCode` (backend also accepts `country`) |
+| POST | `/api/v1/orders/code` | JSON `{orderId}`; check SMS |
+| POST | `/api/v1/orders/cancel` | JSON `{orderId}`; cancel eligible waiting order |
+| GET | `/api/v1/transactions` | Up to 100 ledger transactions, including credit/debit/refund types |
+| GET | `/api/wallet/receipt?reference=<reference>` | Receipt lookup used by the app |
 
-Fields: `versionName`, `versionCode`, `apkUrl` (direct HTTPS APK URL), `apkSizeBytes`, `sha256`, `releaseNotes`, `isActive`, `isMandatory`, `allowSkip`. The app downloads with byte progress, verifies SHA-256 when provided, and opens Android's package installer. Android still requires user confirmation and may ask permission to install unknown apps.
+Order list/detail responses include price and currency in USD, status, phone, service, country, SMS/code fields and expiry metadata. Treat OTP and full SMS content as sensitive.
 
-**Backend/admin work still required:** the website/backend repository must implement authenticated admin publish/withdraw/mandatory/optional controls, persist release metadata, host the APK at a stable HTTPS URL, and send FCM notifications when requested. This mobile-only repository cannot create those server endpoints/admin controls. Keep package ID `com.numelixa.app` and sign every update with the exact same release keystore.
+The wallet transaction endpoint is a ledger, not a complete payment-provider history. A unified list of pending/failed payment requests is not verified and requires backend work.
+
+## 5. Notifications and support
+
+| Method | Route | Verified behavior |
+|---|---|---|
+| GET | `/api/notifications` | User notifications and unread count |
+| POST | `/api/notifications` | Mark one notification read with `{id}`; empty body marks all unread read |
+| POST | `/api/notifications/register` | Authenticated FCM token registration with token, platform and optional deviceId/appVersion |
+| GET | `/api/support` | Latest active support ticket for the authenticated user and canSubmit |
+| POST | `/api/support` | Create a support ticket |
+
+Support POST accepts `channel` (`email`, `whatsapp`, `telegram`), `contact`, `subject` (4–120 characters) and `message` (15–3000 characters). Ticket records are created in the existing support database collection. No frontend-only ticket simulation is used.
+
+## 6. API transport and client-side protections
+
+- ApiClient uses the HTTPS Numelixa base URL and now refuses non-HTTPS schemes.
+- API requests do not follow redirects, preventing Authorization credentials from being forwarded to a redirect destination.
+- Native session tokens are stored using `flutter_secure_storage`.
+- Authentication callback errors no longer log raw exception contents.
+- Local notifications are configured with private lock-screen visibility.
+- OTP copying occurs only after an explicit user action.
+
+## 7. Contracts requiring additional backend confirmation
+
+1. Unified payment history for pending, failed, rejected and refunded payment-provider attempts.
+2. Full Sifalo, Binance and Ethiopia payment route schemas, idempotency and status transitions.
+3. Account deletion API and machine-readable deletion confirmation.
+4. Device-wide FCM unlink contract beyond the existing logout/device-removal behavior.
+5. Numeric API rate-limit quotas and reset headers.
+6. Mobile session refresh/rotation beyond the current 30-day token expiry.
+7. Formal API versioning and backwards-compatibility policy.
+
+No website or backend code was modified for this mobile repository task.
