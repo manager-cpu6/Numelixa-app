@@ -1253,7 +1253,7 @@ class _CatalogPageState extends State<_CatalogPage> {
     };
     String? slug;
     for (final entry in logos.entries) {
-      if (key == entry.key || key.startsWith(entry.key)) { slug = entry.value.replaceAll(' ', ''); break; }
+      if (key == entry.key || (entry.key.length >= 3 && key.startsWith(entry.key))) { slug = entry.value.replaceAll(' ', ''); break; }
     }
     final knownDomains = <String, String>{
       'whatsapp': 'whatsapp.com', 'telegram': 'telegram.org', 'facebook': 'facebook.com',
@@ -1277,27 +1277,33 @@ class _CatalogPageState extends State<_CatalogPage> {
     for (final entry in knownDomains.entries) {
       if (key == entry.key || key.startsWith(entry.key)) { domain = entry.value; break; }
     }
-    domain ??= key.isEmpty ? 'example.com' : '$key.com';
-    // Use a branded Simple Icons asset where available, with a larger
-    // official-site favicon as fallback for supported brands.
-    // Prefer the resolved official brand site's favicon: it avoids mismatched third-party
-    // icon slugs for short provider IDs (wa, go, am, op, etc.).
-    final imageUrl = 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
+    // Never guess a service domain. Unknown brands use a neutral app icon.
+    final imageUrl = domain == null ? '' : 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
+    final primaryUrl = slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug';
+    if (primaryUrl.isEmpty) {
+      return const CircleAvatar(
+        radius: 23,
+        backgroundColor: Color(0xFF102844),
+        child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
+      );
+    }
     return CircleAvatar(
       radius: 23,
       backgroundColor: const Color(0xFF102844),
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Image.network(
-          slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug',
+          primaryUrl,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Image.network(
-            imageUrl,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const Center(
-              child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
-            ),
-          ),
+          errorBuilder: (_, __, ___) => imageUrl.isEmpty
+              ? const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23))
+              : Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
+                  ),
+                ),
         ),
       ),
     );
@@ -1548,27 +1554,37 @@ class _OrdersPageState extends State<_OrdersPage> {
     };
     String? slug;
     for (final entry in logos.entries) {
-      if (name == entry.key || name.startsWith(entry.key)) { slug = entry.value; break; }
+      if (name == entry.key || (entry.key.length >= 3 && name.startsWith(entry.key))) { slug = entry.value; break; }
     }
     String? domain;
     for (final entry in domains.entries) {
-      if (name == entry.key || name.startsWith(entry.key)) { domain = entry.value; break; }
+      if (name == entry.key || (entry.key.length >= 3 && name.startsWith(entry.key))) { domain = entry.value; break; }
     }
-    domain ??= name.isEmpty ? 'example.com' : '$name.com';
-    final imageUrl = 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
+    // Do not derive a website URL from an unknown service identifier.
+    final imageUrl = domain == null ? '' : 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
+    final primaryUrl = slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug';
+    if (primaryUrl.isEmpty) {
+      return const CircleAvatar(
+        radius: 20,
+        backgroundColor: Color(0xFF102844),
+        child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21),
+      );
+    }
     return CircleAvatar(
       radius: 20,
       backgroundColor: const Color(0xFF102844),
       child: Padding(
         padding: const EdgeInsets.all(7),
         child: Image.network(
-          slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug',
+          primaryUrl,
           width: 26, height: 26, fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Image.network(
-            imageUrl,
-            width: 26, height: 26, fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21)),
-          ),
+          errorBuilder: (_, __, ___) => imageUrl.isEmpty
+              ? const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21))
+              : Image.network(
+                  imageUrl,
+                  width: 26, height: 26, fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21)),
+                ),
         ),
       ),
     );
