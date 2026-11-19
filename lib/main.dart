@@ -12,6 +12,9 @@ import 'screens/app_shell.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  // Android automatically displays FCM notification-payload messages while the app is backgrounded.
+  // Showing those again with flutter_local_notifications created duplicate alerts.
+  if (message.notification != null) return;
   const android = AndroidInitializationSettings('@drawable/ic_stat_numelixa');
   final local = FlutterLocalNotificationsPlugin();
   await local.initialize(const InitializationSettings(android: android));
