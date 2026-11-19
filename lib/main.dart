@@ -18,7 +18,7 @@ const _backgroundNotificationIconNames = <String, String>{
   'announcement': 'ic_notification_announcement', 'success': 'ic_notification_success',
 };
 String notificationIconFor(Map<String, dynamic> data) {
-  final requested = (data['iconType'] ?? data['notificationIcon'] ?? '').toString().toLowerCase().trim();
+  final requested = (data['iconType'] ?? data['notificationCategory'] ?? data['notificationIcon'] ?? '').toString().toLowerCase().trim();
   if (_backgroundNotificationIconNames.containsKey(requested)) return '@drawable/${_backgroundNotificationIconNames[requested]}';
   final type = (data['type'] ?? '').toString().toLowerCase();
   if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
@@ -59,8 +59,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   ];
   final androidNotifications = local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   for (final channel in channels) { await androidNotifications?.createNotificationChannel(channel); }
-  final title = (data['title'] ?? 'Numelixa').toString();
-  final body = (data['body'] ?? data['message'] ?? '').toString();
+  final rawTitle = (data['title'] ?? '').toString().trim();
+  final title = rawTitle.isEmpty ? 'Numelixa' : rawTitle;
+  final rawBody = (data['body'] ?? data['message'] ?? '').toString();
+  final body = rawBody.trim().isEmpty ? 'You have a new update from Numelixa.' : rawBody;
   final rawCode = (data['code'] ?? data['otp'] ?? data['verificationCode'] ?? data['smsCode'] ?? '').toString();
   final code = RegExp(r'^\d{4,8}$').hasMatch(rawCode)
       ? rawCode
