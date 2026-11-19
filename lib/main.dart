@@ -19,7 +19,7 @@ const _backgroundNotificationIconNames = <String, String>{
 };
 String notificationIconFor(Map<String, dynamic> data) {
   final requested = (data['iconType'] ?? data['notificationIcon'] ?? '').toString().toLowerCase().trim();
-  if (_notificationIconNames.containsKey(requested)) return '@drawable/${_notificationIconNames[requested]}';
+  if (_backgroundNotificationIconNames.containsKey(requested)) return '@drawable/${_backgroundNotificationIconNames[requested]}';
   final type = (data['type'] ?? '').toString().toLowerCase();
   if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
   if (type.contains('admin') || type == 'push_test') return '@drawable/ic_notification_admin';
