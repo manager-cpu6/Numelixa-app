@@ -476,13 +476,13 @@ jobs:
         run: |
           VERSION=$(sed -n 's/^version: *//p' pubspec.yaml | tr -d '"' | head -n 1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Remove stale legacy APK from rolling release
+      - name: Remove stale legacy APK from versioned release
         if: (startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && steps.release_guard.outputs.publish == 'true')) && steps.signing.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          TAG="${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'android-latest' }}"
+          TAG="${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.app_version.outputs.version) }}"
           RELEASE_ID="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.id' 2>/dev/null || true)"
           if [ -n "$RELEASE_ID" ]; then
             gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --jq '.[] | select(.name == "app-release.apk") | .id' |
@@ -492,11 +492,11 @@ jobs:
               echo "Removed stale legacy APK asset $ASSET_ID"
             done
           fi
-      - name: Publish GitHub release assets
+      - name: Publish versioned GitHub release assets
         if: (startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && steps.release_guard.outputs.publish == 'true')) && steps.signing.outputs.configured == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'android-latest' }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.app_version.outputs.version) }}
           name: Numelixa Android ${{ steps.app_version.outputs.version }}
           make_latest: true
           generate_release_notes: false
@@ -508,7 +508,7 @@ jobs:
 
             Version ${{ steps.app_version.outputs.version }} keeps the existing Android package ID and uses the configured release signing key for in-place updates. Existing account data remains on the Numelixa service.
 
-            Download Numelixa.apk to install or update the Android app. Do not uninstall an existing installation before updating.
+            Download Numelixa.apk to install or update the Android app. Install over your existing app; do not uninstall first.
           files: |
             build/app/outputs/flutter-apk/Numelixa.apk
             build/app/outputs/bundle/release/app-release.aab
