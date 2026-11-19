@@ -369,8 +369,6 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: Unit and widget tests
         run: flutter test
-      - name: Build debug APK
-        run: flutter build apk --debug --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Build release APK
         run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
       - name: Rename release APK for public downloads and updates
@@ -382,7 +380,6 @@ jobs:
         with:
           name: numelixa-android-builds
           path: |
-            build/app/outputs/flutter-apk/app-debug.apk
             build/app/outputs/flutter-apk/Numelixa.apk
             build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
