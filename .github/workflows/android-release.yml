@@ -113,13 +113,13 @@ jobs:
           if start >= 0 and end > start:
               block = text[start:end]
               if 'mavenCentral()' not in block:
-                  block = re.sub(r'(repositories\\s*\\{)', r'\\1\\n        mavenCentral()', block, count=1)
+                  block = re.sub(r'(repositories\s*\{)', r'\1\n        mavenCentral()', block, count=1)
                   text = text[:start] + block + text[end:]
           start = text.find('dependencyResolutionManagement')
           if start >= 0:
               block = text[start:]
               if 'mavenCentral()' not in block:
-                  block = re.sub(r'(repositories\\s*\\{)', r'\\1\\n        mavenCentral()', block, count=1)
+                  block = re.sub(r'(repositories\s*\{)', r'\1\n        mavenCentral()', block, count=1)
                   text = text[:start] + block
           p.write_text(text)
           print('Ensured Maven Central is available for Gradle plugin and dependency resolution.')
@@ -210,7 +210,7 @@ jobs:
               end = s.find('>', start)
               if start < 0 or end < 0:
                   raise SystemExit('Could not locate Android application manifest element.')
-              s = s[:end + 1] + '\\n        ' + meta + s[end + 1:]
+              s = s[:end + 1] + '\n        ' + meta + s[end + 1:]
           p.write_text(s)
           PY
       - name: Generate all twelve monochrome notification icons
