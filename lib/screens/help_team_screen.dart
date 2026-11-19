@@ -270,9 +270,9 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff030817),
+      backgroundColor: const AppTheme.navy,
       appBar: AppBar(
-        backgroundColor: const Color(0xff071329),
+        backgroundColor: const AppTheme.backgroundElevated,
         title: const Row(
           children: [
             Icon(Icons.support_agent_rounded, color: AppTheme.cyan),
@@ -295,7 +295,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               gradient: const LinearGradient(
-                colors: [Color(0xff102d4d), Color(0xff151c3b)],
+                colors: [AppTheme.panel, AppTheme.panelRaised],
               ),
               border: Border.all(color: AppTheme.cyan.withOpacity(.2)),
             ),
@@ -356,7 +356,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
                               margin: const EdgeInsets.symmetric(vertical: 5),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: mine ? const Color(0xff123c55) : const Color(0xff1c2540),
+                                color: mine ? const AppTheme.panelRaised : const AppTheme.glassBorder,
                                 borderRadius: BorderRadius.circular(17),
                                 border: Border.all(color: AppTheme.cyan.withOpacity(.18)),
                               ),
@@ -399,7 +399,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
             child: Container(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xff1b3048))),
+                border: Border(top: BorderSide(color: AppTheme.glassBorder)),
               ),
               child: Row(
                 children: [
@@ -430,7 +430,7 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
                       decoration: InputDecoration(
                         hintText: recording ? 'Recording voice note…' : 'Message Help Team',
                         filled: true,
-                        fillColor: const Color(0xff111d33),
+                        fillColor: const AppTheme.panel,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
