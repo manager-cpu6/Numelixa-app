@@ -244,7 +244,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    if (_accessBlock != null) return _AppUnavailableScreen(details: _accessBlock!);
+    if (_accessBlock != null) return _AppUnavailableScreen(details: _accessBlock!, accessToken: auth.accessToken);
     if (!auth.isReady) {
       return const _SplashScreen();
     }
@@ -287,24 +287,30 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 }
 
 class _AppUnavailableScreen extends StatelessWidget {
-  const _AppUnavailableScreen({required this.details});
+  const _AppUnavailableScreen({required this.details, this.accessToken});
   final Map<String, dynamic> details;
+  final String? accessToken;
   @override
   Widget build(BuildContext context) {
     final reason = (details['reason'] ?? '').toString();
     final countryBlocked = reason == 'country';
     final appVersionBlocked = reason == 'version';
+    final maintenance = reason == 'maintenance';
     final number = (details['whatsapp'] ?? '252907868526').toString().replaceAll(RegExp(r'[^0-9]'), '');
-    final message = countryBlocked
+    final message = maintenance
+        ? 'Numelixa is under maintenance.'
+        : countryBlocked
         ? 'This app is not available in your country.'
         : appVersionBlocked
           ? 'This Numelixa app version is no longer supported.'
           : reason == 'android-version'
             ? 'This app is not available on this Android version.'
             : 'This app is not available on this device.';
-    final description = appVersionBlocked
-        ? 'An administrator has retired this app version. Install the latest official Numelixa update to continue. If you still cannot update, contact support and we will help you.'
-        : 'If you believe this is a mistake, contact our support team for assistance.';
+    final description = maintenance
+        ? (details['message'] ?? 'Our team is improving Numelixa. You can still contact the Help Team while maintenance is active.').toString()
+        : appVersionBlocked
+          ? 'An administrator has retired this app version. Install the latest official Numelixa update to continue. If you still cannot update, contact support and we will help you.'
+          : 'If you believe this is a mistake, contact our support team for assistance.';
     return Scaffold(
       body: SafeArea(child: Center(child: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
@@ -329,10 +335,16 @@ class _AppUnavailableScreen extends StatelessWidget {
               )),
             ],
             const SizedBox(height: 22),
-            SizedBox(width: double.infinity, child: FilledButton.icon(
-              onPressed: number.isEmpty ? null : () => launchUrl(Uri.parse('https://wa.me/$number'), mode: LaunchMode.externalApplication),
-              icon: const Icon(Icons.chat_rounded), label: const Text('Contact WhatsApp support'),
-            )),
+            if (maintenance)
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                onPressed: accessToken == null ? null : () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: accessToken))),
+                icon: const Icon(Icons.chat_bubble_outline_rounded), label: const Text('Chat with Help Team'),
+              ))
+            else
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                onPressed: number.isEmpty ? null : () => launchUrl(Uri.parse('https://wa.me/$number'), mode: LaunchMode.externalApplication),
+                icon: const Icon(Icons.chat_rounded), label: const Text('Contact WhatsApp support'),
+              )),
           ],
         )),
       ))),
