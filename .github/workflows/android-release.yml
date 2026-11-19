@@ -397,8 +397,6 @@ jobs:
       - name: Rename release APK for public downloads and updates
         run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Numelixa.apk
       - name: Verify APK package and in-place update signing
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
@@ -409,7 +407,12 @@ jobs:
             echo "::error::Release APK is unexpectedly small ($SIZE bytes)."
             exit 1
           fi
-          BUILD_TOOLS="$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "::error::Android SDK location is not configured on the runner."
+            exit 1
+          fi
+          BUILD_TOOLS="$(find "$SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           AAPT="$BUILD_TOOLS/aapt"
           APKSIGNER="$BUILD_TOOLS/apksigner"
           test -x "$AAPT" && test -x "$APKSIGNER"
@@ -418,20 +421,29 @@ jobs:
             echo "::error::Unexpected APK package: $PACKAGE"
             exit 1
           fi
-          "$APKSIGNER" verify --verbose --print-certs "$APK" > /tmp/numelixa-new-signature.txt
-          NEW_CERT="$(grep -i 'Signer #1 certificate SHA-256 digest:' /tmp/numelixa-new-signature.txt | head -n 1 | awk '{print tolower($NF)}')"
-          test -n "$NEW_CERT"
-          mkdir -p /tmp/numelixa-previous
-          gh release download android-latest --repo "$GITHUB_REPOSITORY" --pattern Numelixa.apk --dir /tmp/numelixa-previous
-          OLD_APK="/tmp/numelixa-previous/Numelixa.apk"
-          test -s "$OLD_APK"
-          "$APKSIGNER" verify --verbose --print-certs "$OLD_APK" > /tmp/numelixa-old-signature.txt
-          OLD_CERT="$(grep -i 'Signer #1 certificate SHA-256 digest:' /tmp/numelixa-old-signature.txt | head -n 1 | awk '{print tolower($NF)}')"
-          if [ -z "$OLD_CERT" ] || [ "$NEW_CERT" != "$OLD_CERT" ]; then
-            echo "::error::The new APK is not signed by the same certificate as the currently published APK. Refusing to publish an update that could fail to install over existing apps."
+          "$APKSIGNER" verify --verbose "$APK"
+          "$APKSIGNER" verify --print-certs "$APK" 2>&1 | tee /tmp/numelixa-new-signature.txt
+          NEW_CERT="$(awk 'tolower($0) ~ /sha-256 digest/ {sub(/^.*:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}' /tmp/numelixa-new-signature.txt)"
+          if [ -z "$NEW_CERT" ]; then
+            echo "::error::Could not read the new APK signer certificate fingerprint."
+            cat /tmp/numelixa-new-signature.txt
             exit 1
           fi
-          echo "Verified package=$PACKAGE, size=$SIZE bytes, and unchanged release signing certificate."
+          OLD_APK="/tmp/Numelixa-previous.apk"
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://github.com/manager-cpu6/Numelixa-app/releases/download/android-latest/Numelixa.apk" \
+            --output "$OLD_APK"
+          test -s "$OLD_APK"
+          "$APKSIGNER" verify --verbose "$OLD_APK"
+          "$APKSIGNER" verify --print-certs "$OLD_APK" 2>&1 | tee /tmp/numelixa-old-signature.txt
+          OLD_CERT="$(awk 'tolower($0) ~ /sha-256 digest/ {sub(/^.*:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}' /tmp/numelixa-old-signature.txt)"
+          if [ -z "$OLD_CERT" ] || [ "$NEW_CERT" != "$OLD_CERT" ]; then
+            echo "::error::The new APK signing certificate differs from the currently published APK. Refusing to publish an incompatible update."
+            echo "New certificate: $NEW_CERT"
+            echo "Current certificate: $OLD_CERT"
+            exit 1
+          fi
+          echo "Verified package=$PACKAGE, size=$SIZE bytes, and matching release signing certificate."
           sha256sum "$APK"
       - name: Build AAB
         run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
