@@ -3782,7 +3782,29 @@ class _DeveloperDocsPageState extends State<_DeveloperDocsPage>{
     final q=_query.trim().toLowerCase();
     final visible=_sections.asMap().entries.where((e)=>q.isEmpty||('${e.value['title']} ${e.value['body']}').toLowerCase().contains(q)).toList();
     final active=visible.isEmpty?null:visible.firstWhere((e)=>e.key==_active,orElse:()=>visible.first);
-    return Scaffold(appBar:AppBar(title:const Text('Developer documentation'),actions:[IconButton(tooltip:'Official developer portal',onPressed:()=>launchUrl(Uri.parse('https://www.numelixa.com/developers'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_new_rounded))]),body:Column(children:[
+    return Scaffold(
+      drawer: Drawer(
+        backgroundColor: AppTheme.panel,
+        child: SafeArea(child: ListView(padding: const EdgeInsets.symmetric(vertical: 14), children: [
+          const Padding(padding: EdgeInsets.fromLTRB(18, 8, 18, 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('NUMELIXA', style: TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w900, letterSpacing: 1.6)),
+            SizedBox(height: 5),
+            Text('Developer documentation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          ])),
+          for (final entry in _sections.asMap().entries)
+            ListTile(
+              selected: active?.key == entry.key,
+              selectedTileColor: AppTheme.blue.withValues(alpha: .16),
+              leading: Icon(Icons.article_outlined, color: active?.key == entry.key ? AppTheme.cyan : AppTheme.muted),
+              title: Text(entry.value['title']!, style: TextStyle(color: active?.key == entry.key ? AppTheme.textPrimary : AppTheme.muted, fontWeight: active?.key == entry.key ? FontWeight.w800 : FontWeight.w600)),
+              onTap: () { setState(() => _active = entry.key); Navigator.pop(context); },
+            ),
+        ])),
+      ),
+      appBar: AppBar(title: const Text('Developer documentation'), actions: [
+        IconButton(tooltip: 'Official developer portal', onPressed: () => launchUrl(Uri.parse('https://www.numelixa.com/developers'), mode: LaunchMode.externalApplication), icon: const Icon(Icons.open_in_new_rounded)),
+      ]),
+      body: Column(children:[
       Padding(padding:const EdgeInsets.fromLTRB(14,8,14,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         const Text('Developer Center  /  API reference',style:TextStyle(color:AppTheme.muted,fontSize:11)),const SizedBox(height:9),
         TextField(onChanged:(v)=>setState(()=>_query=v),decoration:const InputDecoration(prefixIcon:Icon(Icons.search_rounded),hintText:'Search endpoints, authentication, errors…')),
