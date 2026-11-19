@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// A small, crisp, vector-rendered Numelixa account verification mark.
@@ -38,7 +39,7 @@ class _VerifiedBadgePainter extends CustomPainter {
     for (var i = 0; i < points * 2; i++) {
       final angle = -3.141592653589793 / 2 + i * 3.141592653589793 / points;
       final r = i.isEven ? radius : innerRadius;
-      final point = Offset(center.dx + r * _cos(angle), center.dy + r * _sin(angle));
+      final point = Offset(center.dx + r * math.cos(angle), center.dy + r * math.sin(angle));
       if (i == 0) {
         path.moveTo(point.dx, point.dy);
       } else {
@@ -70,16 +71,7 @@ class _VerifiedBadgePainter extends CustomPainter {
     );
   }
 
-  double _sin(double x) => _trig(x, true);
-  double _cos(double x) => _trig(x, false);
-  double _trig(double x, bool sine) {
-    // Dart's math functions are avoided here to keep this painter dependency-free.
-    final shifted = sine ? x : x + 3.141592653589793 / 2;
-    var value = shifted % (2 * 3.141592653589793);
-    if (value > 3.141592653589793) value -= 2 * 3.141592653589793;
-    final square = value * value;
-    return value * (1 - square / 6 + square * square / 120 - square * square * square / 5040);
-  }
+
 
   @override
   bool shouldRepaint(covariant _VerifiedBadgePainter oldDelegate) => oldDelegate.color != color;
