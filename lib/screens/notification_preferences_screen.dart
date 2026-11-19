@@ -32,13 +32,13 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
    const Text('Manage which notifications you receive.',style:TextStyle(color:AppTheme.muted,fontSize:14)),
    const SizedBox(height:18),
    Card(child:SwitchListTile(
-    secondary:Container(width:44,height:44,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFF102844),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.notifications_active_rounded,color:AppTheme.cyan)),
+    secondary:Container(width:44,height:44,alignment:Alignment.center,decoration:BoxDecoration(color:const AppTheme.backgroundElevated,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.notifications_active_rounded,color:AppTheme.cyan)),
     title:const Text('App notifications',style:TextStyle(fontWeight:FontWeight.w800)),
     subtitle:const Text('Receive alerts on your Numelixa Android device.'),
     value:_app,onChanged:_saving?null:(v)=>_save(v,_email),activeColor:AppTheme.cyan,
    )),
    Card(child:SwitchListTile(
-    secondary:Container(width:44,height:44,alignment:Alignment.center,decoration:BoxDecoration(color:const Color(0xFF102844),borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.email_rounded,color:AppTheme.violet)),
+    secondary:Container(width:44,height:44,alignment:Alignment.center,decoration:BoxDecoration(color:const AppTheme.backgroundElevated,borderRadius:BorderRadius.circular(14)),child:const Icon(Icons.email_rounded,color:AppTheme.violet)),
     title:const Text('Email notifications',style:TextStyle(fontWeight:FontWeight.w800)),
     subtitle:const Text('Send eligible account and service updates to your registered email address.'),
     value:_email,onChanged:_saving?null:(v)=>_save(_app,v),activeColor:AppTheme.cyan,
@@ -46,7 +46,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
    if(_saving)const Padding(padding:EdgeInsets.all(12),child:Center(child:CircularProgressIndicator(strokeWidth:2))),
    if(_error!=null)Padding(padding:const EdgeInsets.only(top:12),child:Text(_error!,style:const TextStyle(color:AppTheme.error))),
    const SizedBox(height:12),
-   const Text('You can enable either channel or both. Android notification permission and your device settings must also allow app alerts.',style:TextStyle(color:Color(0xFF7185A5),fontSize:12,height:1.55)),
+   const Text('You can enable either channel or both. Android notification permission and your device settings must also allow app alerts.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.55)),
   ]),
  );
 }
