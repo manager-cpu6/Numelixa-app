@@ -6,6 +6,9 @@ name: Numelixa Android CI
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: numelixa-android-release-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   android:
     name: Analyze, test and build Android
