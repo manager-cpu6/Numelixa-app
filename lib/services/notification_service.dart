@@ -22,9 +22,9 @@ String _channelFor(Map<String, dynamic> data) {
 
 String _notificationIcon(Map<String, dynamic> data) {
   final type = (data['type'] ?? '').toString().toLowerCase();
-  if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
   if (type.contains('admin') || type.contains('announcement') || type == 'push_test') return '@drawable/ic_notification_admin';
   if (type.contains('auto') || type.contains('automation') || type.contains('background')) return '@drawable/ic_notification_auto';
+  if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
   if (type.contains('number') || type.contains('order') || type.contains('activation') || type.contains('purchase')) return '@drawable/ic_notification_number';
   return '@drawable/ic_notification_admin';
 }
