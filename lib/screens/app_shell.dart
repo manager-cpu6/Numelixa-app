@@ -1423,7 +1423,7 @@ class _CountriesPageState extends State<_CountriesPage> {
         final filteredCountries = countries.where((country) {
           final query = _search.trim().toLowerCase();
           if (query.isEmpty) return true;
-          return ['name','title','id','code','country','countryCode'].any((key) => (country[key] ?? '').toString().toLowerCase().contains(query));
+          return ['name','title','id','code','country','countryCode','callingCode','dialCode'].any((key) => (country[key] ?? '').toString().toLowerCase().contains(query));
         }).toList();
         return ListView(padding: const EdgeInsets.all(14), children: [
           TextField(onChanged: (value) => setState(() => _search = value),
@@ -1432,9 +1432,16 @@ class _CountriesPageState extends State<_CountriesPage> {
           if (filteredCountries.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No countries match your search.', textAlign: TextAlign.center)),
           for (final country in filteredCountries)
             Card(child: ListTile(
-              leading: Text((country['flag'] ?? '🌐').toString(), style: const TextStyle(fontSize: 25)),
+              leading: (country['flag'] ?? '').toString().trim().isEmpty
+                  ? const Icon(Icons.flag_outlined, color: AppTheme.muted, size: 25)
+                  : Text(country['flag'].toString(), style: const TextStyle(fontSize: 25)),
               title: Text((country['name'] ?? country['title'] ?? country['id'] ?? 'Country').toString()),
-              subtitle: Text('Stock: ${(country['stock'] is Map ? country['stock']['count'] : country['count']) ?? '—'}'),
+              subtitle: Text([
+                if ((country['callingCode'] ?? country['dialCode'] ?? '').toString().trim().isNotEmpty)
+                  (country['callingCode'] ?? country['dialCode']).toString(),
+                if ((country['stock'] is Map ? country['stock']['count'] : country['count']) != null)
+                  'Available: ${(country['stock'] is Map ? country['stock']['count'] : country['count'])}',
+              ].join(' · ')),
               trailing: Text((double.tryParse(((country['stock'] is Map ? country['stock']['usdPrice'] : null) ?? country['usdPrice'] ?? '').toString()) ?? 0) > 0 ? '\$' + (double.tryParse(((country['stock'] is Map ? country['stock']['usdPrice'] : null) ?? country['usdPrice'] ?? '').toString())!).toStringAsFixed(2) + ' USD' : 'Price unavailable', style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w800)),
               onTap: () => _confirmPurchase(country),
             )),
