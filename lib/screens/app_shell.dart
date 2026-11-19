@@ -19,6 +19,7 @@ import '../widgets/payment_receipt_dialog.dart';
 import '../widgets/numelixa_verified_badge.dart';
 import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
+import 'notification_preferences_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -2983,6 +2984,15 @@ class _AccountPageState extends State<_AccountPage> {
           ),
           onTap: () => context.read<NotificationService>().openNotificationSettings(),
         ),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(Icons.tune_rounded, color: AppTheme.violet),
+        title: const Text('Notification Preferences'),
+        subtitle: const Text('Choose app alerts, email updates, or both.'),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => NotificationPreferencesScreen(accessToken: auth.accessToken!),
+        )),
       )),
       const SizedBox(height: 18),
       OutlinedButton.icon(
