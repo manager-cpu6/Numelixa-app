@@ -59,11 +59,13 @@ class NumelixaRepository {
       _api.post('/api/v1/orders/code',
           accessToken: token, body: {'orderId': orderId});
 
+  /// Requests cancellation using the verified Numelixa v1 order contract.
+  /// The backend accepts POST /api/v1/orders/cancel with an orderId body.
   Future<Map<String, dynamic>> cancelOrder({
     required String token,
     required String orderId,
   }) =>
-      _api.delete('/api/orders',
+      _api.post('/api/v1/orders/cancel',
           accessToken: token, body: {'orderId': orderId});
 
   Future<Map<String, dynamic>> transactions({required String token}) =>
