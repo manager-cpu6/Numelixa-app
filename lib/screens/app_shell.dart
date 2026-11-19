@@ -2555,7 +2555,24 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               if (_ethiopiaOrder == null) ...[
                 const SizedBox(height: 14),
                 Text('Swipe to prepare payment · \$' + _selectedUsd.toStringAsFixed(2), style: const TextStyle(fontWeight: FontWeight.w800)),
-                SliderTheme(data: SliderTheme.of(context).copyWith(activeTrackColor: AppTheme.cyan, inactiveTrackColor: const Color(0xFF243A56), thumbColor: AppTheme.mint, overlayColor: AppTheme.cyan.withOpacity(.14), trackHeight: 8, thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 11), overlayShape: const RoundSliderOverlayShape(overlayRadius: 20)), child: Slider(value: _ethiopiaSwipe, min: 0, max: 1, onChanged: _creating ? null : (value) => setState(() => _ethiopiaSwipe = value), onChangeEnd: (value) { if (value >= .98) _createEthiopiaPayment(); })),
+                LayoutBuilder(builder: (context, constraints) {
+                  final trackWidth = constraints.maxWidth;
+                  const handleWidth = 50.0;
+                  final left = (_ethiopiaSwipe * (trackWidth - handleWidth)).clamp(0.0, trackWidth - handleWidth);
+                  void update(Offset point) { setState(() => _ethiopiaSwipe = ((point.dx - handleWidth / 2) / (trackWidth - handleWidth)).clamp(0.0, 1.0)); }
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: _creating ? null : (details) => update(details.localPosition),
+                    onHorizontalDragUpdate: _creating ? null : (details) => update(details.localPosition),
+                    onHorizontalDragEnd: _creating ? null : (_) { if (_ethiopiaSwipe >= .98) { _createEthiopiaPayment(); } else { setState(() => _ethiopiaSwipe = 0); } },
+                    child: Container(height: 54, decoration: BoxDecoration(color: const Color(0xFF102B47), borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFF315C7F))),
+                      child: Stack(children: [
+                        Center(child: Text(_creating ? 'Preparing secure payment…' : 'SWIPE TO PREPARE PAYMENT', style: const TextStyle(color: Color(0xFF9FB8D2), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1))),
+                        Positioned(left: left, top: 4, bottom: 4, width: handleWidth, child: Container(decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF00D9FF), Color(0xFF1677FF)]), borderRadius: BorderRadius.circular(13), boxShadow: const [BoxShadow(color: Color(0x441677FF), blurRadius: 12, offset: Offset(0, 4))]), child: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF031021), size: 27))),
+                      ]),
+                    ),
+                  );
+                }),
                 const Text('Once the order is created, SMS matching runs automatically. No manual confirmation is required when your payment arrives.', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.45)),
               ] else ...[
                 const Divider(height: 24),
