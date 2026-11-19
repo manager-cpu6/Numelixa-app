@@ -35,12 +35,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   bool _updateCheckStarted = false;
   Timer? _accessCheckTimer;
   bool _accessCheckInProgress = false;
+  bool _maintenancePending = false;
   Map<String, dynamic>? _accessBlock;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    context.read<AuthService>().addListener(_handleAuthChanged);
     appNotificationRoute.addListener(_handleNotificationRoute);
     _accessCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshAccessStatus());
   }
@@ -78,6 +80,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
 
+  void _handleAuthChanged() {
+    if (!mounted || !_maintenancePending) return;
+    final auth = context.read<AuthService>();
+    if (auth.isSignedIn) _refreshAccessStatus();
+  }
+
   Future<void> _refreshAccessStatus() async {
     if (!mounted || _accessCheckInProgress) return;
     _accessCheckInProgress = true;
@@ -85,13 +93,21 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       final access = await ApiClient().get('/api/mobile/access-check');
       if (!mounted) return;
       if (access['allowed'] == false) {
+        final auth = context.read<AuthService>();
+        if (access['reason'] == 'maintenance' && !auth.isSignedIn) {
+          _maintenancePending = true;
+          if (_accessBlock != null) setState(() => _accessBlock = null);
+          return;
+        }
+        _maintenancePending = false;
         final next = Map<String, dynamic>.from(access);
         if (_accessBlock == null || _accessBlock?['reason'] != next['reason'] ||
             _accessBlock?['message'] != next['message']) {
           setState(() => _accessBlock = next);
         }
-      } else if (_accessBlock != null) {
-        setState(() => _accessBlock = null);
+      } else {
+        _maintenancePending = false;
+        if (_accessBlock != null) setState(() => _accessBlock = null);
       }
     } catch (_) {
       // A temporary status endpoint outage must not unexpectedly lock users out.
@@ -226,6 +242,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _accessCheckTimer?.cancel();
+    context.read<AuthService>().removeListener(_handleAuthChanged);
     appNotificationRoute.removeListener(_handleNotificationRoute);
     super.dispose();
   }
@@ -248,8 +265,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       try {
         final access = await ApiClient().get('/api/mobile/access-check');
         if (access['allowed'] == false) {
-          if (mounted) setState(() => _accessBlock = Map<String, dynamic>.from(access));
-          return;
+          if (access['reason'] == 'maintenance' && !auth.isSignedIn) {
+            _maintenancePending = true;
+          } else {
+            if (mounted) setState(() => _accessBlock = Map<String, dynamic>.from(access));
+            return;
+          }
         }
       } catch (_) {
         // Keep the app usable if a temporary policy lookup cannot be reached.
