@@ -20,6 +20,15 @@ String _channelFor(Map<String, dynamic> data) {
   return 'general';
 }
 
+String _notificationIcon(Map<String, dynamic> data) {
+  final type = (data['type'] ?? '').toString().toLowerCase();
+  if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
+  if (type.contains('admin') || type.contains('announcement') || type == 'push_test') return '@drawable/ic_notification_admin';
+  if (type.contains('auto') || type.contains('automation') || type.contains('background')) return '@drawable/ic_notification_auto';
+  if (type.contains('number') || type.contains('order') || type.contains('activation') || type.contains('purchase')) return '@drawable/ic_notification_number';
+  return '@drawable/ic_notification_admin';
+}
+
 String _channelNameFor(String channel) => switch (channel) {
   'verification' => 'SMS and verification codes',
   'security' => 'Account security',
@@ -206,7 +215,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(channelId, _channelNameFor(channelId),
           channelDescription: _channelDescriptionFor(channelId),
-          importance: Importance.max, priority: Priority.high, playSound: true, icon: '@drawable/ic_stat_numelixa',
+          importance: Importance.max, priority: Priority.high, playSound: true, icon: _notificationIcon(message.data),
           actions: code == null ? null : const [AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false)]),
       ),
       payload: jsonEncode(notificationData),
