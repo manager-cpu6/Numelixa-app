@@ -2035,6 +2035,16 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   double get _selectedUsd => double.tryParse(_amountController.text.trim()) ?? 0;
   bool get _validAmount => _selectedUsd.isFinite && (_selectedUsd * 100).roundToDouble() == _selectedUsd * 100 && _selectedUsd >= _minTopupUsd && _selectedUsd <= _maxTopupUsd;
 
+  String _ethiopiaDialCode() {
+    final raw = _ethiopiaMethods[_ethiopiaMethod];
+    final config = raw is Map ? raw : const <String, dynamic>{};
+    final template = (config['ussdCode'] ?? '').toString().trim();
+    final receiver = (_ethiopiaOrder?['receiverPhone'] ?? config['receiver'] ?? '').toString();
+    final amount = (_ethiopiaOrder?['amountEtb'] ?? 0).toString();
+    return template.replaceAll('{receiver}', receiver).replaceAll('{amount}', amount);
+  }
+
+
   Future<void> _createLocalPayment() async {
     if (_creating || !_validAmount) return;
     if (_localPhone.text.trim().isEmpty) {
@@ -2587,7 +2597,12 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
                 const SizedBox(height: 14),
                 Text((_ethiopiaOrder!['methodName'] ?? 'Ethiopia payment').toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
                 Text(((_ethiopiaOrder!['amountEtb'] ?? '').toString()) + ' ETB', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: AppTheme.mint)),
-                SelectableText('Receiver: ' + (_ethiopiaOrder!['receiverPhone'] ?? '').toString(), style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w800)),
+                Row(children: [
+                  Expanded(child: SelectableText('Receiver: ' + (_ethiopiaOrder!['receiverPhone'] ?? '').toString(), style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w800))),
+                  IconButton(tooltip: 'Copy receiver number', onPressed: () async { await Clipboard.setData(ClipboardData(text: (_ethiopiaOrder!['receiverPhone'] ?? '').toString())); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Receiver number copied.'))); }, icon: const Icon(Icons.copy_rounded, color: AppTheme.cyan)),
+                ]),
+                if (_ethiopiaDialCode().isNotEmpty && _ethiopiaOrder!['status'] != 'paid')
+                  FilledButton.icon(onPressed: () => launchUrl(Uri.parse('tel:${Uri.encodeComponent(_ethiopiaDialCode())}')), icon: const Icon(Icons.phone_in_talk_rounded), label: const Text('Open USSD dialer')),
                 if ((_ethiopiaOrder!['instructions'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_ethiopiaOrder!['instructions'].toString(), style: const TextStyle(color: Color(0xFFA7B7D0), height: 1.5))),
                 const SizedBox(height: 12),
                 Row(children: [Icon(_ethiopiaOrder!['status'] == 'paid' ? Icons.check_circle_rounded : Icons.sync_rounded, color: _ethiopiaOrder!['status'] == 'paid' ? AppTheme.mint : AppTheme.cyan), const SizedBox(width: 8), Expanded(child: Text(_ethiopiaOrder!['status'] == 'paid' ? 'Payment verified · Wallet credited' : 'Waiting for payment SMS verification', style: const TextStyle(fontWeight: FontWeight.w800)))]),
