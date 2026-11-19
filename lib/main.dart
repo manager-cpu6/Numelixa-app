@@ -9,21 +9,36 @@ import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'screens/app_shell.dart';
 
+const _backgroundNotificationIconNames = <String, String>{
+  'admin': 'ic_notification_admin', 'number': 'ic_notification_number',
+  'otp': 'ic_notification_otp', 'auto': 'ic_notification_auto',
+  'payment': 'ic_notification_payment', 'gift': 'ic_notification_gift',
+  'general': 'ic_notification_general', 'user': 'ic_notification_user',
+  'system': 'ic_notification_system', 'numelixa': 'ic_notification_numelixa',
+  'announcement': 'ic_notification_announcement', 'success': 'ic_notification_success',
+};
 String notificationIconFor(Map<String, dynamic> data) {
+  final requested = (data['iconType'] ?? data['notificationIcon'] ?? '').toString().toLowerCase().trim();
+  if (_notificationIconNames.containsKey(requested)) return '@drawable/${_notificationIconNames[requested]}';
   final type = (data['type'] ?? '').toString().toLowerCase();
-  if (type.contains('admin') || type.contains('announcement') || type == 'push_test') return '@drawable/ic_notification_admin';
-  if (type.contains('auto') || type.contains('automation') || type.contains('background')) return '@drawable/ic_notification_auto';
   if (type.contains('otp') || type.contains('verification') || type == 'sms' || type.contains('code')) return '@drawable/ic_notification_otp';
-  if (type.contains('number') || type.contains('order') || type.contains('activation') || type.contains('purchase')) return '@drawable/ic_notification_number';
-  return '@drawable/ic_notification_admin';
+  if (type.contains('admin') || type == 'push_test') return '@drawable/ic_notification_admin';
+  if (type.contains('announcement') || type.contains('news')) return '@drawable/ic_notification_announcement';
+  if (type.contains('auto') || type.contains('automation') || type.contains('background')) return '@drawable/ic_notification_auto';
+  if (type.contains('payment') || type.contains('wallet') || type.contains('deposit') || type.contains('balance') || type.contains('purchase')) return '@drawable/ic_notification_payment';
+  if (type.contains('gift') || type.contains('reward') || type.contains('bonus') || type.contains('promo')) return '@drawable/ic_notification_gift';
+  if (type.contains('number') || type.contains('order') || type.contains('activation')) return '@drawable/ic_notification_number';
+  if (type.contains('user') || type.contains('account') || type.contains('profile')) return '@drawable/ic_notification_user';
+  if (type.contains('system') || type.contains('maintenance') || type.contains('service')) return '@drawable/ic_notification_system';
+  if (type.contains('success') || type.contains('completed')) return '@drawable/ic_notification_success';
+  if (type.contains('numelixa') || type.contains('brand')) return '@drawable/ic_notification_numelixa';
+  return '@drawable/ic_notification_general';
 }
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  // Android automatically displays FCM notification-payload messages while the app is backgrounded.
-  // Showing those again with flutter_local_notifications created duplicate alerts.
-  // Server sends data-only FCM so this handler can select the right Numelixa icon.\n  if (message.notification != null) return;
+  // Data-only FCM lets this background isolate apply the selected icon category.
   const android = AndroidInitializationSettings('@drawable/ic_stat_numelixa');
   final local = FlutterLocalNotificationsPlugin();
   await local.initialize(const InitializationSettings(android: android));
