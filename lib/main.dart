@@ -62,6 +62,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       priority: Priority.high,
       playSound: true,
       icon: notificationIconFor(data),
+      largeIcon: DrawableResourceAndroidBitmap(notificationIconFor(data).replaceFirst('@drawable/', '') + '_color'),
       actions: code == null ? null : const [
         AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
       ],
