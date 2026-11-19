@@ -51,6 +51,11 @@ jobs:
               s = s.replace('<application', permission + '\n    <application', 1)
           if 'android.permission.REQUEST_INSTALL_PACKAGES' not in s:
               s = s.replace('<application', install_permission + '\n    <application', 1)
+          # Use the real Numelixa monochrome status icon for Firebase-rendered background notifications.
+          notification_meta = '''        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_numelixa" />
+                  <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="general" />'''
+          if 'com.google.firebase.messaging.default_notification_icon' not in s:
+              s = s.replace('</application>', notification_meta + '\\n    </application>', 1)
           s = s.replace('android:label="app"', 'android:label="Numelixa"')
           # Receive the short-lived, one-time OAuth ticket returned by the
           # production website after Google verifies the chosen account.
