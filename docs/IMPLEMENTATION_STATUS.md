@@ -2,10 +2,14 @@
 
 **Repository:** `manager-cpu6/Numelixa-app`  
 **Branch:** `main`  
-**App version in pubspec:** `1.0.26+27`  
+**App version in pubspec:** `1.0.30+31`  
 **Status date:** 20 November 2026.
 
 ## Implemented in this mobile-only change set
+
+- Account support shortcuts: direct private Support Team chat with the official blue verified mark, dedicated Support Ticket entry, and direct WhatsApp support.
+- Removed the in-app Developer Center entry from the Android Account screen; the public website developer portal is outside this app-only repository change.
+- Service catalog now prioritizes available popular services (WhatsApp, Telegram, TikTok, Instagram, Facebook, Google, Gmail and YouTube) while retaining the complete live API catalog. Corrected numeric service suffix normalization.
 
 - Wallet: searchable ledger, All/Added/Spent/Refunds filters, transaction details, verified receipt action, and clear disclosure that pending/failed payment-provider events are not returned by the current ledger endpoint.
 - Orders: search, Active/Completed/Cancelled/Failed filters, server-provided USD price, expiry countdown refreshed by the existing 15-second poll, SMS copy/refresh and cancellation.
