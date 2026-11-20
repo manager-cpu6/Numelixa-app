@@ -3138,9 +3138,10 @@ class _AccountPageState extends State<_AccountPage> {
     final name = (user['name'] ?? 'Numelixa user').toString();
     final email = (user['email'] ?? user['phone'] ?? 'Numelixa account').toString();
     final publicIdRaw = (user['publicId'] ?? user['numelixaId'] ?? '').toString();
-    final publicId = RegExp(r'^\\d{7}
+    final publicId = RegExp(r'^\d{7}$').hasMatch(publicIdRaw) ? publicIdRaw : '';
     final verified = user['verified_at'] != null || user['phoneVerifiedAt'] != null;
     final isAdmin = (user['role'] ?? '').toString() == 'admin';
+    final isMerchant = user['merchantEnabled'] == true || (user['role'] ?? '').toString() == 'merchant';
     return ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 32), children: [
       Card(
         child: Padding(
