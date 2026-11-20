@@ -512,34 +512,12 @@ class _NumelixaLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: size, height: size,
-    child: CustomPaint(painter: _NumelixaBrandPainter()),
+    child: Image.asset(
+      'assets/numelixa_icon_source.jpg',
+      width: size, height: size, fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Icon(Icons.public_rounded, color: AppTheme.cyan),
+    ),
   );
-}
-
-class _NumelixaBrandPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(size.width / 100, size.height / 100);
-    final globe = Paint()..shader = const LinearGradient(
-      colors: [Color(0xFF27E8FF), Color(0xFF0864FF), Color(0xFF07134C)],
-      begin: Alignment.topLeft, end: Alignment.bottomRight,
-    ).createShader(const Rect.fromLTWH(8, 5, 84, 84));
-    canvas.drawCircle(const Offset(50, 43), 35, globe);
-    final grid = Paint()..color = const Color(0xFF71EFFF).withValues(alpha: .42)..style = PaintingStyle.stroke..strokeWidth = 1.1;
-    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:58,height:66),grid);
-    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:30,height:66),grid);
-    canvas.drawLine(const Offset(18,43),const Offset(82,43),grid);
-    final ribbon = Path()..moveTo(19,72)..cubicTo(28,48,34,26,43,28)..cubicTo(51,29,57,47,65,57)..cubicTo(72,67,80,69,84,60)..cubicTo(87,54,87,45,87,38);
-    final paint = Paint()..style=PaintingStyle.stroke..strokeWidth=13..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round
-      ..shader=const LinearGradient(colors:[Color(0xFF2AF4EE),Color(0xFF168BFF),Color(0xFF722CFF),Color(0xFFEF43E8)]).createShader(const Rect.fromLTWH(10,20,82,60));
-    canvas.drawPath(ribbon,paint);
-    final orbit=Path()..moveTo(5,57)..cubicTo(23,38,43,39,60,48)..cubicTo(75,56,88,51,96,39);
-    canvas.drawPath(orbit,Paint()..style=PaintingStyle.stroke..strokeWidth=2.2..strokeCap=StrokeCap.round..color=Colors.white);
-    canvas.restore();
-  }
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate)=>false;
 }
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
