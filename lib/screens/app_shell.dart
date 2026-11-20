@@ -1172,27 +1172,6 @@ class _HomePage extends StatelessWidget {
   }
 }
 
-class _HomeShortcut extends StatelessWidget {
-  const _HomeShortcut({required this.icon, required this.title, required this.subtitle, required this.onTap});
-  final IconData icon; final String title, subtitle; final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: InkWell(borderRadius: BorderRadius.circular(17), onTap: onTap, child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(children: [
-        Container(width: 38, height: 38, decoration: BoxDecoration(color: const Color(0xFF102844), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: AppTheme.cyan, size: 20)),
-        const SizedBox(width: 9),
-        Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 3),
-          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: AppTheme.muted)),
-        ])),
-      ]),
-    )),
-  );
-}
-
 class _HomeNotificationsPreview extends StatefulWidget {
   const _HomeNotificationsPreview();
   @override State<_HomeNotificationsPreview> createState()=>_HomeNotificationsPreviewState();
