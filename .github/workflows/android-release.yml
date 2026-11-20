@@ -513,7 +513,7 @@ jobs:
           body: |
             Numelixa — Global Virtual Numbers
 
-            Numelixa mobile platform release: refreshed Wallet, Orders, Account and Support experiences; searchable in-app Developer Center; Legal Center; security and visual refinements; and verified official-domain in-app updates.
+            Numelixa mobile platform release: streamlined Account with verified private Support Team chat, Support Tickets and WhatsApp; prioritized popular live services with official-site icons; categorized purchase, payment, order and security notifications; and refreshed security and visual refinements.
 
             Version ${{ steps.app_version.outputs.version }} keeps the existing Android package ID and uses the configured release signing key for in-place updates. Existing account data remains on the Numelixa service.
 
