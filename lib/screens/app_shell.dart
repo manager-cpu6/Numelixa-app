@@ -3189,77 +3189,123 @@ class _AccountPageState extends State<_AccountPage> {
       ],
     )));
   }
+  Future<void> _openWeb(String path) async {
+    final uri = Uri.parse('https://www.numelixa.com' + path);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _copyPublicId(String value) async {
+    if (value.trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: value));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final user = auth.user ?? const <String, dynamic>{};
     final avatar = _avatarProvider(user);
-    return ListView(padding: const EdgeInsets.fromLTRB(18, 22, 18, 30), children: [
-      Center(child: Stack(children: [
-        CircleAvatar(radius: 43, backgroundColor: const Color(0xFF123C64), backgroundImage: avatar,
-          child: avatar == null ? const Icon(Icons.person_outline_rounded, size: 40, color: AppTheme.cyan) : null),
-        Positioned(right: 0, bottom: 0, child: Material(
-          color: AppTheme.cyan, shape: const CircleBorder(),
-          child: IconButton(
-            tooltip: 'Change profile photo',
-            onPressed: _photoBusy ? null : _showPhotoOptions,
-            icon: _photoBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Color(0xFF03121F), size: 19),
-          ),
-        )),
-      ])),
-      const SizedBox(height: 12),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Flexible(child: Text((user['name'] ?? 'Numelixa user').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800))),
-        if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
-        NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 19),
-      ]),
-      const SizedBox(height: 4),
-      Text((user['email'] ?? user['phone'] ?? 'Numelixa account').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
-      if ((user['role'] ?? '').toString() == 'admin') ...[
-        const SizedBox(height: 22),
-        Card(child: ListTile(
-          leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.mint),
-          title: const Text('Admin control center'),
-          subtitle: const Text('Manage users, payments, referrals and platform operations.'),
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-            builder: (_) => _AdminControlPage(accessToken: auth.accessToken!),
-          )),
-        )),
+    final name = (user['name'] ?? 'Numelixa user').toString();
+    final email = (user['email'] ?? user['phone'] ?? 'Numelixa account').toString();
+    final publicId = (user['publicId'] ?? user['numelixaId'] ?? '').toString();
+    final verified = user['verified_at'] != null || user['phoneVerifiedAt'] != null;
+    final isAdmin = (user['role'] ?? '').toString() == 'admin';
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 32), children: [
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+          child: Column(children: [
+            Center(child: Stack(children: [
+              CircleAvatar(radius: 39, backgroundColor: const Color(0xFF123C64), backgroundImage: avatar,
+                child: avatar == null ? const Icon(Icons.person_outline_rounded, size: 36, color: AppTheme.cyan) : null),
+              Positioned(right: 0, bottom: 0, child: Material(
+                color: AppTheme.cyan, shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Change profile photo',
+                  onPressed: _photoBusy ? null : _showPhotoOptions,
+                  icon: _photoBusy ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Color(0xFF03121F), size: 18),
+                ),
+              )),
+            ])),
+            const SizedBox(height: 10),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
+              if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
+              NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 18),
+            ]),
+            const SizedBox(height: 4),
+            Text(email, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(verified ? Icons.verified_rounded : Icons.pending_outlined, size: 15, color: verified ? AppTheme.mint : AppTheme.warning),
+              const SizedBox(width: 5),
+              Text(verified ? 'Account verified' : 'Verification pending', style: TextStyle(color: verified ? AppTheme.mint : AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700)),
+            ]),
+            if (publicId.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                decoration: BoxDecoration(color: const Color(0xFF0D1930), borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.glassBorder)),
+                child: Row(children: [
+                  const Icon(Icons.badge_outlined, color: AppTheme.cyan, size: 19),
+                  const SizedBox(width: 9),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('NUMELIXA ID', style: TextStyle(color: AppTheme.muted, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                    const SizedBox(height: 2),
+                    Text(publicId, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                  ])),
+                  IconButton(tooltip: 'Copy Numelixa ID', onPressed: () => _copyPublicId(publicId), icon: const Icon(Icons.copy_rounded, color: AppTheme.cyan, size: 19)),
+                ]),
+              ),
+            ],
+          ]),
+        ),
+      ),
+      if (isAdmin) ...[
+        const SizedBox(height: 12),
+        _AccountSection(title: 'ADMINISTRATION', children: [
+          _AccountAction(icon: Icons.admin_panel_settings_rounded, title: 'Admin control center', subtitle: 'Users, payments, referrals and operations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _AdminControlPage(accessToken: auth.accessToken!)))),
+          _AccountAction(icon: Icons.campaign_rounded, title: 'Updates management', subtitle: 'Manage channels, posts and real analytics', onTap: () => _openWeb('/admin/updates')),
+        ]),
       ],
-      const SizedBox(height: 26),
-      const Padding(padding: EdgeInsets.only(left: 4, bottom: 8), child: Text('OFFICIAL SUPPORT', style: TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2))),
-      Card(child: ListTile(
-        leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan),
-        title: Row(children: [const Expanded(child: Text('Support Team')), const NumelixaVerifiedBadge(verified: true, size: 19)]),
-        subtitle: const Text('Private one-to-one chat with the official Numelixa team'),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => HelpTeamScreen(accessToken: auth.accessToken),
-        )),
-      )),
-      Card(child: ListTile(
-        leading: const Icon(Icons.confirmation_number_outlined, color: AppTheme.cyan),
-        title: const Text('Support Ticket'),
-        subtitle: const Text('Create and track a support request'),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => const _SupportCenterPage(),
-        )),
-      )),
-      Card(child: ListTile(
-        leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)),
-        title: const Text('WhatsApp Support'),
-        subtitle: const Text('Contact the Numelixa support team'),
-        trailing: const Icon(Icons.open_in_new_rounded),
-        onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication),
-      )),
-      const SizedBox(height: 18),
+      const SizedBox(height: 16),
+      _AccountSection(title: 'ACCOUNT & IDENTITY', children: [
+        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications, appearance and account security', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
+        _AccountAction(icon: Icons.devices_rounded, title: 'Your devices', subtitle: 'Active sessions and sign out other devices', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountDevicesScreen()))),
+        _AccountAction(icon: Icons.password_rounded, title: 'Change password', subtitle: 'Verify the change with your email code', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountPasswordScreen()))),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'REWARDS', children: [
+        _AccountAction(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Your referral code, rewards and withdrawal status', onTap: () => _openWeb('/referrals')),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'OFFICIAL SUPPORT', children: [
+        _AccountAction(icon: Icons.forum_rounded, title: 'Help Team Chat', subtitle: 'Private one-to-one chat with the official Numelixa team', trailing: const NumelixaVerifiedBadge(verified: true, size: 17), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: auth.accessToken)))),
+        _AccountAction(icon: Icons.confirmation_number_outlined, title: 'Support Ticket', subtitle: 'Create and track a support request', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage()))),
+        _AccountAction(icon: Icons.chat_rounded, title: 'WhatsApp Support', subtitle: 'Contact the configured support team', iconColor: const Color(0xFF25D366), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication)),
+        _AccountAction(icon: Icons.help_outline_rounded, title: 'Help Center', subtitle: 'Guides and frequently asked questions', onTap: () => _openWeb('/clients')),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'DEVELOPER & RESOURCES', children: [
+        _AccountAction(icon: Icons.code_rounded, title: 'Developer Portal', subtitle: 'API access and developer tools', onTap: () => _openWeb('/developers')),
+        _AccountAction(icon: Icons.menu_book_rounded, title: 'API Documentation', subtitle: 'Verified API routes and integration examples', onTap: () => _openWeb('/developers/docs')),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'LEGAL & PRIVACY', children: [
+        _AccountAction(icon: Icons.gavel_rounded, title: 'Legal Center', subtitle: 'Official policies and account information', onTap: () => _openWeb('/legal')),
+        _AccountAction(icon: Icons.description_outlined, title: 'Terms of Service', subtitle: 'Terms governing use of Numelixa', onTap: () => _openWeb('/terms')),
+        _AccountAction(icon: Icons.privacy_tip_outlined, title: 'Privacy Policy', subtitle: 'How account and service data is handled', onTap: () => _openWeb('/privacy')),
+        _AccountAction(icon: Icons.receipt_long_outlined, title: 'Refund Policy', subtitle: 'Refund eligibility and procedures', onTap: () => _openWeb('/refund-policy')),
+        _AccountAction(icon: Icons.cookie_outlined, title: 'Cookie Policy', subtitle: 'Website cookie information', onTap: () => _openWeb('/cookie-policy')),
+        _AccountAction(icon: Icons.rule_rounded, title: 'Acceptable Use', subtitle: 'Permitted and prohibited platform use', onTap: () => _openWeb('/rules')),
+        _AccountAction(icon: Icons.delete_outline_rounded, title: 'Account deletion', subtitle: 'Official account deletion request process', iconColor: const Color(0xFFFF788C), onTap: () => _openWeb('/account-deletion')),
+      ]),
+      const SizedBox(height: 16),
       OutlinedButton.icon(
         onPressed: () async { await auth.logout(); },
         icon: const Icon(Icons.logout_rounded),
         label: const Text('Sign out'),
-        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), foregroundColor: const Color(0xFFFF788C)),
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: const Color(0xFFFF788C)),
       ),
     ]);
   }
