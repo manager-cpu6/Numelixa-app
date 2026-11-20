@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -100,7 +101,7 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
   final c=_channel.isEmpty?widget.channel:_channel,joined=c['joined']==true;
   final subscriberCount=(c['publicSubscriberCount']??c['actualSubscriberCount']??0).toString();
   return RefreshIndicator(onRefresh:()async{setState(_load);await _future;},child:ListView(padding:const EdgeInsets.fromLTRB(14,0,14,28),children:[
-   if((c['coverUrl']??'').toString().isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(18),child:Image.network(c['coverUrl'].toString(),height:145,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(height:12)))
+   if((c['coverUrl']??'').toString().isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(18),child:Image.network(_mediaUrl(c['coverUrl'].toString()),height:145,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(height:12)))
    else Container(height:96,decoration:BoxDecoration(borderRadius:BorderRadius.circular(18),color:const Color(0xFF123C64)),child:const Center(child:Icon(Icons.campaign_outlined,color:AppTheme.cyan,size:40))),
    const SizedBox(height:12),Row(children:[_ChannelAvatar(url:(c['avatarUrl']??'').toString(),size:60),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Flexible(child:Text((c['name']??'').toString(),style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),if(c['verified']==true)const Icon(Icons.verified_rounded,color:AppTheme.cyan,size:18)]),Text((c['description']??'').toString(),style:const TextStyle(color:AppTheme.muted,fontSize:12)),Text('$subscriberCount subscribers',style:const TextStyle(color:AppTheme.cyan,fontSize:11,fontWeight:FontWeight.w700))]))]),
    const SizedBox(height:12),Row(children:[Expanded(child:FilledButton(onPressed:_busy?null:()=>_membership(!joined),child:Text(_busy?'Please wait…':joined?'Joined · Leave':'Join channel'))),if(joined)IconButton(onPressed:_busy?null:()=>_notifications(c['notificationsEnabled']!=true),icon:Icon(c['notificationsEnabled']==true?Icons.notifications_active_rounded:Icons.notifications_off_outlined,color:AppTheme.cyan)),IconButton(onPressed:_busy?null:_block,icon:const Icon(Icons.block_rounded,color:AppTheme.muted))]),
@@ -120,8 +121,28 @@ class _UpdatePostCard extends StatelessWidget{
   return Card(margin:const EdgeInsets.only(top:12),child:Padding(padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
    Row(children:[const Icon(Icons.campaign_outlined,color:AppTheme.cyan,size:18),const SizedBox(width:7),Expanded(child:Text((post['title']??'Announcement').toString(),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:15))),Text(date==null?'':date.toLocal().toString().substring(0,16),style:const TextStyle(color:AppTheme.muted,fontSize:10))]),
    if((post['body']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:SelectableText((post['body']??'').toString(),style:const TextStyle(height:1.55,fontSize:13))),
-   if(media.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),child:SizedBox(height:220,child:PageView(children:media.map((m){final url=(m['url']??'').toString();return ClipRRect(borderRadius:BorderRadius.circular(14),child:m['type']=='video'?InkWell(onTap:()=>launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication),child:Container(color:Colors.black,child:const Center(child:Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:56)))):Image.network(url,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:AppTheme.muted))));}).toList()))),
+   if(media.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),child:SizedBox(height:220,child:PageView(children:media.map((m){final rawUrl=(m['url']??'').toString();final url=_mediaUrl(rawUrl);return ClipRRect(borderRadius:BorderRadius.circular(14),child:m['type']=='video'?_UpdateVideoPlayer(url:url):GestureDetector(onTap:()=>showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.black,child:InteractiveViewer(child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,color:Colors.white))))),child:Image.network(url,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:AppTheme.muted)))));}).toList()))),
    const SizedBox(height:8),Row(children:[const Icon(Icons.visibility_outlined,size:15,color:AppTheme.muted),const SizedBox(width:5),Text('$views views',style:const TextStyle(color:AppTheme.muted,fontSize:11))])
+  ])));
+ }
+}
+String _mediaUrl(String raw)=>raw.startsWith('/')?'https://www.numelixa.com'+raw:raw;
+
+class _UpdateVideoPlayer extends StatefulWidget{
+ const _UpdateVideoPlayer({required this.url});final String url;
+ @override State<_UpdateVideoPlayer> createState()=>_UpdateVideoPlayerState();
+}
+class _UpdateVideoPlayerState extends State<_UpdateVideoPlayer>{
+ late final VideoPlayerController _controller;bool _failed=false;
+ @override void initState(){super.initState();_controller=VideoPlayerController.networkUrl(Uri.parse(widget.url))..initialize().then((_) {if(mounted)setState((){});}).catchError((_) {if(mounted)setState(()=>_failed=true);});}
+ @override void dispose(){_controller.dispose();super.dispose();}
+ @override Widget build(BuildContext context){
+  if(_failed)return Container(color:Colors.black,alignment:Alignment.center,child:const Text('Video unavailable',style:TextStyle(color:Colors.white70)));
+  if(!_controller.value.isInitialized)return Container(color:Colors.black,alignment:Alignment.center,child:const CircularProgressIndicator(color:AppTheme.cyan));
+  return GestureDetector(onTap:(){setState(()=>_controller.value.isPlaying?_controller.pause():_controller.play());},child:Container(color:Colors.black,child:Stack(alignment:Alignment.center,children:[
+   AspectRatio(aspectRatio:_controller.value.aspectRatio,child:VideoPlayer(_controller)),
+   if(!_controller.value.isPlaying)const Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:58),
+   Positioned(left:10,right:10,bottom:8,child:VideoProgressIndicator(_controller,allowScrubbing:true,colors:const VideoProgressColors(playedColor:AppTheme.cyan,bufferedColor:Colors.white38,backgroundColor:Colors.white12))),
   ])));
  }
 }
