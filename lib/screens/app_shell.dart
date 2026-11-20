@@ -1147,7 +1147,6 @@ class _HomePage extends StatelessWidget {
       const SizedBox(height: 18),
       const Text('HELP & RESOURCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
       const SizedBox(height: 9),
-      const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
       const _ActionTile(icon: Icons.support_agent_rounded, title: 'Help Team', subtitle: 'Private help from the Numelixa team', destination: 'support'),
       const _ActionTile(icon: Icons.menu_book_rounded, title: 'Help Center', subtitle: 'Guides and practical help', destination: 'clients'),
     ]);
