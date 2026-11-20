@@ -3224,6 +3224,7 @@ class _AccountPageState extends State<_AccountPage> {
         const SizedBox(height: 12),
         _AccountSection(title: 'ADMINISTRATION', children: [
           _AccountAction(icon: Icons.admin_panel_settings_rounded, title: 'Admin control center', subtitle: 'Users, payments, referrals and operations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _AdminControlPage(accessToken: auth.accessToken!)))),
+          _AccountAction(icon: Icons.dashboard_customize_rounded, title: 'Full Admin Dashboard', subtitle: 'Merchant access and extended platform controls', onTap: () => _openWeb('/admin')),
           _AccountAction(icon: Icons.campaign_rounded, title: 'Updates management', subtitle: 'Manage channels, posts and real analytics', onTap: () => _openWeb('/admin/updates')),
           _AccountAction(icon: Icons.handshake_outlined, title: 'Partner enquiries', subtitle: 'Review and respond to partnership requests', onTap: () => _openWeb('/admin/partner-inquiries')),
         ]),
