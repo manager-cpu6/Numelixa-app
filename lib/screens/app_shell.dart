@@ -257,6 +257,27 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (permission.isGranted) await notifications.syncToken(auth);
   }
 
+  Future<void> _openUpdatesNotification(String route) async {
+    final parts = route.split(':');
+    if (parts.length < 2 || !_updatesEnabled || _hideUpdates) {
+      if (mounted) setState(() => _index = 0);
+      return;
+    }
+    final slug = parts[1].trim();
+    if (slug.isEmpty) return;
+    try {
+      final result = await ApiClient().get('/api/updates', accessToken: context.read<AuthService>().accessToken);
+      final raw = result['channels'];
+      final channels = raw is List ? raw.whereType<Map>().map((x) => Map<String,dynamic>.from(x)).toList() : <Map<String,dynamic>>[];
+      final channel = channels.where((x) => (x['slug'] ?? '').toString() == slug).firstOrNull;
+      if (!mounted || channel == null) return;
+      setState(() => _index = 2);
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpdatesChannelScreen(channel: channel)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This channel update is temporarily unavailable.')));
+    }
+  }
+
   void _handleNotificationRoute() {
     final route = appNotificationRoute.value;
     if (!mounted || route == null) return;
@@ -273,6 +294,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         ));
         return;
       }
+    }
+    if (route.startsWith('updates:')) {
+      _openUpdatesNotification(route);
+      return;
     }
     setState(() => _index = 0);
   }
