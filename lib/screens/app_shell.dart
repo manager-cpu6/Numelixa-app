@@ -22,6 +22,7 @@ import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
 import 'updates_screen.dart';
 import 'account_tools_screen.dart';
+import 'admin_updates_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -1147,8 +1148,7 @@ class _HomePage extends StatelessWidget {
       const SizedBox(height: 18),
       const Text('HELP & RESOURCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
       const SizedBox(height: 9),
-      const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
-      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Support Team Chat', subtitle: 'Private help from the Numelixa team', destination: 'support'),
+      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Help Team', subtitle: 'Private help from the Numelixa team', destination: 'support'),
       const _ActionTile(icon: Icons.menu_book_rounded, title: 'Help Center', subtitle: 'Guides and practical help', destination: 'clients'),
     ]);
   }
@@ -1294,7 +1294,7 @@ class _ActionTile extends StatelessWidget {
           'orders' => const _OrdersPage(),
           'active' => const _ActiveNumbersPage(),
           'notifications' => const _NotificationsPage(),
-          'support' => const _SupportCenterPage(),
+          'support' => HelpTeamScreen(accessToken: context.read<AuthService>().accessToken ?? ''),
           'clients' => const _ClientHelpPage(),
           'wallet' => const _WalletPage(),
           'updates' => const UpdatesScreen(),
@@ -3225,13 +3225,14 @@ class _AccountPageState extends State<_AccountPage> {
         _AccountSection(title: 'ADMINISTRATION', children: [
           _AccountAction(icon: Icons.admin_panel_settings_rounded, title: 'Admin control center', subtitle: 'Users, payments, referrals and operations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _AdminControlPage(accessToken: auth.accessToken!)))),
           _AccountAction(icon: Icons.dashboard_customize_rounded, title: 'Full Admin Dashboard', subtitle: 'Merchant access and extended platform controls', onTap: () => _openWeb('/admin')),
-          _AccountAction(icon: Icons.campaign_rounded, title: 'Updates management', subtitle: 'Manage channels, posts and real analytics', onTap: () => _openWeb('/admin/updates')),
+          _AccountAction(icon: Icons.campaign_rounded, title: 'Updates management', subtitle: 'Manage channels, posts, publishing and notifications', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => AdminUpdatesScreen(accessToken: auth.accessToken!)))),
           _AccountAction(icon: Icons.handshake_outlined, title: 'Partner enquiries', subtitle: 'Review and respond to partnership requests', onTap: () => _openWeb('/admin/partner-inquiries')),
         ]),
       ],
       const SizedBox(height: 16),
       _AccountSection(title: 'ACCOUNT & IDENTITY', children: [
-        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications, appearance and account security', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
+        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications and account preferences', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
+         _AccountAction(icon: Icons.fingerprint_rounded, title: 'Fingerprint & app lock', subtitle: 'Protect Numelixa with fingerprint, face or device authentication', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
         _AccountAction(icon: Icons.devices_rounded, title: 'Your devices', subtitle: 'Active sessions and sign out other devices', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountDevicesScreen()))),
         _AccountAction(icon: Icons.security_rounded, title: 'Security activity', subtitle: 'Account protection and recent security information', onTap: () => _openWeb('/security')),
         _AccountAction(icon: Icons.password_rounded, title: 'Change password', subtitle: 'Verify the change with your email code', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountPasswordScreen()))),
@@ -3242,7 +3243,7 @@ class _AccountPageState extends State<_AccountPage> {
       ]),
       const SizedBox(height: 14),
       _AccountSection(title: 'OFFICIAL SUPPORT', children: [
-        _AccountAction(icon: Icons.forum_rounded, title: 'Help Team Chat', subtitle: 'Private one-to-one chat with the official Numelixa team', trailing: const NumelixaVerifiedBadge(verified: true, size: 17), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: auth.accessToken)))),
+        _AccountAction(icon: Icons.forum_rounded, title: 'Help Team', subtitle: 'Private one-to-one chat with the official Numelixa team', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: auth.accessToken)))),
         _AccountAction(icon: Icons.confirmation_number_outlined, title: 'Support Ticket', subtitle: 'Create and track a support request', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage()))),
         _AccountAction(icon: Icons.chat_rounded, title: 'WhatsApp Support', subtitle: 'Contact the configured support team', iconColor: const Color(0xFF25D366), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication)),
         _AccountAction(icon: Icons.help_outline_rounded, title: 'Help Center', subtitle: 'Guides and frequently asked questions', onTap: () => _openWeb('/clients')),
@@ -3304,14 +3305,12 @@ class _AccountAction extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.trailing,
     this.iconColor = AppTheme.cyan,
   });
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final Widget? trailing;
   final Color iconColor;
   @override
   Widget build(BuildContext context) => ListTile(
@@ -3320,7 +3319,7 @@ class _AccountAction extends StatelessWidget {
     leading: Icon(icon, color: iconColor, size: 21),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
     subtitle: Text(subtitle, style: const TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.3)),
-    trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: AppTheme.muted, size: 20),
+    trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.muted, size: 20),
     onTap: onTap,
   );
 }
