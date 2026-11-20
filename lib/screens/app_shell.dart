@@ -3305,14 +3305,12 @@ class _AccountAction extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.trailing,
     this.iconColor = AppTheme.cyan,
   });
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final Widget? trailing;
   final Color iconColor;
   @override
   Widget build(BuildContext context) => ListTile(
@@ -3321,7 +3319,7 @@ class _AccountAction extends StatelessWidget {
     leading: Icon(icon, color: iconColor, size: 21),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
     subtitle: Text(subtitle, style: const TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.3)),
-    trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: AppTheme.muted, size: 20),
+    trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.muted, size: 20),
     onTap: onTap,
   );
 }
