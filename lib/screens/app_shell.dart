@@ -524,14 +524,7 @@ class _SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        width: 82, height: 82, alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(27),
-          gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
-        ),
-        child: const _NumelixaLogo(size: 62),
-      ),
+      const _NumelixaLogo(size: 82),
       const SizedBox(height: 20),
       const Text('NUMELIXA', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 3)),
       const SizedBox(height: 7),
