@@ -124,7 +124,7 @@ class _AccountPasswordScreenState extends State<AccountPasswordScreen>{
  bool _sent=false,_busy=false;String? _message;
  @override void dispose(){_code.dispose();_password.dispose();_confirm.dispose();super.dispose();}
  Future<void> _send()async{setState(()=>_busy=true);try{await context.read<AuthService>().requestPasswordChangeCode();if(mounted)setState((){_sent=true;_message='A six-digit verification code was sent to your account email.';});}catch(e){if(mounted)setState(()=>_message=e.toString());}finally{if(mounted)setState(()=>_busy=false);}}
- Future<void> _confirm()async{
+ Future<void> _applyPasswordChange()async{
   if(_password.text.length<8||_password.text!=_confirm.text){setState(()=>_message='Enter a password with at least 8 characters and make sure both fields match.');return;}
   setState(()=>_busy=true);try{await context.read<AuthService>().confirmPasswordChange(code:_code.text,newPassword:_password.text);if(mounted){setState(()=>_message='Password changed successfully.');_password.clear();_confirm.clear();_code.clear();}}catch(e){if(mounted)setState(()=>_message=e.toString());}finally{if(mounted)setState(()=>_busy=false);}
  }
@@ -138,7 +138,7 @@ class _AccountPasswordScreenState extends State<AccountPasswordScreen>{
    TextField(controller:_code,keyboardType:TextInputType.number,maxLength:6,decoration:const InputDecoration(labelText:'6-digit email code')),
    TextField(controller:_password,obscureText:true,decoration:const InputDecoration(labelText:'New password')),
    TextField(controller:_confirm,obscureText:true,decoration:const InputDecoration(labelText:'Confirm new password')),
-   const SizedBox(height:12),FilledButton(onPressed:_busy?null:_confirm,child:Text(_busy?'Saving…':'Update password')),
+   const SizedBox(height:12),FilledButton(onPressed:_busy?null:_applyPasswordChange,child:Text(_busy?'Saving…':'Update password')),
    TextButton(onPressed:_busy?null:_send,child:const Text('Send a new code')),
   ]
  ]));
