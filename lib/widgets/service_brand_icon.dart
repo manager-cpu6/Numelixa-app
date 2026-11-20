@@ -7,6 +7,7 @@ class ServiceBrandIcon extends StatelessWidget {
   const ServiceBrandIcon({super.key, required this.name, this.id, this.size = 46});
   final String name;
   final String? id;
+  final double size;
 
   static String canonicalKey(String name, String? id) {
     final raw = (id?.trim().isNotEmpty == true ? id! : name).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '').replaceFirst(RegExp(r'\\d+$'), '');
@@ -40,7 +41,6 @@ class ServiceBrandIcon extends StatelessWidget {
       case 'paypal': return FontAwesomeIcons.paypal;
       case 'reddit': return FontAwesomeIcons.reddit;
       case 'spotify': return FontAwesomeIcons.spotify;
-      case 'netflix': return FontAwesomeIcons.netflix;
       case 'amazon': return FontAwesomeIcons.amazon;
       case 'apple': return FontAwesomeIcons.apple;
       case 'signal': return FontAwesomeIcons.signalMessenger;
@@ -53,22 +53,17 @@ class ServiceBrandIcon extends StatelessWidget {
       case 'uber': return FontAwesomeIcons.uber;
       case 'airbnb': return FontAwesomeIcons.airbnb;
       case 'yahoo': return FontAwesomeIcons.yahoo;
-      case 'tinder': return FontAwesomeIcons.tinder;
       case 'dropbox': return FontAwesomeIcons.dropbox;
       case 'slack': return FontAwesomeIcons.slack;
-      case 'zoom': return FontAwesomeIcons.zoom;
-      case 'canva': return FontAwesomeIcons.canva;
       case 'figma': return FontAwesomeIcons.figma;
       case 'openai': case 'chatgpt': return FontAwesomeIcons.openai;
-      case 'capcut': return FontAwesomeIcons.cut;
+      case 'capcut': return FontAwesomeIcons.scissors;
       case 'threads': return FontAwesomeIcons.threads;
       case 'vk': return FontAwesomeIcons.vk;
       case 'yandex': return FontAwesomeIcons.yandex;
-      case 'coinbase': return FontAwesomeIcons.coinbase;
       case 'aliexpress': return FontAwesomeIcons.alipay;
       case 'ebay': return FontAwesomeIcons.ebay;
       case 'bolt': return FontAwesomeIcons.bolt;
-      case 'grab': return FontAwesomeIcons.grab;
       default: return null;
     }
   }
