@@ -72,6 +72,7 @@ String? _notificationCode(Map<String, dynamic> data) {
 String _routeFor(Map<String, dynamic> data) {
   final type = (data['type'] ?? '').toString().toLowerCase();
   if (type == 'login_approval' && (data['approvalId'] ?? '').toString().isNotEmpty) return 'login_approval:' + (data['approvalId'] ?? '').toString();
+  if (type == 'updates_post' && (data['channelSlug'] ?? '').toString().isNotEmpty) return 'updates:' + (data['channelSlug'] ?? '').toString() + ':' + (data['postId'] ?? '').toString();
   // Payment notifications can carry an orderId too (notably Ethiopia). Route
   // those to Wallet before applying the generic orderId -> Orders rule.
   if (type.contains('wallet') || type.contains('payment') || type.contains('balance')) return 'wallet';
