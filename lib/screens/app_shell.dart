@@ -1138,6 +1138,8 @@ class _HomePage extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 20),
+      const _HomeNotificationsPreview(),
+      const SizedBox(height: 12),
       const _RecentServicesPreview(),
       const SizedBox(height: 12),
       const _HomeUpdatesPreview(),
@@ -1170,6 +1172,26 @@ class _HomeShortcut extends StatelessWidget {
       ]),
     )),
   );
+}
+
+class _HomeNotificationsPreview extends StatefulWidget {
+  const _HomeNotificationsPreview();
+  @override State<_HomeNotificationsPreview> createState()=>_HomeNotificationsPreviewState();
+}
+class _HomeNotificationsPreviewState extends State<_HomeNotificationsPreview>{
+  late Future<Map<String,dynamic>> _future;
+  @override void initState(){super.initState();_load();}
+  void _load(){_future=NumelixaRepository().notifications(token:context.read<AuthService>().accessToken??'');}
+  @override Widget build(BuildContext context)=>FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,s){
+    if(s.connectionState==ConnectionState.waiting||s.hasError)return const SizedBox.shrink();
+    final raw=s.data?['notifications'];final all=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
+    final items=all.where((x){final type=(x['type']??'').toString().toLowerCase();return !type.contains('admin')&&!type.contains('broadcast');}).take(2).toList();
+    if(items.isEmpty)return const SizedBox.shrink();
+    return Card(child:Padding(padding:const EdgeInsets.all(13),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[const Icon(Icons.notifications_active_outlined,color:AppTheme.cyan,size:18),const SizedBox(width:8),const Expanded(child:Text('Recent notifications',style:TextStyle(fontWeight:FontWeight.w900,fontSize:13))),TextButton(onPressed:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _NotificationsPage())),child:const Text('View all'))]),
+      ...items.map((item)=>ListTile(contentPadding:EdgeInsets.zero,dense:true,leading:const Icon(Icons.circle_notifications_outlined,color:AppTheme.cyan,size:21),title:Text((item['title']??'Numelixa notification').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800)),subtitle:Text((item['message']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:AppTheme.muted)))),
+    ])));
+  });
 }
 
 class _RecentServicesPreview extends StatefulWidget {
