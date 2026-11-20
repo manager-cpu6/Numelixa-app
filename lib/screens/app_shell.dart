@@ -269,7 +269,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       final result = await ApiClient().get('/api/updates', accessToken: context.read<AuthService>().accessToken);
       final raw = result['channels'];
       final channels = raw is List ? raw.whereType<Map>().map((x) => Map<String,dynamic>.from(x)).toList() : <Map<String,dynamic>>[];
-      final channel = channels.where((x) => (x['slug'] ?? '').toString() == slug).firstOrNull;
+      final matches = channels.where((x) => (x['slug'] ?? '').toString() == slug).toList();
+      final channel = matches.isEmpty ? null : matches.first;
       if (!mounted || channel == null) return;
       setState(() => _index = 2);
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpdatesChannelScreen(channel: channel)));
