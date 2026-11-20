@@ -46,11 +46,11 @@ class _ChannelCard extends StatefulWidget{
  @override State<_ChannelCard> createState()=>_ChannelCardState();
 }
 class _ChannelCardState extends State<_ChannelCard>{
- late bool _joined;bool _busy=false;
- @override void initState(){super.initState();_joined=widget.channel['joined']==true;}
+ late bool _joined;late int _subscriberCount;bool _busy=false;
+ @override void initState(){super.initState();_joined=widget.channel['joined']==true;_subscriberCount=int.tryParse((widget.channel['publicSubscriberCount']??widget.channel['actualSubscriberCount']??0).toString())??0;}
  Future<void> _join()async{
   if(_busy||_joined)return;setState(()=>_busy=true);
-  try{await ApiClient().post('/api/updates/channels/'+Uri.encodeComponent((widget.channel['slug']??'').toString())+'/membership',accessToken:widget.accessToken,body:{'notificationsEnabled':true});if(mounted){setState(()=>_joined=true);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('You joined this channel.')));}}
+  try{final result=await ApiClient().post('/api/updates/channels/'+Uri.encodeComponent((widget.channel['slug']??'').toString())+'/membership',accessToken:widget.accessToken,body:{'notificationsEnabled':true});if(mounted){setState(()=>{_joined=true;if(widget.channel['subscriberDisplayMode']!='custom')_subscriberCount=int.tryParse((result['subscriberCount']??_subscriberCount).toString())??_subscriberCount;});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('You joined this channel.')));}}
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
   finally{if(mounted)setState(()=>_busy=false);}
  }
@@ -58,7 +58,7 @@ class _ChannelCardState extends State<_ChannelCard>{
   final channel=widget.channel,name=(channel['name']??'Numelixa channel').toString(),avatar=(channel['avatarUrl']??'').toString();
   final latest=channel['latestPost'] is Map?Map<String,dynamic>.from(channel['latestPost']):<String,dynamic>{};
   final preview=(latest['title']??latest['body']??channel['description']??'Official channel').toString();
-  final count=(channel['publicSubscriberCount']??channel['actualSubscriberCount']??0).toString();
+  final count=_subscriberCount.toString();
   return Card(margin:const EdgeInsets.only(bottom:10),child:Padding(padding:const EdgeInsets.all(13),child:Row(children:[
    GestureDetector(onTap:widget.onTap,child:_ChannelAvatar(url:avatar,size:52)),const SizedBox(width:11),
    Expanded(child:InkWell(onTap:widget.onTap,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
