@@ -139,16 +139,35 @@ jobs:
           import re, sys
           p = Path(sys.argv[1])
           text = p.read_text()
+          mirror = 'maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2") }'
           if 'pluginManagement' not in text:
-              text = 'pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\n' + text
+              text = 'pluginManagement { repositories { google(); ' + mirror + '; mavenCentral(); gradlePluginPortal() } }\n' + text
           else:
+              # Maven Central can temporarily return HTTP 429 in CI. Put Google's
+              # read-only Maven Central mirror first while retaining the official
+              # Central and Gradle Plugin Portal fallbacks.
               start = text.find('pluginManagement')
               end = text.find('}', text.find('repositories', start))
               block = text[start:end if end >= 0 else len(text)]
-              if 'mavenCentral()' not in block:
-                  text = re.sub(r'(repositories\s*\{)', r'\1\n        mavenCentral()', text, count=1)
+              if mirror not in block:
+                  if 'mavenCentral()' in block:
+                      text = text.replace('mavenCentral()', mirror + '\\n        mavenCentral()', 1)
+                  else:
+                      text = re.sub(r'(repositories\\s*\\{)', r'\\1\\n        ' + mirror, text, count=1)
+          # Add the same mirror to dependency repositories in this included build,
+          # without removing Google's Android repository or Maven Central fallback.
+          if 'dependencyResolutionManagement' in text:
+              start = text.find('dependencyResolutionManagement')
+              end = text.find('}', start)
+              block = text[start:end if end >= 0 else len(text)]
+              if mirror not in block:
+                  pos = text.find('repositories', start)
+                  if pos >= 0:
+                      brace = text.find('{', pos)
+                      if brace >= 0:
+                          text = text[:brace + 1] + '\\n        ' + mirror + text[brace + 1:]
           p.write_text(text)
-          print('Ensured Maven Central in Flutter included-build plugin repositories.')
+          print('Configured Google Maven Central mirror with Maven Central and Gradle Plugin Portal fallbacks in Flutter included-build repositories.')
           PY
           fi
       - name: Install exact Numelixa PNG launcher icon
