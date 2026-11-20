@@ -3,6 +3,8 @@ name: Numelixa Android CI
   push:
     branches: [main, feat/numelixa-product-preservation-updates, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade, feat/numelixa-premium-mobile-upgrade, feat/numelixa-major-brand-security-2026, feat/exact-brand-icon-native-login, feat/reliable-inplace-updates-2026, feat/numelixa-liquid-glass-refresh, feat/wallet-somalia-crypto-receipts-premium]
     tags: ['v*']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
