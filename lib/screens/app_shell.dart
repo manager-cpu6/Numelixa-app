@@ -3139,7 +3139,11 @@ class _AccountPageState extends State<_AccountPage> {
     final email = (user['email'] ?? user['phone'] ?? 'Numelixa account').toString();
     final publicIdRaw = (user['publicId'] ?? user['numelixaId'] ?? '').toString();
     final publicId = RegExp(r'^\d{7}$').hasMatch(publicIdRaw) ? publicIdRaw : '';
-    final verified = user['verified_at'] != null || user['phoneVerifiedAt'] != null;
+    final emailVerified = user['verified_at'] != null;
+    final phoneVerified = user['phoneVerifiedAt'] != null;
+    final isEmailAccount = email.contains('@');
+    final verified = isEmailAccount ? emailVerified : phoneVerified;
+    final verificationLabel = isEmailAccount ? (emailVerified ? 'Email verified' : 'Email verification pending') : (phoneVerified ? 'Phone verified' : 'Verification pending');
     final isAdmin = (user['role'] ?? '').toString() == 'admin';
     final isMerchant = user['merchantEnabled'] == true || (user['role'] ?? '').toString() == 'merchant';
     return ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 32), children: [
@@ -3167,11 +3171,13 @@ class _AccountPageState extends State<_AccountPage> {
             ]),
             const SizedBox(height: 4),
             Text(email, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
+            const SizedBox(height: 6),
+            Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:const Color(0xFF102844),borderRadius:BorderRadius.circular(20),border:Border.all(color:AppTheme.glassBorder)),child:Text(isMerchant?'MERCHANT ACCOUNT':'PERSONAL ACCOUNT',style:const TextStyle(color:AppTheme.cyan,fontSize:9,fontWeight:FontWeight.w900,letterSpacing:1))),
             const SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(verified ? Icons.verified_rounded : Icons.pending_outlined, size: 15, color: verified ? AppTheme.mint : AppTheme.warning),
               const SizedBox(width: 5),
-              Text(verified ? 'Account verified' : 'Verification pending', style: TextStyle(color: verified ? AppTheme.mint : AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700)),
+              Text(verificationLabel, style: TextStyle(color: verified ? AppTheme.mint : AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700)),
             ]),
             if (publicId.isNotEmpty) ...[
               const SizedBox(height: 14),
