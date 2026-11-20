@@ -19,7 +19,7 @@ class ServiceBrandIcon extends StatelessWidget {
     return aliases[raw] ?? raw;
   }
 
-  static bool supports(String name, String? id) => _brandIcon(canonicalKey(name,id)) != null;
+  static bool supports(String name, String? id) => _brandIcon(canonicalKey(id ?? '', null)) != null || _brandIcon(canonicalKey(name, null)) != null;
 
   static IconData? _brandIcon(String key) {
     switch (key) {
@@ -28,6 +28,8 @@ class ServiceBrandIcon extends StatelessWidget {
       case 'tiktok': return FontAwesomeIcons.tiktok;
       case 'instagram': return FontAwesomeIcons.instagram;
       case 'facebook': return FontAwesomeIcons.facebook;
+      case 'googleplay': return FontAwesomeIcons.googlePlay;
+      case 'googlepay': return FontAwesomeIcons.googlePay;
       case 'google': case 'googlevoice': case 'gmail': return FontAwesomeIcons.google;
       case 'youtube': return FontAwesomeIcons.youtube;
       case 'microsoft': case 'microsoftteams': return FontAwesomeIcons.microsoft;
@@ -38,7 +40,7 @@ class ServiceBrandIcon extends StatelessWidget {
       case 'paypal': return FontAwesomeIcons.paypal;
       case 'reddit': return FontAwesomeIcons.reddit;
       case 'spotify': return FontAwesomeIcons.spotify;
-      case 'netflix': return FontAwesomeIcons.n;
+      case 'netflix': return FontAwesomeIcons.netflix;
       case 'amazon': return FontAwesomeIcons.amazon;
       case 'apple': return FontAwesomeIcons.apple;
       case 'signal': return FontAwesomeIcons.signalMessenger;
@@ -73,7 +75,8 @@ class ServiceBrandIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final key = canonicalKey(name,id);
+    final idKey = canonicalKey(id ?? '', null);
+    final key = _brandIcon(idKey) != null ? idKey : canonicalKey(name, null);
     final icon = _brandIcon(key);
     if (icon == null) return const SizedBox.shrink();
     final color = switch (key) {
