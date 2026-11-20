@@ -152,7 +152,7 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
 }
 
 class _UpdatePostCard extends StatefulWidget{
- const _UpdatePostCard({required this.post,required this.slug,required this.accessToken});final Map<String,dynamic> post;final String slug,accessToken;
+ const _UpdatePostCard({super.key,required this.post,required this.slug,required this.accessToken});final Map<String,dynamic> post;final String slug,accessToken;
  @override State<_UpdatePostCard> createState()=>_UpdatePostCardState();
 }
 class _UpdatePostCardState extends State<_UpdatePostCard>{
