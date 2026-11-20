@@ -21,6 +21,10 @@ class ServiceBrandIcon extends StatelessWidget {
   }
 
   static bool supports(String name, String? id) => _brandIcon(canonicalKey(id ?? '', null)) != null || _brandIcon(canonicalKey(name, null)) != null;
+  static String resolvedKey(String name, String? id) {
+    final fromId = canonicalKey(id ?? '', null);
+    return _brandIcon(fromId) != null ? fromId : canonicalKey(name, null);
+  }
 
   static IconData? _brandIcon(String key) {
     switch (key) {
@@ -70,8 +74,7 @@ class ServiceBrandIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final idKey = canonicalKey(id ?? '', null);
-    final key = _brandIcon(idKey) != null ? idKey : canonicalKey(name, null);
+    final key = resolvedKey(name, id);
     final icon = _brandIcon(key);
     if (icon == null) return const SizedBox.shrink();
     final color = switch (key) {
