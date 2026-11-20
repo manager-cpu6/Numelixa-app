@@ -1329,7 +1329,7 @@ class _CatalogPageState extends State<_CatalogPage> {
       'wa': 'WhatsApp', 'whatsapp': 'WhatsApp', 'tg': 'Telegram', 'telegram': 'Telegram',
       'fb': 'Facebook', 'facebook': 'Facebook', 'ig': 'Instagram', 'instagram': 'Instagram',
       'tt': 'TikTok', 'tiktok': 'TikTok', 'googlevoice': 'Google Voice', 'google': 'Google',
-      'gmail': 'Gmail', 'youtube': 'YouTube', 'ms': 'Microsoft', 'microsoft': 'Microsoft',
+      'gmail': 'Gmail', 'youtube': 'YouTube', 'googleplay': 'Google Play', 'googlepay': 'Google Pay', 'gplay': 'Google Play', 'gpay': 'Google Pay', 'ms': 'Microsoft', 'microsoft': 'Microsoft',
       'discord': 'Discord', 'snapchat': 'Snapchat', 'reddit': 'Reddit', 'netflix': 'Netflix',
       'amazon': 'Amazon', 'apple': 'Apple', 'x': 'X', 'twitter': 'X', 'spotify': 'Spotify',
       'linkedin': 'LinkedIn', 'pinterest': 'Pinterest', 'twitch': 'Twitch', 'steam': 'Steam',
@@ -1364,6 +1364,16 @@ class _CatalogPageState extends State<_CatalogPage> {
               .map((e) => Map<String, dynamic>.from(e))
               .toList()
           : <Map<String, dynamic>>[];
+      // Only show services with a bundled, locally rendered brand mark. Deduplicate
+      // aliases before rendering so the same service cannot appear twice.
+      final seenBrandKeys = <String>{};
+      services.removeWhere((service) {
+        final name = _serviceName(service);
+        final id = (service['id'] ?? service['code'] ?? '').toString();
+        if (!ServiceBrandIcon.supports(name, id)) return true;
+        final key = ServiceBrandIcon.canonicalKey(name, id);
+        return !seenBrandKeys.add(key);
+      });
       // Prioritize popular services that are actually present in the live API.
       const popularOrder = <String>[
         'whatsapp', 'telegram', 'tiktok', 'instagram', 'facebook',
