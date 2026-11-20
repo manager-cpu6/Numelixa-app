@@ -3139,7 +3139,7 @@ class _AccountPageState extends State<_AccountPage> {
     final email = (user['email'] ?? user['phone'] ?? 'Numelixa account').toString();
     final publicIdRaw = (user['publicId'] ?? user['numelixaId'] ?? '').toString();
     final publicId = RegExp(r'^\d{7}$').hasMatch(publicIdRaw) ? publicIdRaw : '';
-    final emailVerified = user['verified_at'] != null;
+    final emailVerified = user['emailVerifiedAt'] != null;
     final phoneVerified = user['phoneVerifiedAt'] != null;
     final isEmailAccount = email.contains('@');
     final verified = isEmailAccount ? emailVerified : phoneVerified;
