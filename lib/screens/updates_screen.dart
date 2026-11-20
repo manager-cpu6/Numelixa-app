@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
@@ -74,7 +73,7 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
  }
  Future<void> _membership(bool join)async{
   if(_busy)return;setState(()=>_busy=true);
-  try{final api=ApiClient();final r=join?await api.post(_path('/membership'),accessToken:_token,body:{'notificationsEnabled':true}):await api.delete(_path('/membership'),accessToken:_token);if(mounted)setState(()=>_channel={..._channel,'joined':join,'actualSubscriberCount':r['subscriberCount']??_channel['actualSubscriberCount']});}
+  try{final api=ApiClient();final r=join?await api.post(_path('/membership'),accessToken:_token,body:{'notificationsEnabled':true}):await api.delete(_path('/membership'),accessToken:_token);if(mounted)setState(()=>_channel={..._channel,'joined':join,'actualSubscriberCount':r['subscriberCount']??_channel['actualSubscriberCount'],'publicSubscriberCount':_channel['subscriberDisplayMode']=='custom'?_channel['publicSubscriberCount']:(r['subscriberCount']??_channel['actualSubscriberCount'])});}
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
   finally{if(mounted)setState(()=>_busy=false);}
  }
@@ -91,7 +90,7 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
  }
  Future<void> _more()async{
   if(_busy||!_hasMore)return;setState(()=>_busy=true);
-  try{final next=_page+1;final r=await ApiClient().get(_path('?page=$next'),accessToken:_token);final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];if(mounted)setState((){_page=next;_posts=[..._posts,...items];_hasMore=r['hasMore']==true;});}
+  try{final next=_page+1;final r=await ApiClient().get(_path('?page=$next'),accessToken:_token);final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];if(mounted)setState((){_page=next;_posts=[..._posts,...items];_hasMore=r['hasMore']==true;});for(final p in items){final id=(p['id']??'').toString();if(id.isNotEmpty)ApiClient().post(_path('/views'),accessToken:_token,body:{'postId':id}).catchError((_)=> <String,dynamic>{});}}
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
   finally{if(mounted)setState(()=>_busy=false);}
  }
