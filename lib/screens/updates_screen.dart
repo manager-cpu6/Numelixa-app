@@ -36,18 +36,19 @@ class _UpdatesScreenState extends State<UpdatesScreen>{
    SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:categories.map((category)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(category),selected:_category==category,onSelected:(_)=>setState(()=>_category=category)))).toList())),
    const SizedBox(height:14),
    if(filtered.isEmpty)_UpdatesMessage(message:channels.isEmpty?'No channels have been published yet.':'No channels match your filters.')
-   else ...filtered.map((channel)=>_ChannelCard(channel:channel,accessToken:context.read<AuthService>().accessToken??'',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:channel))).then((_) {if(mounted)setState(_load);}))),
+   else ...filtered.map((channel)=>_ChannelCard(key:ValueKey((channel['id']??channel['slug']??'').toString()),channel:channel,accessToken:context.read<AuthService>().accessToken??'',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:channel))).then((_) {if(mounted)setState(_load);}))),
   ]));
  });
 }
 
 class _ChannelCard extends StatefulWidget{
- const _ChannelCard({required this.channel,required this.accessToken,required this.onTap});final Map<String,dynamic> channel;final String accessToken;final VoidCallback onTap;
+ const _ChannelCard({super.key,required this.channel,required this.accessToken,required this.onTap});final Map<String,dynamic> channel;final String accessToken;final VoidCallback onTap;
  @override State<_ChannelCard> createState()=>_ChannelCardState();
 }
 class _ChannelCardState extends State<_ChannelCard>{
  late bool _joined;late int _subscriberCount;bool _busy=false;
  @override void initState(){super.initState();_joined=widget.channel['joined']==true;_subscriberCount=int.tryParse((widget.channel['publicSubscriberCount']??widget.channel['actualSubscriberCount']??0).toString())??0;}
+ @override void didUpdateWidget(covariant _ChannelCard oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.channel['joined']!=widget.channel['joined'])_joined=widget.channel['joined']==true;if(oldWidget.channel['publicSubscriberCount']!=widget.channel['publicSubscriberCount']||oldWidget.channel['actualSubscriberCount']!=widget.channel['actualSubscriberCount'])_subscriberCount=int.tryParse((widget.channel['publicSubscriberCount']??widget.channel['actualSubscriberCount']??0).toString())??_subscriberCount;}
  Future<void> _join()async{
   if(_busy||_joined)return;setState(()=>_busy=true);
   try{final result=await ApiClient().post('/api/updates/channels/'+Uri.encodeComponent((widget.channel['slug']??'').toString())+'/membership',accessToken:widget.accessToken,body:{'notificationsEnabled':true});if(mounted){setState((){_joined=true;if(widget.channel['subscriberDisplayMode']!='custom')_subscriberCount=int.tryParse((result['subscriberCount']??_subscriberCount).toString())??_subscriberCount;});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('You joined this channel.')));}}
