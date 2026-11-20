@@ -3310,6 +3310,59 @@ class _AccountPageState extends State<_AccountPage> {
     ]);
   }
 }
+class _AccountSection extends StatelessWidget {
+  const _AccountSection({required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 5, bottom: 8),
+        child: Text(title, style: const TextStyle(color: AppTheme.muted, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.35)),
+      ),
+      Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: [
+          for (var i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1) const Divider(height: 1, indent: 54),
+          ],
+        ]),
+      ),
+    ],
+  );
+}
+
+class _AccountAction extends StatelessWidget {
+  const _AccountAction({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.trailing,
+    this.iconColor = AppTheme.cyan,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Widget? trailing;
+  final Color iconColor;
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+    minLeadingWidth: 30,
+    leading: Icon(icon, color: iconColor, size: 21),
+    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w750, fontSize: 13)),
+    subtitle: Text(subtitle, style: const TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.3)),
+    trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: AppTheme.muted, size: 20),
+    onTap: onTap,
+  );
+}
+
 class _BiometricLockScreen extends StatefulWidget {
   const _BiometricLockScreen();
   @override
