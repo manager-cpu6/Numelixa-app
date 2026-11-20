@@ -3721,7 +3721,23 @@ class _ClientHelpPage extends StatelessWidget {
       const Text('Refund information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('Eligible refunds for cancelled, expired or unfulfilled activations are returned to the Numelixa wallet according to the order record and published Refund Policy. Completed activations are generally not refundable. If a payment was charged but the wallet was not credited, do not pay again immediately; contact Support with your payment reference.', style: TextStyle(color: AppTheme.muted, height: 1.5)))),
       const Text('Account help', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-      const     subtitle: 'Build with the Numelixa API using the official developer resources.',
+      const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined, color: AppTheme.cyan), title: Text('Verification and sign-in'), subtitle: Text('Check your email verification state, use the password recovery flow, and review active devices from Account → Security.'))),
+      const Text('Frequently asked questions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+      Card(child: ExpansionTile(title: const Text('Why has my SMS not arrived?'), children: const [Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 16), child: Text('Check that the activation is still waiting and has not expired. Use the SMS refresh action. If the provider reports no code before expiry, contact Support with the order ID.', style: TextStyle(color: AppTheme.muted, height: 1.5)))])),
+      Card(child: ExpansionTile(title: const Text('Can I cancel an activation?'), children: const [Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 16), child: Text('Cancellation is shown only where the order is eligible. The backend validates the provider and order status; a refund is not complete until the server confirms it.', style: TextStyle(color: AppTheme.muted, height: 1.5)))])),
+      Card(child: ExpansionTile(title: const Text('Why is a country unavailable?'), children: const [Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 16), child: Text('Stock changes continuously. Refresh the service and country list; only current server availability can be purchased.', style: TextStyle(color: AppTheme.muted, height: 1.5)))])),
+      Card(child: ExpansionTile(title: const Text('What should I send to Support?'), children: const [Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 16), child: Text('Provide your Numelixa ID and relevant order/payment reference. Never include passwords, OTP codes, recovery codes or full payment-card details.', style: TextStyle(color: AppTheme.muted, height: 1.5)))])),
+      FilledButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage())), icon: const Icon(Icons.support_agent_rounded), label: const Text('Contact Support')),
+    ],
+  );
+}
+
+class _DeveloperCenterPage extends StatelessWidget {
+  const _DeveloperCenterPage();
+  @override
+  Widget build(BuildContext context) => _ResourcePageFrame(
+    title: 'Developer Center',
+    subtitle: 'Build with the Numelixa API using the official developer resources.',
     icon: Icons.code_rounded,
     children: [
       Card(child: ListTile(leading: const Icon(Icons.phone_android_rounded,color:AppTheme.cyan),title: const Text('Read API docs in Numelixa'),subtitle: const Text('Search verified endpoints, examples and integration notes.'),trailing: const Icon(Icons.chevron_right_rounded),onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _DeveloperDocsPage())))),
