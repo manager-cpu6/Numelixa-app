@@ -27,7 +27,6 @@ class ServiceBrandIcon extends StatelessWidget {
     'google': FontAwesomeIcons.google,
     'googleplay': FontAwesomeIcons.googlePlay,
     'googlepay': FontAwesomeIcons.googlePay,
-    'gmail': FontAwesomeIcons.google,
     'youtube': FontAwesomeIcons.youtube,
     'microsoft': FontAwesomeIcons.microsoft,
     'snapchat': FontAwesomeIcons.snapchat,
@@ -43,7 +42,6 @@ class ServiceBrandIcon extends StatelessWidget {
     'google': Color(0xFF4285F4),
     'googleplay': Color(0xFF34A853),
     'googlepay': Color(0xFF4285F4),
-    'gmail': Color(0xFFEA4335),
     'youtube': Color(0xFFFF0033),
     'microsoft': Color(0xFFF25022),
     'snapchat': Color(0xFFFFFC00),
@@ -51,15 +49,23 @@ class ServiceBrandIcon extends StatelessWidget {
   };
 
   static String? canonicalKey(String name, {String? id}) {
-    final rawId = _key(id ?? '');
     final rawName = _key(name);
-    final idKey = _aliases[rawId] ?? rawId;
-    if (_brands.containsKey(idKey)) return idKey;
     final nameKey = _aliases[rawName] ?? rawName;
     if (_brands.containsKey(nameKey)) return nameKey;
-    // Allow an explicit service suffix, but never infer from an unrelated substring.
-    for (final key in _brands.keys) {
-      if (rawName == key || rawName == '${key}verification' || rawName == '${key}otp') return key;
+    // Match the most specific complete brand prefix before generic brands (Google).
+    final keys = _brands.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
+    for (final key in keys) {
+      if (!rawName.startsWith(key)) continue;
+      final suffix = rawName.substring(key.length);
+      if (suffix.isEmpty || const ['verification', 'otp', 'sms', 'activation'].contains(suffix)) {
+        return key;
+      }
+    }
+    // Use a short provider code only when the displayed name is itself that code.
+    final rawId = _key(id ?? '');
+    if (rawName.isEmpty || rawName == rawId || _aliases.containsKey(rawName)) {
+      final idKey = _aliases[rawId] ?? rawId;
+      if (_brands.containsKey(idKey)) return idKey;
     }
     return null;
   }
