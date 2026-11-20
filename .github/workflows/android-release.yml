@@ -151,9 +151,9 @@ jobs:
               block = text[start:end if end >= 0 else len(text)]
               if mirror not in block:
                   if 'mavenCentral()' in block:
-                      text = text.replace('mavenCentral()', mirror + '\\n        mavenCentral()', 1)
+                      text = text.replace('mavenCentral()', mirror + '\n        mavenCentral()', 1)
                   else:
-                      text = re.sub(r'(repositories\\s*\\{)', r'\\1\\n        ' + mirror, text, count=1)
+                      text = re.sub(r'(repositories\s*\{)', r'\1\n        ' + mirror, text, count=1)
           # Add the same mirror to dependency repositories in this included build,
           # without removing Google's Android repository or Maven Central fallback.
           if 'dependencyResolutionManagement' in text:
@@ -165,7 +165,7 @@ jobs:
                   if pos >= 0:
                       brace = text.find('{', pos)
                       if brace >= 0:
-                          text = text[:brace + 1] + '\\n        ' + mirror + text[brace + 1:]
+                          text = text[:brace + 1] + '\n        ' + mirror + text[brace + 1:]
           p.write_text(text)
           print('Configured Google Maven Central mirror with Maven Central and Gradle Plugin Portal fallbacks in Flutter included-build repositories.')
           PY
