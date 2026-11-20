@@ -93,8 +93,6 @@ class AccountManagementScreen extends StatelessWidget {
     const Divider(height:1),
     ListTile(leading:const Icon(Icons.password_rounded,color:AppTheme.cyan),title:const Text('Change password'),subtitle:const Text('Verify with the code sent to your account email'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountPasswordScreen()))),
     const Divider(height:1),
-    ListTile(leading:const Icon(Icons.fingerprint_rounded,color:AppTheme.cyan),title:const Text('Fingerprint & app lock'),subtitle:const Text('Manage biometric protection'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountSettingsScreen()))),
-    const Divider(height:1),
     ListTile(leading:const Icon(Icons.history_rounded,color:AppTheme.cyan),title:const Text('Security activity'),subtitle:const Text('Review recent account security activity'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri.parse('https://www.numelixa.com/security'),mode:LaunchMode.externalApplication)),
    ])),
    const SizedBox(height:18),
