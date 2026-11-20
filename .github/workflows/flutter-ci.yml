@@ -9,7 +9,7 @@ on:
       - 'android/**'
       - '.github/workflows/flutter-ci.yml'
   push:
-    branches: [main]
+    branches: ['**']
     paths:
       - '**.dart'
       - 'pubspec.yaml'
