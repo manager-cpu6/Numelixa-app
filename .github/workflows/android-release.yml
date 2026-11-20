@@ -157,7 +157,6 @@ jobs:
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image
           from PIL import Image, ImageDraw
           # Draw the official N + globe + orbital ring mark at high resolution.
           source = Image.new('RGBA', (512, 512), (7, 19, 41, 255))
