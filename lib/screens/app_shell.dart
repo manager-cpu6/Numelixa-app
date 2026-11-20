@@ -428,7 +428,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
+        destinations: [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.public_outlined), selectedIcon: Icon(Icons.public_rounded), label: 'Numbers'),
           if (updatesVisible) NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'Updates'),
@@ -3236,7 +3236,7 @@ class _AccountAction extends StatelessWidget {
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
     minLeadingWidth: 30,
     leading: Icon(icon, color: iconColor, size: 21),
-    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w750, fontSize: 13)),
+    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
     subtitle: Text(subtitle, style: const TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.3)),
     trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: AppTheme.muted, size: 20),
     onTap: onTap,
