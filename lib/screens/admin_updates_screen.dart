@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
-import '../services/auth_service.dart';
 
 class AdminUpdatesScreen extends StatefulWidget {
   const AdminUpdatesScreen({super.key, required this.accessToken});
