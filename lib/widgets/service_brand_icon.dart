@@ -90,7 +90,7 @@ class ServiceBrandIcon extends StatelessWidget {
     final key = canonicalKey(name, id: id);
     final localIcon = key == null ? null : _brands[key];
     if (localIcon != null) {
-      return Center(child: FaIcon(localIcon, size: size * .66, color: _brandColor(key)));
+      return Center(child: FaIcon(localIcon, size: size * .66, color: _brandColor(key!)));
     }
     final slug = _slugFor(name, id: id);
     if (slug.isEmpty) {
