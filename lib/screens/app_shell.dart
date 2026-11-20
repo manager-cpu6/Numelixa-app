@@ -19,7 +19,6 @@ import '../widgets/payment_receipt_dialog.dart';
 import '../widgets/numelixa_verified_badge.dart';
 import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
-import 'notification_preferences_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
