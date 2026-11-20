@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -143,6 +144,7 @@ class _UpdatePostCardState extends State<_UpdatePostCard>{
    Row(children:[const Icon(Icons.campaign_outlined,color:AppTheme.cyan,size:18),const SizedBox(width:7),Expanded(child:Text((post['title']??'Announcement').toString(),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:15))),Text(date==null?'':date.toLocal().toString().substring(0,16),style:const TextStyle(color:AppTheme.muted,fontSize:10))]),
    if((post['body']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:SelectableText((post['body']??'').toString(),style:const TextStyle(height:1.55,fontSize:13))),
    if(media.isNotEmpty)Padding(padding:const EdgeInsets.only(top:12),child:SizedBox(height:220,child:PageView(children:media.map((m){final rawUrl=(m['url']??'').toString();final url=_mediaUrl(rawUrl);return ClipRRect(borderRadius:BorderRadius.circular(14),child:m['type']=='video'?_UpdateVideoPlayer(url:url):GestureDetector(onTap:()=>showDialog<void>(context:context,builder:(_)=>Dialog(backgroundColor:Colors.black,child:InteractiveViewer(child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,color:Colors.white))))),child:Image.network(url,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.broken_image_outlined,color:AppTheme.muted)))));}).toList()))),
+   if(post['links'] is List&&(post['links'] as List).isNotEmpty)Padding(padding:const EdgeInsets.only(top:10),child:Wrap(spacing:7,runSpacing:7,children:(post['links'] as List).whereType<String>().map((link)=>ActionChip(avatar:const Icon(Icons.open_in_new_rounded,size:14),label:Text(Uri.tryParse(link)?.host??'Open link'),onPressed:()=>launchUrl(Uri.parse(link),mode:LaunchMode.externalApplication))).toList())),
    const SizedBox(height:8),Row(children:[const Icon(Icons.visibility_outlined,size:15,color:AppTheme.muted),const SizedBox(width:5),Text('$views views',style:const TextStyle(color:AppTheme.muted,fontSize:11))])
   ])));
  }
