@@ -1357,13 +1357,12 @@ class _CatalogPageState extends State<_CatalogPage> {
       if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
       if (snapshot.hasError) return _RetryState(message: snapshot.error.toString(), onRetry: () => setState(_load));
       final raw = snapshot.data?['services'];
+      // Keep every live provider service in the catalog. Brand-logo
+      // availability must never determine whether a service can be purchased.
       final services = raw is List
           ? raw.whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
-              .where((service) => ServiceBrandIcon.hasVerifiedIcon(
-                _serviceName(service),
-                id: (service['id'] ?? service['code'] ?? '').toString(),
-              ))
+              .where((service) => (service['id'] ?? service['code'] ?? service['name'] ?? service['title'] ?? '').toString().trim().isNotEmpty)
               .toList()
           : <Map<String, dynamic>>[];
       // Prioritize popular services that are actually present in the live API.
@@ -1397,35 +1396,71 @@ class _CatalogPageState extends State<_CatalogPage> {
         return ['name','title','id','code','description','category'].any((key) => (service[key] ?? '').toString().toLowerCase().contains(query))
             || _serviceName(service).toLowerCase().contains(query);
       }).toList();
-      return ListView(padding: const EdgeInsets.all(16), children: [
-        const Text('Choose a service', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 6),
-        const Text('Find your service by its full name and official logo.', style: TextStyle(color: Color(0xFF91A8C4))),
-        const SizedBox(height: 14),
-        TextField(onChanged: (value) => setState(() => _search = value),
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), labelText: 'Search services', hintText: 'WhatsApp, Telegram, Instagram…')),
-        const SizedBox(height: 12),
-        if (filteredServices.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No services match your search.', textAlign: TextAlign.center)),
-        for (final service in filteredServices)
-          Card(child: InkWell(
-            borderRadius: BorderRadius.circular(19),
-            onTap: () {
-              final id = (service['id'] ?? service['code'] ?? service['name'] ?? service['title'] ?? '').toString();
-              if (id.isEmpty) return;
-              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _CountriesPage(service: id, name: _serviceName(service))));
-            },
-            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13), child: Row(children: [
-              SizedBox(width: 52, height: 52, child: _serviceLogo(service)),
-              const SizedBox(width: 13),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text((service['description'] ?? service['category'] ?? 'Select to view country availability').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.35)),
-              ])),
-              const Icon(Icons.chevron_right_rounded, color: AppTheme.cyan, size: 25),
-            ])),
-          )),
-      ]);
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: filteredServices.isEmpty ? 4 : filteredServices.length + 3,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Text('Choose a service', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+            );
+          }
+          if (index == 1) {
+            return const Padding(
+              padding: EdgeInsets.only(bottom: 14),
+              child: Text('Browse the full live catalog, including hundreds of supported services.', style: TextStyle(color: Color(0xFF91A8C4))),
+            );
+          }
+          if (index == 2) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TextField(
+                onChanged: (value) => setState(() => _search = value),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search_rounded),
+                  labelText: 'Search all services',
+                  hintText: 'WhatsApp, Telegram, Instagram…',
+                ),
+              ),
+            );
+          }
+          if (filteredServices.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('No services match your search.', textAlign: TextAlign.center),
+            );
+          }
+          final service = filteredServices[index - 3];
+          return Card(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(19),
+              onTap: () {
+                final id = (service['id'] ?? service['code'] ?? service['name'] ?? service['title'] ?? '').toString();
+                if (id.isEmpty) return;
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => _CountriesPage(service: id, name: _serviceName(service)),
+                ));
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                child: Row(children: [
+                  SizedBox(width: 58, height: 58, child: _serviceLogo(service)),
+                  const SizedBox(width: 13),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text((service['description'] ?? service['category'] ?? 'Select to view country availability').toString(),
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12, height: 1.35)),
+                  ])),
+                  const Icon(Icons.chevron_right_rounded, color: AppTheme.cyan, size: 25),
+                ]),
+              ),
+            ),
+          );
+        },
+      );
     },
   );
 }
@@ -3242,13 +3277,6 @@ class _AccountPageState extends State<_AccountPage> {
         _AccountAction(icon: Icons.help_outline_rounded, title: 'Help Center', subtitle: 'Guides and frequently asked questions', onTap: () => _openWeb('/clients')),
       ]),
       const SizedBox(height: 14),
-      OutlinedButton.icon(
-        onPressed: () async { await auth.logout(); },
-        icon: const Icon(Icons.logout_rounded),
-        label: const Text('Sign out'),
-        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: const Color(0xFFFF788C)),
-      ),
-      const SizedBox(height: 18),
       _AccountSection(title: 'LEGAL & PRIVACY', children: [
         _AccountAction(icon: Icons.gavel_rounded, title: 'Legal Center', subtitle: 'Official policies and account information', onTap: () => _openWeb('/legal')),
         _AccountAction(icon: Icons.description_outlined, title: 'Terms of Service', subtitle: 'Terms governing use of Numelixa', onTap: () => _openWeb('/terms')),
@@ -3257,6 +3285,18 @@ class _AccountPageState extends State<_AccountPage> {
         _AccountAction(icon: Icons.cookie_outlined, title: 'Cookie Policy', subtitle: 'Website cookie information', onTap: () => _openWeb('/cookies')),
         _AccountAction(icon: Icons.rule_rounded, title: 'Acceptable Use', subtitle: 'Permitted and prohibited platform use', onTap: () => _openWeb('/acceptable-use')),
       ]),
+      const SizedBox(height: 18),
+      OutlinedButton.icon(
+        onPressed: () async { await auth.logout(); },
+        icon: const Icon(Icons.logout_rounded),
+        label: const Text('Log out'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          foregroundColor: const Color(0xFFFF788C),
+          side: const BorderSide(color: Color(0x66FF788C)),
+        ),
+      ),
+      const SizedBox(height: 28),
     ]);
   }
 }
