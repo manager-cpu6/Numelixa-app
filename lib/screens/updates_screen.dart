@@ -83,17 +83,17 @@ class _ChannelCardState extends State<_ChannelCard>{
 }
 
 class UpdatesChannelScreen extends StatefulWidget{
- const UpdatesChannelScreen({super.key,required this.channel});final Map<String,dynamic> channel;
+ const UpdatesChannelScreen({super.key,required this.channel,this.initialPostId});final Map<String,dynamic> channel;final String? initialPostId;
  @override State<UpdatesChannelScreen> createState()=>_UpdatesChannelScreenState();
 }
 class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
- late Future<Map<String,dynamic>> _future;Map<String,dynamic> _channel={};List<Map<String,dynamic>> _posts=[];
+ late Future<Map<String,dynamic>> _future;Map<String,dynamic> _channel={};List<Map<String,dynamic>> _posts=[];final Map<String,GlobalKey> _postKeys={};
  bool _busy=false,_hasMore=false;int _page=1;
  String get _slug=>(widget.channel['slug']??'').toString();
  String get _token=>context.read<AuthService>().accessToken??'';
  String _path(String suffix)=>'/api/updates/channels/'+Uri.encodeComponent(_slug)+suffix;
  @override void initState(){super.initState();_load();}
- void _load(){_page=1;_posts=[];_future=_fetch();}
+ void _load(){_page=1;_posts=[];_future=_fetch();if(widget.initialPostId!=null&&widget.initialPostId!.isNotEmpty)_future.then((_)=>_revealInitialPost());}
  Future<Map<String,dynamic>> _fetch()async{
   final r=await ApiClient().get(_path('?page=1'),accessToken:_token);
   final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
@@ -117,6 +117,17 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
   if(yes!=true||!mounted)return;
   try{await ApiClient().post(_path('/block'),accessToken:_token);if(mounted)Navigator.pop(context);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
  }
+ Future<void> _revealInitialPost()async{
+  for(var attempt=0;attempt<5;attempt++){
+   if(_posts.any((p)=>(p['id']??'').toString()==widget.initialPostId))break;
+   if(!_hasMore)break;
+   await _more();
+  }
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+   final key=_postKeys[widget.initialPostId];
+   if(mounted&&key?.currentContext!=null)Scrollable.ensureVisible(key!.currentContext!,alignment:.08,duration:const Duration(milliseconds:380),curve:Curves.easeOutCubic);
+  });
+ }
  Future<void> _more()async{
   if(_busy||!_hasMore)return;setState(()=>_busy=true);
   try{final next=_page+1;final r=await ApiClient().get(_path('?page=$next'),accessToken:_token);final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];if(mounted)setState((){_page=next;_posts=[..._posts,...items];_hasMore=r['hasMore']==true;});}
@@ -135,7 +146,7 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
    const SizedBox(height:12),Row(children:[Expanded(child:FilledButton(onPressed:_busy?null:()=>_membership(!joined),child:Text(_busy?'Please wait…':joined?'Joined · Leave':'Join channel'))),if(joined)IconButton(onPressed:_busy?null:()=>_notifications(c['notificationsEnabled']!=true),icon:Icon(c['notificationsEnabled']==true?Icons.notifications_active_rounded:Icons.notifications_off_outlined,color:AppTheme.cyan)),IconButton(onPressed:_busy?null:_block,icon:const Icon(Icons.block_rounded,color:AppTheme.muted))]),
    const SizedBox(height:18),const Text('LATEST POSTS',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,letterSpacing:1.4,color:AppTheme.muted)),
    if(_posts.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('No published posts yet.',textAlign:TextAlign.center,style:TextStyle(color:AppTheme.muted))),
-   ..._posts.map((p)=>_UpdatePostCard(post:p,slug:_slug,accessToken:_token)),if(_hasMore)OutlinedButton(onPressed:_busy?null:_more,child:Text(_busy?'Loading…':'Load older posts'))
+   ..._posts.map((p){final id=(p['id']??'').toString();final key=_postKeys.putIfAbsent(id,()=>GlobalKey());return _UpdatePostCard(key:key,post:p,slug:_slug,accessToken:_token);}),if(_hasMore)OutlinedButton(onPressed:_busy?null:_more,child:Text(_busy?'Loading…':'Load older posts'))
   ]));
  }));
 }
