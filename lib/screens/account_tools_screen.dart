@@ -12,7 +12,7 @@ class AccountSettingsScreen extends StatefulWidget{
  @override State<AccountSettingsScreen> createState()=>_AccountSettingsScreenState();
 }
 class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
- bool _loading=true,_busy=false,_app=true,_email=false,_hideUpdates=false,_updatesEnabled=false;
+ bool _loading=true,_busy=false,_app=true,_email=false,_hideUpdates=false,_updatesEnabled=false,_updatesNotifications=true;
  String? _error;
  @override void initState(){super.initState();_load();}
  Future<void> _load()async{
@@ -20,12 +20,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
    final token=context.read<AuthService>().accessToken;
    final values=await Future.wait([ApiClient().get('/api/mobile/notification-preferences',accessToken:token),ApiClient().get('/api/updates/preferences',accessToken:token)]);
    if(!mounted)return;
-   setState((){_app=values[0]['preferences']?['appEnabled']!=false;_email=values[0]['preferences']?['emailEnabled']==true;_hideUpdates=values[1]['hideUpdates']==true;_updatesEnabled=values[1]['enabled']==true;_loading=false;_error=null;});
+   setState((){_app=values[0]['preferences']?['appEnabled']!=false;_email=values[0]['preferences']?['emailEnabled']==true;_hideUpdates=values[1]['hideUpdates']==true;_updatesEnabled=values[1]['enabled']==true;_updatesNotifications=values[1]['notificationsEnabled']!=false;_loading=false;_error=null;});
   }catch(e){if(mounted)setState(()=>_loading=false);if(mounted)setState(()=>_error=e.toString());}
  }
  Future<void> _saveNotifications({bool? app,bool? email})async{
   final nextApp=app??_app,nextEmail=email??_email;setState(()=>_busy=true);
   try{await ApiClient().patch('/api/mobile/notification-preferences',accessToken:context.read<AuthService>().accessToken,body:{'appEnabled':nextApp,'emailEnabled':nextEmail});if(mounted)setState((){_app=nextApp;_email=nextEmail;});}
+  catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
+  finally{if(mounted)setState(()=>_busy=false);}
+ }
+ Future<void> _saveUpdatesNotifications(bool value)async{
+  setState(()=>_busy=true);
+  try{final result=await ApiClient().patch('/api/updates/preferences',accessToken:context.read<AuthService>().accessToken,body:{'notificationsEnabled':value});if(mounted)setState(()=>_updatesNotifications=result['notificationsEnabled']!=false);}
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
   finally{if(mounted)setState(()=>_busy=false);}
  }
@@ -51,6 +57,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
    const SizedBox(height:14),const _SettingHeading('UPDATES'),
    Card(child:Column(children:[
     SwitchListTile(value:_updatesEnabled&&!_hideUpdates,onChanged:_updatesEnabled&&!_busy?(v)=>_saveHideUpdates(!v):null,secondary:const Icon(Icons.campaign_outlined,color:AppTheme.cyan),title:const Text('Show Updates'),subtitle:Text(_updatesEnabled?'Hide Updates only on this account. Your subscriptions are preserved.':'Updates is currently closed by Numelixa administrators.')),
+    const Divider(height:1),
+    SwitchListTile(value:_updatesNotifications,onChanged:_updatesEnabled&&!_busy?(v)=>_saveUpdatesNotifications(v):null,secondary:const Icon(Icons.notifications_active_outlined,color:AppTheme.cyan),title:const Text('Updates notifications'),subtitle:const Text('Allow new post alerts from channels you follow')),
     const Divider(height:1),
     ListTile(enabled:_updatesEnabled,leading:const Icon(Icons.block_outlined,color:AppTheme.cyan),title:const Text('Blocked channels'),subtitle:const Text('Review and unblock channels'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const BlockedUpdatesChannelsScreen()))),
    ])),
