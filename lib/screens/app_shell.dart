@@ -9,6 +9,7 @@ import 'package:gal/gal.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
+import '../widgets/service_brand_icon.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -1296,73 +1297,11 @@ class _CatalogPageState extends State<_CatalogPage> {
         .join(' ');
   }
 
-  Widget _serviceLogo(Map<String, dynamic> service) {
-    final rawKey = _serviceKey(service);
-    const aliases = <String, String>{
-      'wa': 'whatsapp', 'tg': 'telegram', 'tt': 'tiktok',
-      'ig': 'instagram', 'fb': 'facebook', 'go': 'google',
-      'gm': 'gmail', 'yt': 'youtube', 'ms': 'microsoft',
-      'ds': 'discord', 'sn': 'snapchat', 'tw': 'x',
-      'li': 'linkedin', 'pp': 'paypal', 'rd': 'reddit',
-      'sp': 'spotify', 'nf': 'netflix', 'vb': 'viber', 'sg': 'signal',
-      'ap': 'apple', 'am': 'amazon',
-    };
-    final key = aliases[rawKey] ?? rawKey;
-    const knownDomains = <String, String>{
-      'whatsapp': 'whatsapp.com', 'telegram': 'telegram.org',
-      'tiktok': 'tiktok.com', 'instagram': 'instagram.com',
-      'facebook': 'facebook.com', 'google': 'google.com',
-      'googlevoice': 'voice.google.com', 'gmail': 'mail.google.com',
-      'youtube': 'youtube.com', 'microsoft': 'microsoft.com',
-      'microsoftteams': 'teams.microsoft.com', 'discord': 'discord.com',
-      'snapchat': 'snapchat.com', 'x': 'x.com', 'twitter': 'x.com',
-      'signal': 'signal.org', 'viber': 'viber.com', 'wechat': 'wechat.com',
-      'line': 'line.me', 'imo': 'imo.im', 'paypal': 'paypal.com',
-      'binance': 'binance.com', 'reddit': 'reddit.com', 'netflix': 'netflix.com',
-      'amazon': 'amazon.com', 'apple': 'apple.com', 'spotify': 'spotify.com',
-      'linkedin': 'linkedin.com', 'pinterest': 'pinterest.com', 'twitch': 'twitch.tv',
-      'steam': 'steampowered.com', 'uber': 'uber.com', 'airbnb': 'airbnb.com',
-      'yahoo': 'yahoo.com', 'kakaotalk': 'kakao.com', 'tinder': 'tinder.com',
-      'bumble': 'bumble.com', 'shopee': 'shopee.com', 'dropbox': 'dropbox.com',
-      'slack': 'slack.com', 'zoom': 'zoom.us', 'notion': 'notion.so',
-      'canva': 'canva.com', 'figma': 'figma.com', 'openai': 'openai.com',
-      'chatgpt': 'chatgpt.com', 'capcut': 'capcut.com', 'threads': 'threads.net',
-      'vk': 'vk.com', 'yandex': 'yandex.com', 'protonmail': 'proton.me',
-      'coinbase': 'coinbase.com', 'bybit': 'bybit.com', 'okx': 'okx.com',
-      'kucoin': 'kucoin.com', 'bitget': 'bitget.com', 'aliexpress': 'aliexpress.com',
-      'ebay': 'ebay.com', 'olx': 'olx.com', 'bolt': 'bolt.eu',
-      'grab': 'grab.com', 'booking': 'booking.com', 'expedia': 'expedia.com',
-      'agoda': 'agoda.com', 'disneyplus': 'disneyplus.com', 'hulu': 'hulu.com',
-    };
-    String? domain = knownDomains[key];
-    if (domain == null) {
-      for (final entry in knownDomains.entries) {
-        if (key.startsWith(entry.key)) { domain = entry.value; break; }
-      }
-    }
-    if (domain == null) {
-      return const CircleAvatar(
-        radius: 23,
-        backgroundColor: Color(0xFF102844),
-        child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
-      );
-    }
-    final imageUrl = 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
-    return CircleAvatar(
-      radius: 23,
-      backgroundColor: const Color(0xFF102844),
-      child: Padding(
-        padding: const EdgeInsets.all(7),
-        child: Image.network(
-          imageUrl,
-          width: 34,
-          height: 34,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
-        ),
-      ),
-    );
-  }
+  Widget _serviceLogo(Map<String, dynamic> service) => ServiceBrandIcon(
+    name: _serviceName(service),
+    id: (service['id'] ?? service['code'] ?? '').toString(),
+    size: 46,
+  );
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
     future: _future,
@@ -1590,83 +1529,7 @@ class _OrdersPageState extends State<_OrdersPage> {
     }
   }
 
-  Widget _platformLogo(String service) {
-    final rawName = service.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    const aliases = <String, String>{
-      'wa':'whatsapp','tg':'telegram','go':'google','op':'openai','oi':'openai',
-      'am':'amazon','fb':'facebook','ig':'instagram','tt':'tiktok','tw':'x',
-      'ms':'microsoft','ap':'apple','ds':'discord','sn':'snapchat','li':'linkedin',
-      'pp':'paypal','rd':'reddit','sp':'spotify','nf':'netflix','vb':'viber','sg':'signal',
-    };
-    final name = aliases[rawName] ?? rawName;
-    const logos = <String, String>{
-      'whatsapp': 'whatsapp/25D366', 'facebook': 'facebook/0866FF',
-      'instagram': 'instagram/E4405F', 'telegram': 'telegram/26A5E4',
-      'tiktok': 'tiktok/FFFFFF', 'google': 'google/4285F4',
-      'discord': 'discord/5865F2', 'snapchat': 'snapchat/FFFC00',
-      'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
-      'amazon': 'amazon/FF9900', 'microsoft': 'microsoft/737373',
-      'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF', 'twitter': 'x/FFFFFF',
-      'uber': 'uber/FFFFFF', 'airbnb': 'airbnb/FF5A5F', 'spotify': 'spotify/1DB954',
-      'linkedin': 'linkedin/0A66C2', 'pinterest': 'pinterest/BD081C',
-      'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF', 'signal': 'signal/3A76F0',
-      'viber': 'viber/7360F2', 'wechat': 'wechat/07C160', 'line': 'line/00C300',
-      'paypal': 'paypal/003087', 'binance': 'binance/F0B90B', 'ebay': 'ebay/E53238',
-      'tinder': 'tinder/FF6B6B', 'bumble': 'bumble/FFC629', 'slack': 'slack/4A154B',
-      'zoom': 'zoom/0B5CFF', 'notion': 'notion/FFFFFF', 'canva': 'canva/00C4CC',
-      'figma': 'figma/F24E1E', 'openai': 'openai/FFFFFF', 'chatgpt': 'openai/FFFFFF',
-    };
-    const domains = <String, String>{
-      'whatsapp': 'whatsapp.com', 'facebook': 'facebook.com', 'instagram': 'instagram.com',
-      'telegram': 'telegram.org', 'tiktok': 'tiktok.com', 'google': 'google.com',
-      'discord': 'discord.com', 'snapchat': 'snapchat.com', 'reddit': 'reddit.com',
-      'netflix': 'netflix.com', 'amazon': 'amazon.com', 'microsoft': 'microsoft.com',
-      'apple': 'apple.com', 'spotify': 'spotify.com', 'linkedin': 'linkedin.com',
-      'pinterest': 'pinterest.com', 'twitch': 'twitch.tv', 'steam': 'steampowered.com',
-      'signal': 'signal.org', 'viber': 'viber.com', 'wechat': 'wechat.com',
-      'line': 'line.me', 'paypal': 'paypal.com', 'binance': 'binance.com',
-      'ebay': 'ebay.com', 'tinder': 'tinder.com', 'bumble': 'bumble.com',
-      'slack': 'slack.com', 'zoom': 'zoom.us', 'notion': 'notion.so',
-      'canva': 'canva.com', 'figma': 'figma.com', 'openai': 'openai.com',
-      'chatgpt': 'chatgpt.com',
-    };
-    String? slug;
-    for (final entry in logos.entries) {
-      if (name == entry.key || (entry.key.length >= 3 && name.startsWith(entry.key))) { slug = entry.value; break; }
-    }
-    String? domain;
-    for (final entry in domains.entries) {
-      if (name == entry.key || (entry.key.length >= 3 && name.startsWith(entry.key))) { domain = entry.value; break; }
-    }
-    // Do not derive a website URL from an unknown service identifier.
-    final imageUrl = domain == null ? '' : 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
-    final primaryUrl = slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug';
-    if (primaryUrl.isEmpty) {
-      return const CircleAvatar(
-        radius: 20,
-        backgroundColor: Color(0xFF102844),
-        child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21),
-      );
-    }
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: const Color(0xFF102844),
-      child: Padding(
-        padding: const EdgeInsets.all(7),
-        child: Image.network(
-          primaryUrl,
-          width: 26, height: 26, fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => imageUrl.isEmpty
-              ? const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21))
-              : Image.network(
-                  imageUrl,
-                  width: 26, height: 26, fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21)),
-                ),
-        ),
-      ),
-    );
-  }
+  Widget _platformLogo(String service) => ServiceBrandIcon(name: _platformName(service), id: service, size: 40);
 
   String _platformName(String raw) {
     final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
