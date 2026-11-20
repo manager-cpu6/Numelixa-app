@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_theme.dart';
+import '../core/config/app_config.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 
@@ -149,7 +150,7 @@ class _UpdatePostCardState extends State<_UpdatePostCard>{
   ])));
  }
 }
-String _mediaUrl(String raw)=>raw.startsWith('/')?'https://www.numelixa.com'+raw:raw;
+String _mediaUrl(String raw)=>raw.startsWith('/')?Uri.parse(AppConfig.apiBase).resolve(raw).toString():raw;
 
 class _UpdateVideoPlayer extends StatefulWidget{
  const _UpdateVideoPlayer({required this.url});final String url;
