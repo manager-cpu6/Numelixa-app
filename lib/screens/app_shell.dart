@@ -1174,11 +1174,10 @@ class _CatalogPageState extends State<_CatalogPage> {
   void initState() { super.initState(); _load(); }
   void _load() { _future = NumelixaRepository().services(token: context.read<AuthService>().accessToken); }
 
-  String _serviceKey(Map<String, dynamic> service) =>
-      (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? '')
-          .toString().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')
-          .replaceFirst(RegExp(r'\d+
-
+  String _serviceKey(Map<String, dynamic> service) {
+    final raw = (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? '').toString();
+    return raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '').replaceFirst(RegExp(r'\d+$'), '');
+  }
   String _serviceName(Map<String, dynamic> service) {
     final raw = (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString().trim();
     final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
