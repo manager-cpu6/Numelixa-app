@@ -3188,8 +3188,10 @@ class _AccountPageState extends State<_AccountPage> {
             const SizedBox(height: 10),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
-              if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
-              NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 18),
+              if (user['badgeVerifiedAt'] != null) ...[
+                const SizedBox(width: 6),
+                const NumelixaVerifiedBadge(verified: true, size: 18),
+              ],
             ]),
             const SizedBox(height: 4),
             Text(email, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
