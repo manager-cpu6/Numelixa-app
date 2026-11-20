@@ -95,9 +95,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     final hidden = updatesVisibilityChanged.value;
     if (hidden == null || !mounted) return;
     setState(() {
+      final wasVisible = _updatesEnabled && !_hideUpdates;
       _hideUpdates = hidden;
-      if (hidden && _index >= 3) _index -= 1;
-      if (hidden && _index == 2) _index = 2;
+      final isVisible = _updatesEnabled && !_hideUpdates;
+      if (wasVisible && !isVisible && _index >= 3) _index -= 1;
+      if (!wasVisible && isVisible && _index >= 2) _index += 1;
     });
   }
 
@@ -111,11 +113,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       final hidden = result['hideUpdates'] == true;
       if (enabled != _updatesEnabled || hidden != _hideUpdates || _updatesConfigLoading) {
         setState(() {
+          final wasVisible = _updatesEnabled && !_hideUpdates;
           _updatesEnabled = enabled;
           _hideUpdates = hidden;
           _updatesConfigLoading = false;
-          if ((!enabled || hidden) && _index >= 3) _index -= 1;
-          if ((!enabled || hidden) && _index == 2) _index = 2;
+          final isVisible = _updatesEnabled && !_hideUpdates;
+          if (wasVisible && !isVisible && _index >= 3) _index -= 1;
+          if (!wasVisible && isVisible && _index >= 2) _index += 1;
         });
       }
     } catch (_) {
