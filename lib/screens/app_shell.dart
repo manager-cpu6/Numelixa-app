@@ -9,6 +9,7 @@ import 'package:gal/gal.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
+import '../widgets/service_brand_icon.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -19,6 +20,8 @@ import '../widgets/payment_receipt_dialog.dart';
 import '../widgets/numelixa_verified_badge.dart';
 import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
+import 'updates_screen.dart';
+import 'account_tools_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -35,6 +38,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Timer? _accessCheckTimer;
   bool _accessCheckInProgress = false;
   bool _maintenancePending = false;
+  bool _updatesEnabled = false;
+  bool _hideUpdates = false;
+  bool _updatesConfigLoading = true;
   Map<String, dynamic>? _accessBlock;
 
   @override
@@ -43,6 +49,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     context.read<AuthService>().addListener(_handleAuthChanged);
     appNotificationRoute.addListener(_handleNotificationRoute);
+    updatesVisibilityChanged.addListener(_handleUpdatesVisibilityChanged);
     _accessCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshAccessStatus());
   }
 
@@ -85,7 +92,45 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (auth.isSignedIn) _refreshAccessStatus();
   }
 
+  void _handleUpdatesVisibilityChanged() {
+    final hidden = updatesVisibilityChanged.value;
+    if (hidden == null || !mounted) return;
+    setState(() {
+      final wasVisible = _updatesEnabled && !_hideUpdates;
+      _hideUpdates = hidden;
+      final isVisible = _updatesEnabled && !_hideUpdates;
+      if (wasVisible && !isVisible && _index >= 3) _index -= 1;
+      if (!wasVisible && isVisible && _index >= 2) _index += 1;
+    });
+  }
+
+  Future<void> _refreshUpdatesConfig() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isSignedIn || _updatesConfigLoading && _updatesEnabled) return;
+    try {
+      final result = await ApiClient().get('/api/updates/preferences', accessToken: auth.accessToken);
+      if (!mounted) return;
+      final enabled = result['enabled'] == true;
+      final hidden = result['hideUpdates'] == true;
+      if (enabled != _updatesEnabled || hidden != _hideUpdates || _updatesConfigLoading) {
+        setState(() {
+          final wasVisible = _updatesEnabled && !_hideUpdates;
+          _updatesEnabled = enabled;
+          _hideUpdates = hidden;
+          _updatesConfigLoading = false;
+          final isVisible = _updatesEnabled && !_hideUpdates;
+          if (wasVisible && !isVisible && _index >= 3) _index -= 1;
+          if (!wasVisible && isVisible && _index >= 2) _index += 1;
+        });
+      }
+    } catch (_) {
+      // Keep the last known navigation state if the feature-config API is offline.
+      if (_updatesConfigLoading && mounted) setState(() => _updatesConfigLoading = false);
+    }
+  }
+
   Future<void> _refreshAccessStatus() async {
+    _refreshUpdatesConfig();
     if (!mounted || _accessCheckInProgress) return;
     _accessCheckInProgress = true;
     try {
@@ -217,6 +262,29 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (permission.isGranted) await notifications.syncToken(auth);
   }
 
+  Future<void> _openUpdatesNotification(String route) async {
+    final parts = route.split(':');
+    if (parts.length < 2 || !_updatesEnabled || _hideUpdates) {
+      if (mounted) setState(() => _index = 0);
+      return;
+    }
+    final slug = parts[1].trim();
+    if (slug.isEmpty) return;
+    try {
+      final result = await ApiClient().get('/api/updates', accessToken: context.read<AuthService>().accessToken);
+      final raw = result['channels'];
+      final channels = raw is List ? raw.whereType<Map>().map((x) => Map<String,dynamic>.from(x)).toList() : <Map<String,dynamic>>[];
+      final matches = channels.where((x) => (x['slug'] ?? '').toString() == slug).toList();
+      final channel = matches.isEmpty ? null : matches.first;
+      if (!mounted || channel == null) return;
+      setState(() => _index = 2);
+      final postId=parts.length>2?parts[2].trim():null;
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpdatesChannelScreen(channel: channel,initialPostId:postId)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This channel update is temporarily unavailable.')));
+    }
+  }
+
   void _handleNotificationRoute() {
     final route = appNotificationRoute.value;
     if (!mounted || route == null) return;
@@ -234,6 +302,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         return;
       }
     }
+    if (route.startsWith('updates:')) {
+      _openUpdatesNotification(route);
+      return;
+    }
     setState(() => _index = 0);
   }
 
@@ -243,6 +315,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _accessCheckTimer?.cancel();
     context.read<AuthService>().removeListener(_handleAuthChanged);
     appNotificationRoute.removeListener(_handleNotificationRoute);
+    updatesVisibilityChanged.removeListener(_handleUpdatesVisibilityChanged);
     super.dispose();
   }
 
@@ -258,6 +331,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // still be able to receive the update that restores current policy support.
       final auth = context.read<AuthService>();
       await auth.restore();
+      if (!mounted) return;
+      await _refreshUpdatesConfig();
       if (!mounted) return;
       // Maintenance is checked before the mandatory-update prompt so the
       // maintenance-only Chat screen always takes priority.
@@ -315,13 +390,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (role == 'support_admin' || role == 'support_agent') {
       return SupportAdminScreen(accessToken: auth.accessToken!, role: role);
     }
-    final pages = [
+    final updatesVisible = _updatesEnabled && !_hideUpdates;
+    final accountIndex = updatesVisible ? 5 : 4;
+    final pages = <Widget>[
       const _HomePage(),
       const _CatalogPage(),
+      if (updatesVisible) const UpdatesScreen(),
       const _OrdersPage(),
       const _WalletPage(),
       const _AccountPage(),
     ];
+    final selectedIndex = _index.clamp(0, pages.length - 1);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 18,
@@ -340,19 +419,20 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           ),
           IconButton(
             tooltip: 'Account',
-            onPressed: () => setState(() => _index = 4),
+            onPressed: () => setState(() => _index = accountIndex),
             icon: const Icon(Icons.account_circle_outlined),
           ),
           const SizedBox(width: 5),
         ],
       ),
-      body: SafeArea(child: IndexedStack(index: _index, children: pages)),
+      body: SafeArea(child: IndexedStack(index: selectedIndex, children: pages)),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
+        selectedIndex: selectedIndex,
         onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
+        destinations: [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.public_outlined), selectedIcon: Icon(Icons.public_rounded), label: 'Numbers'),
+          if (updatesVisible) NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'Updates'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'Orders'),
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallet'),
           NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Account'),
@@ -434,48 +514,19 @@ class _NumelixaLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: size, height: size,
-    child: CustomPaint(painter: _NumelixaBrandPainter()),
+    child: Image.asset(
+      'assets/numelixa_icon_source.jpg',
+      width: size, height: size, fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Icon(Icons.public_rounded, color: AppTheme.cyan),
+    ),
   );
-}
-
-class _NumelixaBrandPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(size.width / 100, size.height / 100);
-    final globe = Paint()..shader = const LinearGradient(
-      colors: [Color(0xFF27E8FF), Color(0xFF0864FF), Color(0xFF07134C)],
-      begin: Alignment.topLeft, end: Alignment.bottomRight,
-    ).createShader(const Rect.fromLTWH(8, 5, 84, 84));
-    canvas.drawCircle(const Offset(50, 43), 35, globe);
-    final grid = Paint()..color = const Color(0xFF71EFFF).withValues(alpha: .42)..style = PaintingStyle.stroke..strokeWidth = 1.1;
-    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:58,height:66),grid);
-    canvas.drawOval(Rect.fromCenter(center: const Offset(50,43),width:30,height:66),grid);
-    canvas.drawLine(const Offset(18,43),const Offset(82,43),grid);
-    final ribbon = Path()..moveTo(19,72)..cubicTo(28,48,34,26,43,28)..cubicTo(51,29,57,47,65,57)..cubicTo(72,67,80,69,84,60)..cubicTo(87,54,87,45,87,38);
-    final paint = Paint()..style=PaintingStyle.stroke..strokeWidth=13..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round
-      ..shader=const LinearGradient(colors:[Color(0xFF2AF4EE),Color(0xFF168BFF),Color(0xFF722CFF),Color(0xFFEF43E8)]).createShader(const Rect.fromLTWH(10,20,82,60));
-    canvas.drawPath(ribbon,paint);
-    final orbit=Path()..moveTo(5,57)..cubicTo(23,38,43,39,60,48)..cubicTo(75,56,88,51,96,39);
-    canvas.drawPath(orbit,Paint()..style=PaintingStyle.stroke..strokeWidth=2.2..strokeCap=StrokeCap.round..color=Colors.white);
-    canvas.restore();
-  }
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate)=>false;
 }
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
   Widget build(BuildContext context) => Scaffold(
     body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        width: 82, height: 82, alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(27),
-          gradient: const LinearGradient(colors: [Color(0xFF1677FF), Color(0xFF00D9FF)]),
-        ),
-        child: const _NumelixaLogo(size: 62),
-      ),
+      const _NumelixaLogo(size: 82),
       const SizedBox(height: 20),
       const Text('NUMELIXA', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 3)),
       const SizedBox(height: 7),
@@ -1050,53 +1101,146 @@ class _HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final name = (auth.user?['name'] ?? auth.user?['email'] ?? 'there').toString();
-    return ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 28), children: [
+    final name = (auth.user?['name'] ?? auth.user?['email'] ?? 'there').toString().split(' ').first;
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 30), children: [
       Container(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.fromLTRB(19, 20, 19, 18),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(24),
           gradient: const LinearGradient(colors: [Color(0xFF123C64), Color(0xFF0B1B34), Color(0xFF10162F)], begin: Alignment.topLeft, end: Alignment.bottomRight),
           border: Border.all(color: const Color(0xFF24547B)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('GLOBAL VIRTUAL NUMBERS', style: TextStyle(color: AppTheme.mint, fontSize: 10, letterSpacing: 1.8, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 13),
-          Text.rich(
-            TextSpan(children: [
-              TextSpan(text: 'Welcome back, $name'),
-              if (auth.user?['badgeVerifiedAt'] != null)
-                const WidgetSpan(alignment: PlaceholderAlignment.middle, child: Padding(padding: EdgeInsets.only(left: 6), child: NumelixaVerifiedBadge(verified: true, size: 19))),
-            ]),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 25, height: 1.15, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 10),
-          const Text('Numbers, without the noise.', style: TextStyle(color: Color(0xFFB2C7DD), height: 1.45)),
+          Row(children: [const _NumelixaLogo(size: 28), const SizedBox(width: 9), const Text('NUMELIXA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: AppTheme.cyan)), const Spacer(), const Icon(Icons.public_rounded, color: AppTheme.cyan, size: 18)]),
+          const SizedBox(height: 18),
+          Row(children: [
+            Expanded(child: Text('Welcome back, $name', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900))),
+            if (auth.user?['badgeVerifiedAt'] != null) const NumelixaVerifiedBadge(verified: true, size: 18),
+          ]),
+          const SizedBox(height: 7),
+          const Text('Your numbers, messages and wallet in one secure workspace.', style: TextStyle(color: Color(0xFFB2C7DD), height: 1.45, fontSize: 12)),
         ]),
       ),
-      const SizedBox(height: 18),
-      const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
-      const SizedBox(height: 12),
-      const Text('Your workspace', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 12),
-      const _ActionTile(icon: Icons.public_rounded, title: 'Browse services', subtitle: 'Explore the live catalog', destination: 'catalog'),
-      const _ActionTile(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Manage waiting activations', destination: 'active'),
-      const _ActionTile(icon: Icons.sms_outlined, title: 'Your orders', subtitle: 'View activations and SMS status', destination: 'orders'),
-      const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
-      const SizedBox(height: 18),
-      const Text('Help & resources', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 10),
-      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Support Center', subtitle: 'Chat with the Numelixa Help Team', destination: 'support'),
-      const _ActionTile(icon: Icons.menu_book_rounded, title: 'For Clients', subtitle: 'Getting started and practical help', destination: 'clients'),
-
-      const _ActionTile(icon: Icons.handshake_outlined, title: 'For Partners', subtitle: 'Business and integration enquiries', destination: 'partners'),
       const SizedBox(height: 14),
-      const Text('Balances, orders and availability are loaded from Numelixa services. If a service is unavailable, no demo data is substituted.', style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 12)),
+      const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
+      const SizedBox(height: 20),
+      const Text('QUICK ACTIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
+      const SizedBox(height: 10),
+      GridView.count(
+        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 1.75,
+        children: [
+          _HomeShortcut(icon: Icons.add_call, title: 'Get a number', subtitle: 'Browse live services', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _CatalogPage()))),
+          _HomeShortcut(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Waiting activations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _ActiveNumbersPage()))),
+          _HomeShortcut(icon: Icons.receipt_long_rounded, title: 'My orders', subtitle: 'Orders and SMS', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _OrdersPage()))),
+          _HomeShortcut(icon: Icons.account_balance_wallet_rounded, title: 'Wallet', subtitle: 'Balance and payments', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _WalletPage()))),
+          _HomeShortcut(icon: Icons.code_rounded, title: 'Developer API', subtitle: 'API access and docs', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/developers'), mode: LaunchMode.externalApplication)),
+          _HomeShortcut(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Invite and earn', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/referrals'), mode: LaunchMode.externalApplication)),
+        ],
+      ),
+      const SizedBox(height: 20),
+      const _HomeNotificationsPreview(),
+      const SizedBox(height: 12),
+      const _RecentServicesPreview(),
+      const SizedBox(height: 12),
+      const _HomeUpdatesPreview(),
+      const SizedBox(height: 18),
+      const Text('HELP & RESOURCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
+      const SizedBox(height: 9),
+      const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
+      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Support Team Chat', subtitle: 'Private help from the Numelixa team', destination: 'support'),
+      const _ActionTile(icon: Icons.menu_book_rounded, title: 'Help Center', subtitle: 'Guides and practical help', destination: 'clients'),
     ]);
   }
 }
+
+class _HomeShortcut extends StatelessWidget {
+  const _HomeShortcut({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon; final String title, subtitle; final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    child: InkWell(borderRadius: BorderRadius.circular(17), onTap: onTap, child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(children: [
+        Container(width: 38, height: 38, decoration: BoxDecoration(color: const Color(0xFF102844), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: AppTheme.cyan, size: 20)),
+        const SizedBox(width: 9),
+        Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 3),
+          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: AppTheme.muted)),
+        ])),
+      ]),
+    )),
+  );
+}
+
+class _HomeNotificationsPreview extends StatefulWidget {
+  const _HomeNotificationsPreview();
+  @override State<_HomeNotificationsPreview> createState()=>_HomeNotificationsPreviewState();
+}
+class _HomeNotificationsPreviewState extends State<_HomeNotificationsPreview>{
+  late Future<Map<String,dynamic>> _future;
+  @override void initState(){super.initState();_load();}
+  void _load(){_future=NumelixaRepository().notifications(token:context.read<AuthService>().accessToken??'');}
+  @override Widget build(BuildContext context)=>FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,s){
+    if(s.connectionState==ConnectionState.waiting||s.hasError)return const SizedBox.shrink();
+    final raw=s.data?['notifications'];final all=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
+    final items=all.where((x){final type=(x['type']??'').toString().toLowerCase();return !type.contains('admin')&&!type.contains('broadcast');}).take(2).toList();
+    if(items.isEmpty)return const SizedBox.shrink();
+    return Card(child:Padding(padding:const EdgeInsets.all(13),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[const Icon(Icons.notifications_active_outlined,color:AppTheme.cyan,size:18),const SizedBox(width:8),const Expanded(child:Text('Recent notifications',style:TextStyle(fontWeight:FontWeight.w900,fontSize:13))),TextButton(onPressed:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _NotificationsPage())),child:const Text('View all'))]),
+      ...items.map((item)=>ListTile(key:ValueKey(item['id']??item['_id']),contentPadding:EdgeInsets.zero,dense:true,leading:const Icon(Icons.circle_notifications_outlined,color:AppTheme.cyan,size:21),title:Text((item['title']??'Numelixa notification').toString(),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800)),subtitle:Text((item['message']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:AppTheme.muted)))),
+    ])));
+  });
+}
+
+class _RecentServicesPreview extends StatefulWidget {
+  const _RecentServicesPreview();
+  @override State<_RecentServicesPreview> createState() => _RecentServicesPreviewState();
+}
+class _RecentServicesPreviewState extends State<_RecentServicesPreview> {
+  late Future<Map<String,dynamic>> _future;
+  @override void initState(){super.initState();_load();}
+  void _load(){final token=context.read<AuthService>().accessToken??'';_future=NumelixaRepository().orders(token:token,limit:12);}
+  @override Widget build(BuildContext context)=>FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,s){
+    if(s.connectionState==ConnectionState.waiting||s.hasError)return const SizedBox.shrink();
+    final raw=s.data?['orders'];final orders=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
+    final seen=<String>{};final recent=<Map<String,dynamic>>[];
+    for(final order in orders){final id=(order['service']??order['serviceId']??order['serviceName']??'').toString();if(id.isNotEmpty&&seen.add(id)){recent.add(order);if(recent.length==4)break;}}
+    if(recent.isEmpty)return const SizedBox.shrink();
+    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      const Text('RECENTLY USED SERVICES',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted)),
+      const SizedBox(height:9),
+      SizedBox(height:82,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:recent.length,separatorBuilder:(_,__)=>const SizedBox(width:9),itemBuilder:(context,index){
+        final order=recent[index],id=(order['service']??order['serviceId']??'').toString(),name=(order['serviceName']??order['service']??'Service').toString();
+        return InkWell(onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _CatalogPage())),borderRadius:BorderRadius.circular(15),child:Container(width:132,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFF0D1930),borderRadius:BorderRadius.circular(15),border:Border.all(color:AppTheme.glassBorder)),child:Row(children:[ServiceBrandIcon(name:name,id:id,size:34),const SizedBox(width:8),Expanded(child:Text(name,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)))])));
+      })),
+      const SizedBox(height:15),
+    ]);
+  });
+}
+
+class _HomeUpdatesPreview extends StatefulWidget {
+  const _HomeUpdatesPreview();
+  @override State<_HomeUpdatesPreview> createState() => _HomeUpdatesPreviewState();
+}
+class _HomeUpdatesPreviewState extends State<_HomeUpdatesPreview> {
+  late Future<Map<String,dynamic>> _future;
+  @override void initState(){super.initState();_load();}
+  void _load(){_future=ApiClient().get('/api/updates',accessToken:context.read<AuthService>().accessToken);}
+  @override Widget build(BuildContext context)=>FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,s){
+    if(s.connectionState==ConnectionState.waiting||s.hasError)return const SizedBox.shrink();
+    final d=s.data??{};if(d['enabled']!=true||d['hidden']==true)return const SizedBox.shrink();
+    final raw=d['channels'];final channels=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).where((x)=>x['latestPost'] is Map).take(2).toList():<Map<String,dynamic>>[];
+    if(channels.isEmpty)return const SizedBox.shrink();
+    return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[const Icon(Icons.campaign_rounded,color:AppTheme.cyan,size:19),const SizedBox(width:8),const Expanded(child:Text('Latest updates',style:TextStyle(fontWeight:FontWeight.w900,fontSize:14))),TextButton(onPressed:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const UpdatesScreen())),child:const Text('View all'))]),
+      ...channels.map((channel){final post=Map<String,dynamic>.from(channel['latestPost'] as Map);final name=(channel['name']??'Channel').toString();final preview=(post['title']??post['body']??'New post').toString();return ListTile(key:ValueKey(channel['id']??channel['slug']),contentPadding:EdgeInsets.zero,dense:true,leading:const CircleAvatar(backgroundColor:Color(0xFF102844),child:Icon(Icons.campaign_outlined,color:AppTheme.cyan,size:18)),title:Text(name,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800)),subtitle:Text(preview,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:AppTheme.muted)),onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:channel,initialPostId:(post['id']??'').toString()))));}),
+    ])));
+  });
+}
+
 
 class _DataCard extends StatefulWidget {
   const _DataCard({required this.title, required this.icon});
@@ -1152,6 +1296,8 @@ class _ActionTile extends StatelessWidget {
           'notifications' => const _NotificationsPage(),
           'support' => const _SupportCenterPage(),
           'clients' => const _ClientHelpPage(),
+          'wallet' => const _WalletPage(),
+          'updates' => const UpdatesScreen(),
           'partners' => const _PartnerCenterPage(),
           _ => const _NotificationsPage(),
         };
@@ -1202,73 +1348,11 @@ class _CatalogPageState extends State<_CatalogPage> {
         .join(' ');
   }
 
-  Widget _serviceLogo(Map<String, dynamic> service) {
-    final rawKey = _serviceKey(service);
-    const aliases = <String, String>{
-      'wa': 'whatsapp', 'tg': 'telegram', 'tt': 'tiktok',
-      'ig': 'instagram', 'fb': 'facebook', 'go': 'google',
-      'gm': 'gmail', 'yt': 'youtube', 'ms': 'microsoft',
-      'ds': 'discord', 'sn': 'snapchat', 'tw': 'x',
-      'li': 'linkedin', 'pp': 'paypal', 'rd': 'reddit',
-      'sp': 'spotify', 'nf': 'netflix', 'vb': 'viber', 'sg': 'signal',
-      'ap': 'apple', 'am': 'amazon',
-    };
-    final key = aliases[rawKey] ?? rawKey;
-    const knownDomains = <String, String>{
-      'whatsapp': 'whatsapp.com', 'telegram': 'telegram.org',
-      'tiktok': 'tiktok.com', 'instagram': 'instagram.com',
-      'facebook': 'facebook.com', 'google': 'google.com',
-      'googlevoice': 'voice.google.com', 'gmail': 'mail.google.com',
-      'youtube': 'youtube.com', 'microsoft': 'microsoft.com',
-      'microsoftteams': 'teams.microsoft.com', 'discord': 'discord.com',
-      'snapchat': 'snapchat.com', 'x': 'x.com', 'twitter': 'x.com',
-      'signal': 'signal.org', 'viber': 'viber.com', 'wechat': 'wechat.com',
-      'line': 'line.me', 'imo': 'imo.im', 'paypal': 'paypal.com',
-      'binance': 'binance.com', 'reddit': 'reddit.com', 'netflix': 'netflix.com',
-      'amazon': 'amazon.com', 'apple': 'apple.com', 'spotify': 'spotify.com',
-      'linkedin': 'linkedin.com', 'pinterest': 'pinterest.com', 'twitch': 'twitch.tv',
-      'steam': 'steampowered.com', 'uber': 'uber.com', 'airbnb': 'airbnb.com',
-      'yahoo': 'yahoo.com', 'kakaotalk': 'kakao.com', 'tinder': 'tinder.com',
-      'bumble': 'bumble.com', 'shopee': 'shopee.com', 'dropbox': 'dropbox.com',
-      'slack': 'slack.com', 'zoom': 'zoom.us', 'notion': 'notion.so',
-      'canva': 'canva.com', 'figma': 'figma.com', 'openai': 'openai.com',
-      'chatgpt': 'chatgpt.com', 'capcut': 'capcut.com', 'threads': 'threads.net',
-      'vk': 'vk.com', 'yandex': 'yandex.com', 'protonmail': 'proton.me',
-      'coinbase': 'coinbase.com', 'bybit': 'bybit.com', 'okx': 'okx.com',
-      'kucoin': 'kucoin.com', 'bitget': 'bitget.com', 'aliexpress': 'aliexpress.com',
-      'ebay': 'ebay.com', 'olx': 'olx.com', 'bolt': 'bolt.eu',
-      'grab': 'grab.com', 'booking': 'booking.com', 'expedia': 'expedia.com',
-      'agoda': 'agoda.com', 'disneyplus': 'disneyplus.com', 'hulu': 'hulu.com',
-    };
-    String? domain = knownDomains[key];
-    if (domain == null) {
-      for (final entry in knownDomains.entries) {
-        if (key.startsWith(entry.key)) { domain = entry.value; break; }
-      }
-    }
-    if (domain == null) {
-      return const CircleAvatar(
-        radius: 23,
-        backgroundColor: Color(0xFF102844),
-        child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
-      );
-    }
-    final imageUrl = 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
-    return CircleAvatar(
-      radius: 23,
-      backgroundColor: const Color(0xFF102844),
-      child: Padding(
-        padding: const EdgeInsets.all(7),
-        child: Image.network(
-          imageUrl,
-          width: 34,
-          height: 34,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(Icons.apps_rounded, color: AppTheme.muted, size: 23),
-        ),
-      ),
-    );
-  }
+  Widget _serviceLogo(Map<String, dynamic> service) => ServiceBrandIcon(
+    name: _serviceName(service),
+    id: (service['id'] ?? service['code'] ?? '').toString(),
+    size: 46,
+  );
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
     future: _future,
@@ -1496,83 +1580,7 @@ class _OrdersPageState extends State<_OrdersPage> {
     }
   }
 
-  Widget _platformLogo(String service) {
-    final rawName = service.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    const aliases = <String, String>{
-      'wa':'whatsapp','tg':'telegram','go':'google','op':'openai','oi':'openai',
-      'am':'amazon','fb':'facebook','ig':'instagram','tt':'tiktok','tw':'x',
-      'ms':'microsoft','ap':'apple','ds':'discord','sn':'snapchat','li':'linkedin',
-      'pp':'paypal','rd':'reddit','sp':'spotify','nf':'netflix','vb':'viber','sg':'signal',
-    };
-    final name = aliases[rawName] ?? rawName;
-    const logos = <String, String>{
-      'whatsapp': 'whatsapp/25D366', 'facebook': 'facebook/0866FF',
-      'instagram': 'instagram/E4405F', 'telegram': 'telegram/26A5E4',
-      'tiktok': 'tiktok/FFFFFF', 'google': 'google/4285F4',
-      'discord': 'discord/5865F2', 'snapchat': 'snapchat/FFFC00',
-      'reddit': 'reddit/FF4500', 'netflix': 'netflix/E50914',
-      'amazon': 'amazon/FF9900', 'microsoft': 'microsoft/737373',
-      'apple': 'apple/FFFFFF', 'x': 'x/FFFFFF', 'twitter': 'x/FFFFFF',
-      'uber': 'uber/FFFFFF', 'airbnb': 'airbnb/FF5A5F', 'spotify': 'spotify/1DB954',
-      'linkedin': 'linkedin/0A66C2', 'pinterest': 'pinterest/BD081C',
-      'twitch': 'twitch/9146FF', 'steam': 'steam/FFFFFF', 'signal': 'signal/3A76F0',
-      'viber': 'viber/7360F2', 'wechat': 'wechat/07C160', 'line': 'line/00C300',
-      'paypal': 'paypal/003087', 'binance': 'binance/F0B90B', 'ebay': 'ebay/E53238',
-      'tinder': 'tinder/FF6B6B', 'bumble': 'bumble/FFC629', 'slack': 'slack/4A154B',
-      'zoom': 'zoom/0B5CFF', 'notion': 'notion/FFFFFF', 'canva': 'canva/00C4CC',
-      'figma': 'figma/F24E1E', 'openai': 'openai/FFFFFF', 'chatgpt': 'openai/FFFFFF',
-    };
-    const domains = <String, String>{
-      'whatsapp': 'whatsapp.com', 'facebook': 'facebook.com', 'instagram': 'instagram.com',
-      'telegram': 'telegram.org', 'tiktok': 'tiktok.com', 'google': 'google.com',
-      'discord': 'discord.com', 'snapchat': 'snapchat.com', 'reddit': 'reddit.com',
-      'netflix': 'netflix.com', 'amazon': 'amazon.com', 'microsoft': 'microsoft.com',
-      'apple': 'apple.com', 'spotify': 'spotify.com', 'linkedin': 'linkedin.com',
-      'pinterest': 'pinterest.com', 'twitch': 'twitch.tv', 'steam': 'steampowered.com',
-      'signal': 'signal.org', 'viber': 'viber.com', 'wechat': 'wechat.com',
-      'line': 'line.me', 'paypal': 'paypal.com', 'binance': 'binance.com',
-      'ebay': 'ebay.com', 'tinder': 'tinder.com', 'bumble': 'bumble.com',
-      'slack': 'slack.com', 'zoom': 'zoom.us', 'notion': 'notion.so',
-      'canva': 'canva.com', 'figma': 'figma.com', 'openai': 'openai.com',
-      'chatgpt': 'chatgpt.com',
-    };
-    String? slug;
-    for (final entry in logos.entries) {
-      if (name == entry.key || (entry.key.length >= 3 && name.startsWith(entry.key))) { slug = entry.value; break; }
-    }
-    String? domain;
-    for (final entry in domains.entries) {
-      if (name == entry.key || (entry.key.length >= 3 && name.startsWith(entry.key))) { domain = entry.value; break; }
-    }
-    // Do not derive a website URL from an unknown service identifier.
-    final imageUrl = domain == null ? '' : 'https://www.google.com/s2/favicons?domain=$domain&sz=128';
-    final primaryUrl = slug == null ? imageUrl : 'https://cdn.simpleicons.org/$slug';
-    if (primaryUrl.isEmpty) {
-      return const CircleAvatar(
-        radius: 20,
-        backgroundColor: Color(0xFF102844),
-        child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21),
-      );
-    }
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: const Color(0xFF102844),
-      child: Padding(
-        padding: const EdgeInsets.all(7),
-        child: Image.network(
-          primaryUrl,
-          width: 26, height: 26, fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => imageUrl.isEmpty
-              ? const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21))
-              : Image.network(
-                  imageUrl,
-                  width: 26, height: 26, fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.apps_rounded, color: AppTheme.muted, size: 21)),
-                ),
-        ),
-      ),
-    );
-  }
+  Widget _platformLogo(String service) => ServiceBrandIcon(name: _platformName(service), id: service, size: 40);
 
   String _platformName(String raw) {
     final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
@@ -3111,81 +3119,212 @@ class _AccountPageState extends State<_AccountPage> {
       ],
     )));
   }
+  Future<void> _openWeb(String path) async {
+    final uri = Uri.parse('https://www.numelixa.com' + path);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _copyPublicId(String value) async {
+    if (value.trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: value));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final user = auth.user ?? const <String, dynamic>{};
     final avatar = _avatarProvider(user);
-    return ListView(padding: const EdgeInsets.fromLTRB(18, 22, 18, 30), children: [
-      Center(child: Stack(children: [
-        CircleAvatar(radius: 43, backgroundColor: const Color(0xFF123C64), backgroundImage: avatar,
-          child: avatar == null ? const Icon(Icons.person_outline_rounded, size: 40, color: AppTheme.cyan) : null),
-        Positioned(right: 0, bottom: 0, child: Material(
-          color: AppTheme.cyan, shape: const CircleBorder(),
-          child: IconButton(
-            tooltip: 'Change profile photo',
-            onPressed: _photoBusy ? null : _showPhotoOptions,
-            icon: _photoBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Color(0xFF03121F), size: 19),
-          ),
-        )),
-      ])),
+    final name = (user['name'] ?? 'Numelixa user').toString();
+    final email = (user['email'] ?? user['phone'] ?? 'Numelixa account').toString();
+    final publicIdRaw = (user['publicId'] ?? user['numelixaId'] ?? '').toString();
+    final publicId = RegExp(r'^\d{7}$').hasMatch(publicIdRaw) ? publicIdRaw : '';
+    final emailVerified = user['emailVerifiedAt'] != null;
+    final phoneVerified = user['phoneVerifiedAt'] != null;
+    final isEmailAccount = email.contains('@');
+    final verified = isEmailAccount ? emailVerified : phoneVerified;
+    final verificationLabel = isEmailAccount ? (emailVerified ? 'Email verified' : 'Email verification pending') : (phoneVerified ? 'Phone verified' : 'Verification pending');
+    final isAdmin = (user['role'] ?? '').toString() == 'admin';
+    final isMerchant = user['merchantEnabled'] == true || (user['role'] ?? '').toString() == 'merchant';
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 32), children: [
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+          child: Column(children: [
+            Center(child: Stack(children: [
+              CircleAvatar(radius: 39, backgroundColor: const Color(0xFF123C64), backgroundImage: avatar,
+                child: avatar == null ? const Icon(Icons.person_outline_rounded, size: 36, color: AppTheme.cyan) : null),
+              Positioned(right: 0, bottom: 0, child: Material(
+                color: AppTheme.cyan, shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Change profile photo',
+                  onPressed: _photoBusy ? null : _showPhotoOptions,
+                  icon: _photoBusy ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Color(0xFF03121F), size: 18),
+                ),
+              )),
+            ])),
+            const SizedBox(height: 10),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
+              if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
+              NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 18),
+            ]),
+            const SizedBox(height: 4),
+            Text(email, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
+            const SizedBox(height: 6),
+            Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:const Color(0xFF102844),borderRadius:BorderRadius.circular(20),border:Border.all(color:AppTheme.glassBorder)),child:Text(isMerchant?'MERCHANT ACCOUNT':'PERSONAL ACCOUNT',style:const TextStyle(color:AppTheme.cyan,fontSize:9,fontWeight:FontWeight.w900,letterSpacing:1))),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(verified ? Icons.verified_rounded : Icons.pending_outlined, size: 15, color: verified ? AppTheme.mint : AppTheme.warning),
+              const SizedBox(width: 5),
+              Text(verificationLabel, style: TextStyle(color: verified ? AppTheme.mint : AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700)),
+            ]),
+            if (publicId.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                decoration: BoxDecoration(color: const Color(0xFF0D1930), borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.glassBorder)),
+                child: Row(children: [
+                  const Icon(Icons.badge_outlined, color: AppTheme.cyan, size: 19),
+                  const SizedBox(width: 9),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('NUMELIXA ID', style: TextStyle(color: AppTheme.muted, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                    const SizedBox(height: 2),
+                    Text(publicId, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                  ])),
+                  IconButton(tooltip: 'Copy Numelixa ID', onPressed: () => _copyPublicId(publicId), icon: const Icon(Icons.copy_rounded, color: AppTheme.cyan, size: 19)),
+                ]),
+              ),
+            ],
+          ]),
+        ),
+      ),
       const SizedBox(height: 12),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Flexible(child: Text((user['name'] ?? 'Numelixa user').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800))),
-        if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
-        NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 19),
-      ]),
-      const SizedBox(height: 4),
-      Text((user['email'] ?? user['phone'] ?? 'Numelixa account').toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF91A8C4))),
-      if ((user['role'] ?? '').toString() == 'admin') ...[
-        const SizedBox(height: 22),
-        Card(child: ListTile(
-          leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.mint),
-          title: const Text('Admin control center'),
-          subtitle: const Text('Manage users, payments, referrals and platform operations.'),
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-            builder: (_) => _AdminControlPage(accessToken: auth.accessToken!),
-          )),
-        )),
+      const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
+      const SizedBox(height: 16),
+      const Padding(padding: EdgeInsets.only(left: 5,bottom: 9),child:Text('QUICK ACCESS',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted))),
+      GridView.count(
+        crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
+        mainAxisSpacing:9,crossAxisSpacing:9,childAspectRatio:1.75,
+        children:[
+          _HomeShortcut(icon:Icons.add_call,title:'Get a Number',subtitle:'Browse live services',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _CatalogPage()))),
+          _HomeShortcut(icon:Icons.receipt_long_rounded,title:'My Orders',subtitle:'Orders and SMS codes',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _OrdersPage()))),
+          _HomeShortcut(icon:Icons.account_balance_wallet_rounded,title:'Wallet',subtitle:'Balance and payments',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _WalletPage()))),
+          _HomeShortcut(icon:Icons.code_rounded,title:'Developer API',subtitle:'API access and docs',onTap:()=>_openWeb('/developers')),
+        ],
+      ),
+      const SizedBox(height: 16),
+      if (isMerchant) ...[
+        _AccountSection(title:'MERCHANT ACCOUNT',children:[
+          _AccountAction(icon:Icons.storefront_rounded,title:'Merchant Dashboard',subtitle:'Transfers and merchant activity',onTap:()=>_openWeb('/merchant')),
+        ]),
+        const SizedBox(height:14),
       ],
-      const SizedBox(height: 26),
-      const Padding(padding: EdgeInsets.only(left: 4, bottom: 8), child: Text('OFFICIAL SUPPORT', style: TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2))),
-      Card(child: ListTile(
-        leading: const Icon(Icons.forum_rounded, color: AppTheme.cyan),
-        title: Row(children: [const Expanded(child: Text('Support Team')), const NumelixaVerifiedBadge(verified: true, size: 19)]),
-        subtitle: const Text('Private one-to-one chat with the official Numelixa team'),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => HelpTeamScreen(accessToken: auth.accessToken),
-        )),
-      )),
-      Card(child: ListTile(
-        leading: const Icon(Icons.confirmation_number_outlined, color: AppTheme.cyan),
-        title: const Text('Support Ticket'),
-        subtitle: const Text('Create and track a support request'),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => const _SupportCenterPage(),
-        )),
-      )),
-      Card(child: ListTile(
-        leading: const Icon(Icons.chat_rounded, color: Color(0xFF25D366)),
-        title: const Text('WhatsApp Support'),
-        subtitle: const Text('Contact the Numelixa support team'),
-        trailing: const Icon(Icons.open_in_new_rounded),
-        onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication),
-      )),
-      const SizedBox(height: 18),
+      if (isAdmin) ...[
+        const SizedBox(height: 12),
+        _AccountSection(title: 'ADMINISTRATION', children: [
+          _AccountAction(icon: Icons.admin_panel_settings_rounded, title: 'Admin control center', subtitle: 'Users, payments, referrals and operations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _AdminControlPage(accessToken: auth.accessToken!)))),
+          _AccountAction(icon: Icons.dashboard_customize_rounded, title: 'Full Admin Dashboard', subtitle: 'Merchant access and extended platform controls', onTap: () => _openWeb('/admin')),
+          _AccountAction(icon: Icons.campaign_rounded, title: 'Updates management', subtitle: 'Manage channels, posts and real analytics', onTap: () => _openWeb('/admin/updates')),
+          _AccountAction(icon: Icons.handshake_outlined, title: 'Partner enquiries', subtitle: 'Review and respond to partnership requests', onTap: () => _openWeb('/admin/partner-inquiries')),
+        ]),
+      ],
+      const SizedBox(height: 16),
+      _AccountSection(title: 'ACCOUNT & IDENTITY', children: [
+        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications, appearance and account security', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
+        _AccountAction(icon: Icons.devices_rounded, title: 'Your devices', subtitle: 'Active sessions and sign out other devices', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountDevicesScreen()))),
+        _AccountAction(icon: Icons.security_rounded, title: 'Security activity', subtitle: 'Account protection and recent security information', onTap: () => _openWeb('/security')),
+        _AccountAction(icon: Icons.password_rounded, title: 'Change password', subtitle: 'Verify the change with your email code', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountPasswordScreen()))),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'REWARDS', children: [
+        _AccountAction(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Your referral code, rewards and withdrawal status', onTap: () => _openWeb('/referrals')),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'OFFICIAL SUPPORT', children: [
+        _AccountAction(icon: Icons.forum_rounded, title: 'Help Team Chat', subtitle: 'Private one-to-one chat with the official Numelixa team', trailing: const NumelixaVerifiedBadge(verified: true, size: 17), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: auth.accessToken)))),
+        _AccountAction(icon: Icons.confirmation_number_outlined, title: 'Support Ticket', subtitle: 'Create and track a support request', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage()))),
+        _AccountAction(icon: Icons.chat_rounded, title: 'WhatsApp Support', subtitle: 'Contact the configured support team', iconColor: const Color(0xFF25D366), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication)),
+        _AccountAction(icon: Icons.help_outline_rounded, title: 'Help Center', subtitle: 'Guides and frequently asked questions', onTap: () => _openWeb('/clients')),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'DEVELOPER & RESOURCES', children: [
+        _AccountAction(icon: Icons.code_rounded, title: 'Developer Portal', subtitle: 'API access and developer tools', onTap: () => _openWeb('/developers')),
+        _AccountAction(icon: Icons.menu_book_rounded, title: 'API Documentation', subtitle: 'Verified API routes and integration examples', onTap: () => _openWeb('/developers/docs')),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'LEGAL & PRIVACY', children: [
+        _AccountAction(icon: Icons.gavel_rounded, title: 'Legal Center', subtitle: 'Official policies and account information', onTap: () => _openWeb('/legal')),
+        _AccountAction(icon: Icons.description_outlined, title: 'Terms of Service', subtitle: 'Terms governing use of Numelixa', onTap: () => _openWeb('/terms')),
+        _AccountAction(icon: Icons.privacy_tip_outlined, title: 'Privacy Policy', subtitle: 'How account and service data is handled', onTap: () => _openWeb('/privacy')),
+        _AccountAction(icon: Icons.receipt_long_outlined, title: 'Refund Policy', subtitle: 'Refund eligibility and procedures', onTap: () => _openWeb('/refunds')),
+        _AccountAction(icon: Icons.cookie_outlined, title: 'Cookie Policy', subtitle: 'Website cookie information', onTap: () => _openWeb('/cookies')),
+        _AccountAction(icon: Icons.rule_rounded, title: 'Acceptable Use', subtitle: 'Permitted and prohibited platform use', onTap: () => _openWeb('/acceptable-use')),
+        _AccountAction(icon: Icons.delete_outline_rounded, title: 'Account deletion', subtitle: 'Official account deletion request process', iconColor: const Color(0xFFFF788C), onTap: () => _openWeb('/account-deletion')),
+      ]),
+      const SizedBox(height: 16),
       OutlinedButton.icon(
         onPressed: () async { await auth.logout(); },
         icon: const Icon(Icons.logout_rounded),
         label: const Text('Sign out'),
-        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), foregroundColor: const Color(0xFFFF788C)),
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: const Color(0xFFFF788C)),
       ),
     ]);
   }
 }
+class _AccountSection extends StatelessWidget {
+  const _AccountSection({required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(left: 5, bottom: 8),
+        child: Text(title, style: const TextStyle(color: AppTheme.muted, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.35)),
+      ),
+      Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: [
+          for (var i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1) const Divider(height: 1, indent: 54),
+          ],
+        ]),
+      ),
+    ],
+  );
+}
+
+class _AccountAction extends StatelessWidget {
+  const _AccountAction({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.trailing,
+    this.iconColor = AppTheme.cyan,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Widget? trailing;
+  final Color iconColor;
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+    minLeadingWidth: 30,
+    leading: Icon(icon, color: iconColor, size: 21),
+    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+    subtitle: Text(subtitle, style: const TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.3)),
+    trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: AppTheme.muted, size: 20),
+    onTap: onTap,
+  );
+}
+
 class _BiometricLockScreen extends StatefulWidget {
   const _BiometricLockScreen();
   @override
@@ -3511,5 +3650,3 @@ class _PartnerCenterPage extends StatelessWidget {
     FilledButton.icon(onPressed:()=>launchUrl(Uri.parse('https://support.numelixa.com/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.support_agent_rounded),label:const Text('Open Support Center')),
   ]);
 }
-
-

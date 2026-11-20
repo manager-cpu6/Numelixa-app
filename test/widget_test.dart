@@ -9,12 +9,12 @@ void main() {
   });
 
   test('Numelixa brand tokens use the approved accessible palette', () {
-    expect(AppTheme.blue, const Color(0xFF176BFF));
-    expect(AppTheme.cyan, const Color(0xFF39D8E8));
+    expect(AppTheme.blue, const Color(0xFF4388FF));
+    expect(AppTheme.cyan, const Color(0xFF35D6E3));
     expect(AppTheme.violet, const Color(0xFFA64DFF));
-    expect(AppTheme.textPrimary, const Color(0xFFF4F7FF));
-    expect(AppTheme.textSecondary, const Color(0xFF9BAAC4));
-    expect(AppTheme.glassBorder, const Color(0xFF1A3154));
+    expect(AppTheme.textPrimary, const Color(0xFFF4F7FC));
+    expect(AppTheme.textSecondary, const Color(0xFF98A9C2));
+    expect(AppTheme.glassBorder, const Color(0xFF263957));
   });
 
   test('Material navigation and card styles are defined centrally', () {
