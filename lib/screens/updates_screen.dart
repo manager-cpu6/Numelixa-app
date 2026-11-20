@@ -68,7 +68,6 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
   final r=await ApiClient().get(_path('?page=1'),accessToken:_token);
   final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
   if(mounted)setState((){_channel=r['channel'] is Map?Map<String,dynamic>.from(r['channel']):{};_posts=items;_hasMore=r['hasMore']==true;});
-  for(final p in items){final id=(p['id']??'').toString();if(id.isNotEmpty)ApiClient().post(_path('/views'),accessToken:_token,body:{'postId':id}).catchError((_)=> <String,dynamic>{});}
   return r;
  }
  Future<void> _membership(bool join)async{
@@ -90,7 +89,7 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
  }
  Future<void> _more()async{
   if(_busy||!_hasMore)return;setState(()=>_busy=true);
-  try{final next=_page+1;final r=await ApiClient().get(_path('?page=$next'),accessToken:_token);final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];if(mounted)setState((){_page=next;_posts=[..._posts,...items];_hasMore=r['hasMore']==true;});for(final p in items){final id=(p['id']??'').toString();if(id.isNotEmpty)ApiClient().post(_path('/views'),accessToken:_token,body:{'postId':id}).catchError((_)=> <String,dynamic>{});}}
+  try{final next=_page+1;final r=await ApiClient().get(_path('?page=$next'),accessToken:_token);final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];if(mounted)setState((){_page=next;_posts=[..._posts,...items];_hasMore=r['hasMore']==true;});
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
   finally{if(mounted)setState(()=>_busy=false);}
  }
@@ -106,14 +105,19 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
    const SizedBox(height:12),Row(children:[Expanded(child:FilledButton(onPressed:_busy?null:()=>_membership(!joined),child:Text(_busy?'Please wait…':joined?'Joined · Leave':'Join channel'))),if(joined)IconButton(onPressed:_busy?null:()=>_notifications(c['notificationsEnabled']!=true),icon:Icon(c['notificationsEnabled']==true?Icons.notifications_active_rounded:Icons.notifications_off_outlined,color:AppTheme.cyan)),IconButton(onPressed:_busy?null:_block,icon:const Icon(Icons.block_rounded,color:AppTheme.muted))]),
    const SizedBox(height:18),const Text('LATEST POSTS',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,letterSpacing:1.4,color:AppTheme.muted)),
    if(_posts.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('No published posts yet.',textAlign:TextAlign.center,style:TextStyle(color:AppTheme.muted))),
-   ..._posts.map((p)=>_UpdatePostCard(post:p)),if(_hasMore)OutlinedButton(onPressed:_busy?null:_more,child:Text(_busy?'Loading…':'Load older posts'))
+   ..._posts.map((p)=>_UpdatePostCard(post:p,slug:_slug,accessToken:_token)),if(_hasMore)OutlinedButton(onPressed:_busy?null:_more,child:Text(_busy?'Loading…':'Load older posts'))
   ]));
  }));
 }
 
-class _UpdatePostCard extends StatelessWidget{
- const _UpdatePostCard({required this.post});final Map<String,dynamic> post;
+class _UpdatePostCard extends StatefulWidget{
+ const _UpdatePostCard({required this.post,required this.slug,required this.accessToken});final Map<String,dynamic> post;final String slug,accessToken;
+ @override State<_UpdatePostCard> createState()=>_UpdatePostCardState();
+}
+class _UpdatePostCardState extends State<_UpdatePostCard>{
+ @override void initState(){super.initState();final id=(widget.post['id']??'').toString();if(id.isNotEmpty){WidgetsBinding.instance.addPostFrameCallback((_) {if(mounted)ApiClient().post('/api/updates/channels/'+Uri.encodeComponent(widget.slug)+'/views',accessToken:widget.accessToken,body:{'postId':id}).catchError((_)=> <String,dynamic>{});});}}
  @override Widget build(BuildContext context){
+  final post=widget.post;
   final media=post['media'] is List?(post['media'] as List).whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
   final date=DateTime.tryParse((post['publishedAt']??'').toString());
   final views=(post['displayViews']??post['actualViews']??0).toString();
