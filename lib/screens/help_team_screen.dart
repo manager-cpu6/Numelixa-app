@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
+import '../widgets/numelixa_verified_badge.dart';
 
 class HelpTeamScreen extends StatefulWidget {
   const HelpTeamScreen({super.key, required this.accessToken});
@@ -280,7 +281,11 @@ class _HelpTeamScreenState extends State<HelpTeamScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Help Team', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('Help Team', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  SizedBox(width: 6),
+                  NumelixaVerifiedBadge(verified: true, size: 17),
+                ]),
                 Text('Private support chat', style: TextStyle(fontSize: 11, color: AppTheme.cyan)),
               ],
             ),
