@@ -162,7 +162,7 @@ class _UpdateVideoPlayerState extends State<_UpdateVideoPlayer>{
  @override Widget build(BuildContext context){
   if(_failed)return Container(color:Colors.black,alignment:Alignment.center,child:const Text('Video unavailable',style:TextStyle(color:Colors.white70)));
   if(!_controller.value.isInitialized)return Container(color:Colors.black,alignment:Alignment.center,child:const CircularProgressIndicator(color:AppTheme.cyan));
-  return GestureDetector(onTap:(){setState(()=>_controller.value.isPlaying?_controller.pause():_controller.play());},child:Container(color:Colors.black,child:Stack(alignment:Alignment.center,children:[
+  return GestureDetector(onTap:(){if(_controller.value.isPlaying){_controller.pause();}else{_controller.play();}setState((){});},child:Container(color:Colors.black,child:Stack(alignment:Alignment.center,children:[
    AspectRatio(aspectRatio:_controller.value.aspectRatio,child:VideoPlayer(_controller)),
    if(!_controller.value.isPlaying)const Icon(Icons.play_circle_fill_rounded,color:Colors.white,size:58),
    Positioned(left:10,right:10,bottom:8,child:VideoProgressIndicator(_controller,allowScrubbing:true,colors:const VideoProgressColors(playedColor:AppTheme.cyan,bufferedColor:Colors.white38,backgroundColor:Colors.white12))),
