@@ -22,7 +22,7 @@ jobs:
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.50.0'
+          flutter-version: '3.38.9'
           cache: true
       - name: Install Java
         uses: actions/setup-java@v4
@@ -157,10 +157,21 @@ jobs:
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image
-          source = Image.open('assets/numelixa_icon_source.jpg').convert('RGBA')
-          if source.size != (256, 256):
-              raise SystemExit(f'Unexpected source icon dimensions: {source.size}')
+          from PIL import Image, ImageDraw
+          # Draw the official N + globe + orbital ring mark at high resolution.
+          source = Image.new('RGBA', (512, 512), (7, 19, 41, 255))
+          draw = ImageDraw.Draw(source)
+          draw.ellipse((88, 88, 424, 424), outline=(22, 119, 255, 255), width=13)
+          draw.ellipse((174, 88, 338, 424), outline=(0, 217, 255, 235), width=9)
+          draw.ellipse((88, 174, 424, 338), outline=(0, 217, 255, 235), width=9)
+          # A clear, custom N sits in the center of the globe.
+          draw.line((178, 346, 178, 166, 334, 346, 334, 166), fill=(245, 250, 255, 255), width=38, joint='curve')
+          # Orbital arc is rendered on a transparent layer so the mark stays crisp.
+          orbit = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
+          ImageDraw.Draw(orbit).ellipse((18, 130, 494, 382), outline=(139, 92, 246, 245), width=13)
+          orbit = orbit.rotate(-22, resample=Image.Resampling.BICUBIC)
+          source.alpha_composite(orbit)
+          ImageDraw.Draw(source).ellipse((418, 95, 448, 125), fill=(0, 217, 255, 255))
           res = Path('android/app/src/main/res')
           for density, size in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
               folder = res / f'mipmap-{density}'

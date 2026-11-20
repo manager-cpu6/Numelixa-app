@@ -419,9 +419,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             icon: const Icon(Icons.notifications_none_rounded),
           ),
           IconButton(
-            tooltip: 'Account',
+            tooltip: 'Settings',
             onPressed: () => setState(() => _index = accountIndex),
-            icon: const Icon(Icons.account_circle_outlined),
+            icon: const Icon(Icons.settings_outlined),
           ),
           const SizedBox(width: 5),
         ],
@@ -436,7 +436,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           if (updatesVisible) NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'Updates'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'Orders'),
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallet'),
-          NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Account'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Settings'),
         ],
       ),
     );
@@ -515,13 +515,40 @@ class _NumelixaLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: size, height: size,
-    child: Image.asset(
-      'assets/numelixa_icon_source.jpg',
-      width: size, height: size, fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => const Icon(Icons.public_rounded, color: AppTheme.cyan),
-    ),
+    child: CustomPaint(size: Size.square(size), painter: _NumelixaMarkPainter()),
   );
 }
+
+class _NumelixaMarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height / 2);
+    final r = size.width * .37;
+    final bg = Paint()..color = const Color(0xFF071329);
+    final border = Paint()..color = const Color(0xFF1677FF)..style = PaintingStyle.stroke..strokeWidth = size.width * .035;
+    final line = Paint()..color = const Color(0xFF00D9FF)..style = PaintingStyle.stroke..strokeWidth = size.width * .025;
+    canvas.drawCircle(c, size.width * .48, bg);
+    canvas.drawCircle(c, r, border);
+    canvas.drawOval(Rect.fromCenter(center:c,width:r*1.25,height:r*2),line);
+    canvas.drawOval(Rect.fromCenter(center:c,width:r*2,height:r*.72),line);
+    final n = Path()
+      ..moveTo(c.dx-r*.48,c.dy+r*.48)
+      ..lineTo(c.dx-r*.48,c.dy-r*.48)
+      ..lineTo(c.dx+r*.48,c.dy+r*.48)
+      ..lineTo(c.dx+r*.48,c.dy-r*.48);
+    final np = Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=size.width*.105..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round;
+    canvas.drawPath(n,np);
+    final orbit=Path()
+      ..moveTo(size.width*.08,size.height*.62)
+      ..cubicTo(size.width*.24,size.height*.02,size.width*.78,size.height*.02,size.width*.93,size.height*.39);
+    final op=Paint()..color=const Color(0xFF8B5CF6)..style=PaintingStyle.stroke..strokeWidth=size.width*.035..strokeCap=StrokeCap.round;
+    canvas.drawPath(orbit,op);
+    canvas.drawCircle(Offset(size.width*.93,size.height*.39),size.width*.035,Paint()..color=const Color(0xFF8B5CF6));
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
@@ -1114,9 +1141,14 @@ class _HomePage extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [const _NumelixaLogo(size: 28), const SizedBox(width: 9), const Text('NUMELIXA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: AppTheme.cyan)), const Spacer(), const Icon(Icons.public_rounded, color: AppTheme.cyan, size: 18)]),
           const SizedBox(height: 18),
-          Row(children: [
-            Expanded(child: Text('Welcome back, $name', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900))),
-            if (auth.user?['badgeVerifiedAt'] != null) const NumelixaVerifiedBadge(verified: true, size: 18),
+          const Text('Welcome back', style: TextStyle(fontSize: 11, color: Color(0xFFB2C7DD), fontWeight: FontWeight.w600)),
+          const SizedBox(height: 3),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 23, height: 1.1, fontWeight: FontWeight.w900))),
+            if (auth.user?['badgeVerifiedAt'] != null) ...[
+              const SizedBox(width: 7),
+              const NumelixaVerifiedBadge(verified: true, size: 19),
+            ],
           ]),
           const SizedBox(height: 7),
           const Text('Your numbers, messages and wallet in one secure workspace.', style: TextStyle(color: Color(0xFFB2C7DD), height: 1.45, fontSize: 12)),
@@ -1124,21 +1156,7 @@ class _HomePage extends StatelessWidget {
       ),
       const SizedBox(height: 14),
       const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
-      const SizedBox(height: 20),
-      const Text('QUICK ACTIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
-      const SizedBox(height: 10),
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 1.75,
-        children: [
-          _HomeShortcut(icon: Icons.add_call, title: 'Get a number', subtitle: 'Browse live services', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _CatalogPage()))),
-          _HomeShortcut(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Waiting activations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _ActiveNumbersPage()))),
-          _HomeShortcut(icon: Icons.receipt_long_rounded, title: 'My orders', subtitle: 'Orders and SMS', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _OrdersPage()))),
-          _HomeShortcut(icon: Icons.account_balance_wallet_rounded, title: 'Wallet', subtitle: 'Balance and payments', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _WalletPage()))),
-          _HomeShortcut(icon: Icons.code_rounded, title: 'Developer API', subtitle: 'API access and docs', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/developers'), mode: LaunchMode.externalApplication)),
-          _HomeShortcut(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Invite and earn', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/referrals'), mode: LaunchMode.externalApplication)),
-        ],
-      ),
+      const SizedBox(height: 12),
       const SizedBox(height: 20),
       const _HomeNotificationsPreview(),
       const SizedBox(height: 12),
@@ -1152,27 +1170,6 @@ class _HomePage extends StatelessWidget {
       const _ActionTile(icon: Icons.menu_book_rounded, title: 'Help Center', subtitle: 'Guides and practical help', destination: 'clients'),
     ]);
   }
-}
-
-class _HomeShortcut extends StatelessWidget {
-  const _HomeShortcut({required this.icon, required this.title, required this.subtitle, required this.onTap});
-  final IconData icon; final String title, subtitle; final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: InkWell(borderRadius: BorderRadius.circular(17), onTap: onTap, child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(children: [
-        Container(width: 38, height: 38, decoration: BoxDecoration(color: const Color(0xFF102844), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: AppTheme.cyan, size: 20)),
-        const SizedBox(width: 9),
-        Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 3),
-          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: AppTheme.muted)),
-        ])),
-      ]),
-    )),
-  );
 }
 
 class _HomeNotificationsPreview extends StatefulWidget {
@@ -1351,7 +1348,7 @@ class _CatalogPageState extends State<_CatalogPage> {
   Widget _serviceLogo(Map<String, dynamic> service) => ServiceBrandIcon(
     name: _serviceName(service),
     id: (service['id'] ?? service['code'] ?? '').toString(),
-    size: 46,
+    size: 48,
   );
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
@@ -1363,6 +1360,10 @@ class _CatalogPageState extends State<_CatalogPage> {
       final services = raw is List
           ? raw.whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
+              .where((service) => ServiceBrandIcon.hasVerifiedIcon(
+                _serviceName(service),
+                id: (service['id'] ?? service['code'] ?? '').toString(),
+              ))
               .toList()
           : <Map<String, dynamic>>[];
       // Prioritize popular services that are actually present in the live API.
@@ -1414,7 +1415,7 @@ class _CatalogPageState extends State<_CatalogPage> {
               Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _CountriesPage(service: id, name: _serviceName(service))));
             },
             child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13), child: Row(children: [
-              SizedBox(width: 54, height: 54, child: _serviceLogo(service)),
+              SizedBox(width: 52, height: 52, child: _serviceLogo(service)),
               const SizedBox(width: 13),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(_serviceName(service), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
@@ -3166,8 +3167,10 @@ class _AccountPageState extends State<_AccountPage> {
             const SizedBox(height: 10),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
-              if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
-              NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 18),
+              if (user['badgeVerifiedAt'] != null) ...[
+                const SizedBox(width: 6),
+                const NumelixaVerifiedBadge(verified: true, size: 18),
+              ],
             ]),
             const SizedBox(height: 4),
             Text(email, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
@@ -3202,17 +3205,13 @@ class _AccountPageState extends State<_AccountPage> {
       const SizedBox(height: 12),
       const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
       const SizedBox(height: 16),
-      const Padding(padding: EdgeInsets.only(left: 5,bottom: 9),child:Text('QUICK ACCESS',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted))),
-      GridView.count(
-        crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
-        mainAxisSpacing:9,crossAxisSpacing:9,childAspectRatio:1.75,
-        children:[
-          _HomeShortcut(icon:Icons.add_call,title:'Get a Number',subtitle:'Browse live services',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _CatalogPage()))),
-          _HomeShortcut(icon:Icons.receipt_long_rounded,title:'My Orders',subtitle:'Orders and SMS codes',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _OrdersPage()))),
-          _HomeShortcut(icon:Icons.account_balance_wallet_rounded,title:'Wallet',subtitle:'Balance and payments',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _WalletPage()))),
-          _HomeShortcut(icon:Icons.code_rounded,title:'Developer API',subtitle:'API access and docs',onTap:()=>_openWeb('/developers')),
-        ],
-      ),
+      _AccountSection(title: 'ACCOUNT', children: [
+        _AccountAction(icon: Icons.person_outline_rounded, title: 'Account', subtitle: 'Devices, password and account protection', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountManagementScreen()))),
+      ]),
+      const SizedBox(height: 14),
+      _AccountSection(title: 'PREFERENCES', children: [
+        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications, Updates and app lock', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
+      ]),
       const SizedBox(height: 16),
       if (isMerchant) ...[
         _AccountSection(title:'MERCHANT ACCOUNT',children:[
@@ -3230,13 +3229,7 @@ class _AccountPageState extends State<_AccountPage> {
         ]),
       ],
       const SizedBox(height: 16),
-      _AccountSection(title: 'ACCOUNT & IDENTITY', children: [
-        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications and account preferences', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
-         _AccountAction(icon: Icons.fingerprint_rounded, title: 'Fingerprint & app lock', subtitle: 'Protect Numelixa with fingerprint, face or device authentication', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
-        _AccountAction(icon: Icons.devices_rounded, title: 'Your devices', subtitle: 'Active sessions and sign out other devices', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountDevicesScreen()))),
-        _AccountAction(icon: Icons.security_rounded, title: 'Security activity', subtitle: 'Account protection and recent security information', onTap: () => _openWeb('/security')),
-        _AccountAction(icon: Icons.password_rounded, title: 'Change password', subtitle: 'Verify the change with your email code', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountPasswordScreen()))),
-      ]),
+
       const SizedBox(height: 14),
       _AccountSection(title: 'REWARDS', children: [
         _AccountAction(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Your referral code, rewards and withdrawal status', onTap: () => _openWeb('/referrals')),
@@ -3249,11 +3242,13 @@ class _AccountPageState extends State<_AccountPage> {
         _AccountAction(icon: Icons.help_outline_rounded, title: 'Help Center', subtitle: 'Guides and frequently asked questions', onTap: () => _openWeb('/clients')),
       ]),
       const SizedBox(height: 14),
-      _AccountSection(title: 'DEVELOPER & RESOURCES', children: [
-        _AccountAction(icon: Icons.code_rounded, title: 'Developer Portal', subtitle: 'API access and developer tools', onTap: () => _openWeb('/developers')),
-        _AccountAction(icon: Icons.menu_book_rounded, title: 'API Documentation', subtitle: 'Verified API routes and integration examples', onTap: () => _openWeb('/developers/docs')),
-      ]),
-      const SizedBox(height: 14),
+      OutlinedButton.icon(
+        onPressed: () async { await auth.logout(); },
+        icon: const Icon(Icons.logout_rounded),
+        label: const Text('Sign out'),
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: const Color(0xFFFF788C)),
+      ),
+      const SizedBox(height: 18),
       _AccountSection(title: 'LEGAL & PRIVACY', children: [
         _AccountAction(icon: Icons.gavel_rounded, title: 'Legal Center', subtitle: 'Official policies and account information', onTap: () => _openWeb('/legal')),
         _AccountAction(icon: Icons.description_outlined, title: 'Terms of Service', subtitle: 'Terms governing use of Numelixa', onTap: () => _openWeb('/terms')),
@@ -3261,15 +3256,7 @@ class _AccountPageState extends State<_AccountPage> {
         _AccountAction(icon: Icons.receipt_long_outlined, title: 'Refund Policy', subtitle: 'Refund eligibility and procedures', onTap: () => _openWeb('/refunds')),
         _AccountAction(icon: Icons.cookie_outlined, title: 'Cookie Policy', subtitle: 'Website cookie information', onTap: () => _openWeb('/cookies')),
         _AccountAction(icon: Icons.rule_rounded, title: 'Acceptable Use', subtitle: 'Permitted and prohibited platform use', onTap: () => _openWeb('/acceptable-use')),
-        _AccountAction(icon: Icons.delete_outline_rounded, title: 'Account deletion', subtitle: 'Official account deletion request process', iconColor: const Color(0xFFFF788C), onTap: () => _openWeb('/account-deletion')),
       ]),
-      const SizedBox(height: 16),
-      OutlinedButton.icon(
-        onPressed: () async { await auth.logout(); },
-        icon: const Icon(Icons.logout_rounded),
-        label: const Text('Sign out'),
-        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: const Color(0xFFFF788C)),
-      ),
     ]);
   }
 }

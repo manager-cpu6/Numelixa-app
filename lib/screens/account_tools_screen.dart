@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -66,8 +67,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
    Card(child:Column(children:[
     SwitchListTile(value:auth.biometricEnabled,onChanged:_busy?null:(v)=>_toggleBiometric(v),secondary:const Icon(Icons.fingerprint_rounded,color:AppTheme.cyan),title:const Text('Biometric app lock'),subtitle:const Text('Require fingerprint, face or device authentication when returning to Numelixa')),
     const Divider(height:1),
-    ListTile(leading:const Icon(Icons.devices_rounded,color:AppTheme.cyan),title:const Text('Your devices'),subtitle:const Text('Review active sessions and sign out other devices'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountDevicesScreen()))),
-    ListTile(leading:const Icon(Icons.password_rounded,color:AppTheme.cyan),title:const Text('Change password'),subtitle:const Text('Verify using the code sent to your account email'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountPasswordScreen()))),
+
    ])),
    const SizedBox(height:14),const _SettingHeading('SUPPORT'),
    const Card(child:ListTile(leading:Icon(Icons.support_agent_rounded,color:AppTheme.cyan),title:Text('Need help?'),subtitle:Text('Contact the official Numelixa support team.'))),
@@ -77,6 +77,35 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
   try{if(value){final ok=await context.read<AuthService>().enableBiometricLock();if(!ok&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Biometric setup was cancelled.')));}else{await context.read<AuthService>().disableBiometricLock();}}
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
  }
+}
+
+class AccountManagementScreen extends StatelessWidget {
+ const AccountManagementScreen({super.key});
+ @override
+ Widget build(BuildContext context)=>Scaffold(
+  appBar:AppBar(title:const Text('Account')),
+  body:ListView(padding:const EdgeInsets.all(16),children:[
+   const Card(child:ListTile(leading:Icon(Icons.shield_outlined,color:AppTheme.cyan),title:Text('Account protection'),subtitle:Text('Manage your sessions, password and account access.'))),
+   const SizedBox(height:14),
+   const _SettingHeading('ACCOUNT SECURITY'),
+   Card(child:Column(children:[
+    ListTile(leading:const Icon(Icons.devices_rounded,color:AppTheme.cyan),title:const Text('Devices'),subtitle:const Text('Review active sessions and sign out other devices'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountDevicesScreen()))),
+    const Divider(height:1),
+    ListTile(leading:const Icon(Icons.password_rounded,color:AppTheme.cyan),title:const Text('Change password'),subtitle:const Text('Verify with the code sent to your account email'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountPasswordScreen()))),
+    const Divider(height:1),
+    ListTile(leading:const Icon(Icons.history_rounded,color:AppTheme.cyan),title:const Text('Security activity'),subtitle:const Text('Review recent account security activity'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri.parse('https://www.numelixa.com/security'),mode:LaunchMode.externalApplication)),
+   ])),
+   const SizedBox(height:18),
+   const _SettingHeading('ACCOUNT CONTROL'),
+   Card(child:ListTile(
+    leading:const Icon(Icons.delete_forever_outlined,color:Color(0xFFFF788C)),
+    title:const Text('Delete account',style:TextStyle(color:Color(0xFFFF788C),fontWeight:FontWeight.w800)),
+    subtitle:const Text('Submit an official account deletion request'),
+    trailing:const Icon(Icons.chevron_right),
+    onTap:()=>launchUrl(Uri.parse('https://www.numelixa.com/account-deletion'),mode:LaunchMode.externalApplication),
+   )),
+  ]),
+ );
 }
 
 class AccountDevicesScreen extends StatefulWidget{
