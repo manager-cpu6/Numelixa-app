@@ -50,7 +50,7 @@ class _ChannelCardState extends State<_ChannelCard>{
  @override void initState(){super.initState();_joined=widget.channel['joined']==true;_subscriberCount=int.tryParse((widget.channel['publicSubscriberCount']??widget.channel['actualSubscriberCount']??0).toString())??0;}
  Future<void> _join()async{
   if(_busy||_joined)return;setState(()=>_busy=true);
-  try{final result=await ApiClient().post('/api/updates/channels/'+Uri.encodeComponent((widget.channel['slug']??'').toString())+'/membership',accessToken:widget.accessToken,body:{'notificationsEnabled':true});if(mounted){setState(()=>{_joined=true;if(widget.channel['subscriberDisplayMode']!='custom')_subscriberCount=int.tryParse((result['subscriberCount']??_subscriberCount).toString())??_subscriberCount;});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('You joined this channel.')));}}
+  try{final result=await ApiClient().post('/api/updates/channels/'+Uri.encodeComponent((widget.channel['slug']??'').toString())+'/membership',accessToken:widget.accessToken,body:{'notificationsEnabled':true});if(mounted){setState((){_joined=true;if(widget.channel['subscriberDisplayMode']!='custom')_subscriberCount=int.tryParse((result['subscriberCount']??_subscriberCount).toString())??_subscriberCount;});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('You joined this channel.')));}}
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
   finally{if(mounted)setState(()=>_busy=false);}
  }
