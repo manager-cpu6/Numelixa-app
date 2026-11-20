@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
+import 'updates_screen.dart';
 
 class AccountSettingsScreen extends StatefulWidget{
  const AccountSettingsScreen({super.key});
@@ -54,7 +56,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
    ])),
    const SizedBox(height:14),const _SettingHeading('SECURITY'),
    Card(child:Column(children:[
-    SwitchListTile(value:auth.biometricEnabled,onChanged:_busy?null,(v)=>_toggleBiometric(v),secondary:const Icon(Icons.fingerprint_rounded,color:AppTheme.cyan),title:const Text('Biometric app lock'),subtitle:const Text('Require fingerprint, face or device authentication when returning to Numelixa')),
+    SwitchListTile(value:auth.biometricEnabled,onChanged:_busy?null:(v)=>_toggleBiometric(v),secondary:const Icon(Icons.fingerprint_rounded,color:AppTheme.cyan),title:const Text('Biometric app lock'),subtitle:const Text('Require fingerprint, face or device authentication when returning to Numelixa')),
     const Divider(height:1),
     ListTile(leading:const Icon(Icons.devices_rounded,color:AppTheme.cyan),title:const Text('Your devices'),subtitle:const Text('Review active sessions and sign out other devices'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountDevicesScreen()))),
     ListTile(leading:const Icon(Icons.password_rounded,color:AppTheme.cyan),title:const Text('Change password'),subtitle:const Text('Verify using the code sent to your account email'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountPasswordScreen()))),
