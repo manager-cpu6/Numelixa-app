@@ -2,10 +2,14 @@
 
 **Repository:** `manager-cpu6/Numelixa-app`  
 **Branch:** `main`  
-**App version in pubspec:** `1.0.30+31`  
+**App version in pubspec:** `1.0.31+32`  
 **Status date:** 20 November 2026.
 
 ## Implemented in this mobile-only change set
+
+- Account is simplified to user identity, admin entry for authorized admins, and only three support actions: private verified Support Team chat, Support Ticket, and WhatsApp.
+- Removed the in-app Developer Center and API documentation screens; developer resources remain on the public website.
+- Fixed numeric provider suffix normalization and popular-service ranking. Service logos now load PNG favicons from known official brand domains rather than SVG assets that Flutter's standard Image widget cannot decode.
 
 - Account support shortcuts: direct private Support Team chat with the official blue verified mark, dedicated Support Ticket entry, and direct WhatsApp support.
 - Removed the in-app Developer Center entry from the Android Account screen; the public website developer portal is outside this app-only repository change.
