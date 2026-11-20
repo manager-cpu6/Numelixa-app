@@ -19,6 +19,8 @@ import '../widgets/payment_receipt_dialog.dart';
 import '../widgets/numelixa_verified_badge.dart';
 import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
+import 'updates_screen.dart';
+import 'account_tools_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -35,6 +37,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Timer? _accessCheckTimer;
   bool _accessCheckInProgress = false;
   bool _maintenancePending = false;
+  bool _updatesEnabled = false;
+  bool _hideUpdates = false;
+  bool _updatesConfigLoading = true;
   Map<String, dynamic>? _accessBlock;
 
   @override
@@ -43,6 +48,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     context.read<AuthService>().addListener(_handleAuthChanged);
     appNotificationRoute.addListener(_handleNotificationRoute);
+    updatesVisibilityChanged.addListener(_handleUpdatesVisibilityChanged);
     _accessCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshAccessStatus());
   }
 
@@ -85,7 +91,41 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (auth.isSignedIn) _refreshAccessStatus();
   }
 
+  void _handleUpdatesVisibilityChanged() {
+    final hidden = updatesVisibilityChanged.value;
+    if (hidden == null || !mounted) return;
+    setState(() {
+      _hideUpdates = hidden;
+      if (hidden && _index >= 3) _index -= 1;
+      if (hidden && _index == 2) _index = 2;
+    });
+  }
+
+  Future<void> _refreshUpdatesConfig() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isSignedIn || _updatesConfigLoading && _updatesEnabled) return;
+    try {
+      final result = await ApiClient().get('/api/updates/preferences', accessToken: auth.accessToken);
+      if (!mounted) return;
+      final enabled = result['enabled'] == true;
+      final hidden = result['hideUpdates'] == true;
+      if (enabled != _updatesEnabled || hidden != _hideUpdates || _updatesConfigLoading) {
+        setState(() {
+          _updatesEnabled = enabled;
+          _hideUpdates = hidden;
+          _updatesConfigLoading = false;
+          if ((!enabled || hidden) && _index >= 3) _index -= 1;
+          if ((!enabled || hidden) && _index == 2) _index = 2;
+        });
+      }
+    } catch (_) {
+      // Keep the last known navigation state if the feature-config API is offline.
+      if (_updatesConfigLoading && mounted) setState(() => _updatesConfigLoading = false);
+    }
+  }
+
   Future<void> _refreshAccessStatus() async {
+    _refreshUpdatesConfig();
     if (!mounted || _accessCheckInProgress) return;
     _accessCheckInProgress = true;
     try {
@@ -243,6 +283,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _accessCheckTimer?.cancel();
     context.read<AuthService>().removeListener(_handleAuthChanged);
     appNotificationRoute.removeListener(_handleNotificationRoute);
+    updatesVisibilityChanged.removeListener(_handleUpdatesVisibilityChanged);
     super.dispose();
   }
 
@@ -258,6 +299,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // still be able to receive the update that restores current policy support.
       final auth = context.read<AuthService>();
       await auth.restore();
+      if (!mounted) return;
+      await _refreshUpdatesConfig();
       if (!mounted) return;
       // Maintenance is checked before the mandatory-update prompt so the
       // maintenance-only Chat screen always takes priority.
@@ -315,13 +358,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (role == 'support_admin' || role == 'support_agent') {
       return SupportAdminScreen(accessToken: auth.accessToken!, role: role);
     }
-    final pages = [
+    final updatesVisible = _updatesEnabled && !_hideUpdates;
+    final accountIndex = updatesVisible ? 5 : 4;
+    final pages = <Widget>[
       const _HomePage(),
       const _CatalogPage(),
+      if (updatesVisible) const UpdatesScreen(),
       const _OrdersPage(),
       const _WalletPage(),
       const _AccountPage(),
     ];
+    final selectedIndex = _index.clamp(0, pages.length - 1);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 18,
@@ -340,19 +387,20 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           ),
           IconButton(
             tooltip: 'Account',
-            onPressed: () => setState(() => _index = 4),
+            onPressed: () => setState(() => _index = accountIndex),
             icon: const Icon(Icons.account_circle_outlined),
           ),
           const SizedBox(width: 5),
         ],
       ),
-      body: SafeArea(child: IndexedStack(index: _index, children: pages)),
+      body: SafeArea(child: IndexedStack(index: selectedIndex, children: pages)),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
+        selectedIndex: selectedIndex,
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.public_outlined), selectedIcon: Icon(Icons.public_rounded), label: 'Numbers'),
+          if (updatesVisible) NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'Updates'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'Orders'),
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallet'),
           NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Account'),
