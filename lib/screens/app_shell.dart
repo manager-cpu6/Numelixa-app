@@ -1148,7 +1148,7 @@ class _HomePage extends StatelessWidget {
       const Text('HELP & RESOURCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
       const SizedBox(height: 9),
       const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
-      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Support Team Chat', subtitle: 'Private help from the Numelixa team', destination: 'support'),
+      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Help Team', subtitle: 'Private help from the Numelixa team', destination: 'support'),
       const _ActionTile(icon: Icons.menu_book_rounded, title: 'Help Center', subtitle: 'Guides and practical help', destination: 'clients'),
     ]);
   }
@@ -3231,7 +3231,8 @@ class _AccountPageState extends State<_AccountPage> {
       ],
       const SizedBox(height: 16),
       _AccountSection(title: 'ACCOUNT & IDENTITY', children: [
-        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications, appearance and account security', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
+        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications and account preferences', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
+         _AccountAction(icon: Icons.fingerprint_rounded, title: 'Fingerprint & app lock', subtitle: 'Protect Numelixa with fingerprint, face or device authentication', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
         _AccountAction(icon: Icons.devices_rounded, title: 'Your devices', subtitle: 'Active sessions and sign out other devices', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountDevicesScreen()))),
         _AccountAction(icon: Icons.security_rounded, title: 'Security activity', subtitle: 'Account protection and recent security information', onTap: () => _openWeb('/security')),
         _AccountAction(icon: Icons.password_rounded, title: 'Change password', subtitle: 'Verify the change with your email code', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountPasswordScreen()))),
@@ -3242,7 +3243,7 @@ class _AccountPageState extends State<_AccountPage> {
       ]),
       const SizedBox(height: 14),
       _AccountSection(title: 'OFFICIAL SUPPORT', children: [
-        _AccountAction(icon: Icons.forum_rounded, title: 'Help Team Chat', subtitle: 'Private one-to-one chat with the official Numelixa team', trailing: const NumelixaVerifiedBadge(verified: true, size: 17), onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: auth.accessToken)))),
+        _AccountAction(icon: Icons.forum_rounded, title: 'Help Team', subtitle: 'Private one-to-one chat with the official Numelixa team', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: auth.accessToken)))),
         _AccountAction(icon: Icons.confirmation_number_outlined, title: 'Support Ticket', subtitle: 'Create and track a support request', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage()))),
         _AccountAction(icon: Icons.chat_rounded, title: 'WhatsApp Support', subtitle: 'Contact the configured support team', iconColor: const Color(0xFF25D366), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication)),
         _AccountAction(icon: Icons.help_outline_rounded, title: 'Help Center', subtitle: 'Guides and frequently asked questions', onTap: () => _openWeb('/clients')),
