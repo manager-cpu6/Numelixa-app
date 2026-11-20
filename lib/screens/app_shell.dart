@@ -1128,53 +1128,96 @@ class _HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final name = (auth.user?['name'] ?? auth.user?['email'] ?? 'there').toString();
-    return ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 28), children: [
+    final name = (auth.user?['name'] ?? auth.user?['email'] ?? 'there').toString().split(' ').first;
+    return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 30), children: [
       Container(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.fromLTRB(19, 20, 19, 18),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(24),
           gradient: const LinearGradient(colors: [Color(0xFF123C64), Color(0xFF0B1B34), Color(0xFF10162F)], begin: Alignment.topLeft, end: Alignment.bottomRight),
           border: Border.all(color: const Color(0xFF24547B)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('GLOBAL VIRTUAL NUMBERS', style: TextStyle(color: AppTheme.mint, fontSize: 10, letterSpacing: 1.8, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 13),
-          Text.rich(
-            TextSpan(children: [
-              TextSpan(text: 'Welcome back, $name'),
-              if (auth.user?['badgeVerifiedAt'] != null)
-                const WidgetSpan(alignment: PlaceholderAlignment.middle, child: Padding(padding: EdgeInsets.only(left: 6), child: NumelixaVerifiedBadge(verified: true, size: 19))),
-            ]),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 25, height: 1.15, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 10),
-          const Text('Numbers, without the noise.', style: TextStyle(color: Color(0xFFB2C7DD), height: 1.45)),
+          Row(children: [const _NumelixaLogo(size: 28), const SizedBox(width: 9), const Text('NUMELIXA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: AppTheme.cyan)), const Spacer(), const Icon(Icons.public_rounded, color: AppTheme.cyan, size: 18)]),
+          const SizedBox(height: 18),
+          Row(children: [
+            Expanded(child: Text('Welcome back, $name', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900))),
+            if (auth.user?['badgeVerifiedAt'] != null) const NumelixaVerifiedBadge(verified: true, size: 18),
+          ]),
+          const SizedBox(height: 7),
+          const Text('Your numbers, messages and wallet in one secure workspace.', style: TextStyle(color: Color(0xFFB2C7DD), height: 1.45, fontSize: 12)),
         ]),
       ),
-      const SizedBox(height: 18),
-      const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
-      const SizedBox(height: 12),
-      const Text('Your workspace', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 12),
-      const _ActionTile(icon: Icons.public_rounded, title: 'Browse services', subtitle: 'Explore the live catalog', destination: 'catalog'),
-      const _ActionTile(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Manage waiting activations', destination: 'active'),
-      const _ActionTile(icon: Icons.sms_outlined, title: 'Your orders', subtitle: 'View activations and SMS status', destination: 'orders'),
-      const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
-      const SizedBox(height: 18),
-      const Text('Help & resources', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 10),
-      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Support Center', subtitle: 'Chat with the Numelixa Help Team', destination: 'support'),
-      const _ActionTile(icon: Icons.menu_book_rounded, title: 'For Clients', subtitle: 'Getting started and practical help', destination: 'clients'),
-
-      const _ActionTile(icon: Icons.handshake_outlined, title: 'For Partners', subtitle: 'Business and integration enquiries', destination: 'partners'),
       const SizedBox(height: 14),
-      const Text('Balances, orders and availability are loaded from Numelixa services. If a service is unavailable, no demo data is substituted.', style: TextStyle(color: Color(0xFF7185A5), height: 1.5, fontSize: 12)),
+      const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
+      const SizedBox(height: 20),
+      const Text('QUICK ACTIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
+      const SizedBox(height: 10),
+      GridView.count(
+        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 1.75,
+        children: [
+          _HomeShortcut(icon: Icons.add_call, title: 'Get a number', subtitle: 'Browse live services', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _CatalogPage()))),
+          _HomeShortcut(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Waiting activations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _ActiveNumbersPage()))),
+          _HomeShortcut(icon: Icons.receipt_long_rounded, title: 'My orders', subtitle: 'Orders and SMS', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _OrdersPage()))),
+          _HomeShortcut(icon: Icons.account_balance_wallet_rounded, title: 'Wallet', subtitle: 'Balance and payments', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _WalletPage()))),
+          _HomeShortcut(icon: Icons.code_rounded, title: 'Developer API', subtitle: 'API access and docs', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/developers'), mode: LaunchMode.externalApplication)),
+          _HomeShortcut(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Invite and earn', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/referrals'), mode: LaunchMode.externalApplication)),
+        ],
+      ),
+      const SizedBox(height: 20),
+      const _HomeUpdatesPreview(),
+      const SizedBox(height: 18),
+      const Text('HELP & RESOURCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
+      const SizedBox(height: 9),
+      const _ActionTile(icon: Icons.notifications_none_rounded, title: 'Notifications', subtitle: 'Account, wallet and activation updates', destination: 'notifications'),
+      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Support Team Chat', subtitle: 'Private help from the Numelixa team', destination: 'support'),
+      const _ActionTile(icon: Icons.menu_book_rounded, title: 'Help Center', subtitle: 'Guides and practical help', destination: 'clients'),
     ]);
   }
 }
+
+class _HomeShortcut extends StatelessWidget {
+  const _HomeShortcut({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon; final String title, subtitle; final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    child: InkWell(borderRadius: BorderRadius.circular(17), onTap: onTap, child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(children: [
+        Container(width: 38, height: 38, decoration: BoxDecoration(color: const Color(0xFF102844), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: AppTheme.cyan, size: 20)),
+        const SizedBox(width: 9),
+        Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 3),
+          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: AppTheme.muted)),
+        ])),
+      ]),
+    )),
+  );
+}
+
+class _HomeUpdatesPreview extends StatefulWidget {
+  const _HomeUpdatesPreview();
+  @override State<_HomeUpdatesPreview> createState() => _HomeUpdatesPreviewState();
+}
+class _HomeUpdatesPreviewState extends State<_HomeUpdatesPreview> {
+  late Future<Map<String,dynamic>> _future;
+  @override void initState(){super.initState();_load();}
+  void _load(){_future=ApiClient().get('/api/updates',accessToken:context.read<AuthService>().accessToken);}
+  @override Widget build(BuildContext context)=>FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,s){
+    if(s.connectionState==ConnectionState.waiting||s.hasError)return const SizedBox.shrink();
+    final d=s.data??{};if(d['enabled']!=true||d['hidden']==true)return const SizedBox.shrink();
+    final raw=d['channels'];final channels=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).where((x)=>x['latestPost'] is Map).take(2).toList():<Map<String,dynamic>>[];
+    if(channels.isEmpty)return const SizedBox.shrink();
+    return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[const Icon(Icons.campaign_rounded,color:AppTheme.cyan,size:19),const SizedBox(width:8),const Expanded(child:Text('Latest updates',style:TextStyle(fontWeight:FontWeight.w900,fontSize:14))),TextButton(onPressed:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const UpdatesScreen())),child:const Text('View all'))]),
+      ...channels.map((channel){final post=Map<String,dynamic>.from(channel['latestPost'] as Map);final name=(channel['name']??'Channel').toString();final preview=(post['title']??post['body']??'New post').toString();return ListTile(contentPadding:EdgeInsets.zero,dense:true,leading:const CircleAvatar(backgroundColor:Color(0xFF102844),child:Icon(Icons.campaign_outlined,color:AppTheme.cyan,size:18)),title:Text(name,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800)),subtitle:Text(preview,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:AppTheme.muted)),onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:channel))));}),
+    ])));
+  });
+}
+
 
 class _DataCard extends StatefulWidget {
   const _DataCard({required this.title, required this.icon});
@@ -1230,6 +1273,8 @@ class _ActionTile extends StatelessWidget {
           'notifications' => const _NotificationsPage(),
           'support' => const _SupportCenterPage(),
           'clients' => const _ClientHelpPage(),
+          'wallet' => const _WalletPage(),
+          'updates' => const UpdatesScreen(),
           'partners' => const _PartnerCenterPage(),
           _ => const _NotificationsPage(),
         };
