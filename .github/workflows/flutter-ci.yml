@@ -41,6 +41,8 @@ jobs:
         run: flutter analyze --no-pub --no-fatal-infos
       - name: Tests
         run: flutter test --no-pub
+      - name: Generate Android platform files
+        run: flutter create --platforms=android .
       - name: Build Android debug APK
         run: flutter build apk --debug --no-pub
       - name: Upload CI APK
