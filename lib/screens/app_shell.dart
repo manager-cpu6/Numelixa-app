@@ -1138,6 +1138,8 @@ class _HomePage extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 20),
+      const _RecentServicesPreview(),
+      const SizedBox(height: 12),
       const _HomeUpdatesPreview(),
       const SizedBox(height: 18),
       const Text('HELP & RESOURCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
@@ -1168,6 +1170,32 @@ class _HomeShortcut extends StatelessWidget {
       ]),
     )),
   );
+}
+
+class _RecentServicesPreview extends StatefulWidget {
+  const _RecentServicesPreview();
+  @override State<_RecentServicesPreview> createState() => _RecentServicesPreviewState();
+}
+class _RecentServicesPreviewState extends State<_RecentServicesPreview> {
+  late Future<Map<String,dynamic>> _future;
+  @override void initState(){super.initState();_load();}
+  void _load(){final token=context.read<AuthService>().accessToken??'';_future=NumelixaRepository().orders(token:token,limit:12);}
+  @override Widget build(BuildContext context)=>FutureBuilder<Map<String,dynamic>>(future:_future,builder:(context,s){
+    if(s.connectionState==ConnectionState.waiting||s.hasError)return const SizedBox.shrink();
+    final raw=s.data?['orders'];final orders=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
+    final seen=<String>{};final recent=<Map<String,dynamic>>[];
+    for(final order in orders){final id=(order['service']??order['serviceId']??order['serviceName']??'').toString();if(id.isNotEmpty&&seen.add(id)){recent.add(order);if(recent.length==4)break;}}
+    if(recent.isEmpty)return const SizedBox.shrink();
+    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      const Text('RECENTLY USED SERVICES',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted)),
+      const SizedBox(height:9),
+      SizedBox(height:82,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:recent.length,separatorBuilder:(_,__)=>const SizedBox(width:9),itemBuilder:(context,index){
+        final order=recent[index],id=(order['service']??order['serviceId']??'').toString(),name=(order['serviceName']??order['service']??'Service').toString();
+        return InkWell(onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _CatalogPage())),borderRadius:BorderRadius.circular(15),child:Container(width:132,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFF0D1930),borderRadius:BorderRadius.circular(15),border:Border.all(color:AppTheme.glassBorder)),child:Row(children:[ServiceBrandIcon(name:name,id:id,size:34),const SizedBox(width:8),Expanded(child:Text(name,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)))])));
+      })),
+      const SizedBox(height:15),
+    ]);
+  });
 }
 
 class _HomeUpdatesPreview extends StatefulWidget {
