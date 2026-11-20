@@ -62,7 +62,17 @@ class _ChannelCardState extends State<_ChannelCard>{
   return Card(margin:const EdgeInsets.only(bottom:10),child:Padding(padding:const EdgeInsets.all(13),child:Row(children:[
    GestureDetector(onTap:widget.onTap,child:_ChannelAvatar(url:avatar,size:52)),const SizedBox(width:11),
    Expanded(child:InkWell(onTap:widget.onTap,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Row(children:[Flexible(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800))),if(channel['verified']==true)...[const SizedBox(width:4),const Icon(Icons.verified_rounded,color:AppTheme.cyan,size:16)],if(channel['featured']==true)...[const SizedBox(width:5),const Text('FEATURED',style:TextStyle(color:AppTheme.warning,fontSize:8,fontWeight:FontWeight.w900,letterSpacing:.6)]]]),
+    Row(children:[
+      Flexible(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800))),
+      if(channel['verified']==true)...[
+        const SizedBox(width:4),
+        const Icon(Icons.verified_rounded,color:AppTheme.cyan,size:16),
+      ],
+      if(channel['featured']==true)...[
+        const SizedBox(width:5),
+        const Text('FEATURED',style:TextStyle(color:AppTheme.warning,fontSize:8,fontWeight:FontWeight.w900,letterSpacing:.6)),
+      ],
+    ]),
     const SizedBox(height:4),Text((channel['description']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:AppTheme.muted,fontSize:11)),
     const SizedBox(height:6),Row(children:[const Icon(Icons.people_alt_outlined,size:13,color:AppTheme.cyan),const SizedBox(width:4),Text('$count subscribers',style:const TextStyle(color:AppTheme.muted,fontSize:10)),const SizedBox(width:7),Expanded(child:Text(preview,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w600)))])
    ]))),
