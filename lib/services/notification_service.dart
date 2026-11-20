@@ -14,6 +14,7 @@ final ValueNotifier<String?> appNotificationRoute = ValueNotifier<String?>(null)
 
 String _channelFor(Map<String, dynamic> data) {
   final type = (data['type'] ?? '').toString().toLowerCase();
+  if (type == 'updates_post') return 'updates';
   if (type == 'sms' || type == 'verification' || type == 'verification_code') return 'verification';
   if (type == 'security' || type == 'login' || type == 'login_approval') return 'security';
   if (type == 'admin' || type == 'announcement' || type == 'push_test') return 'admin';
@@ -47,6 +48,7 @@ String _notificationIcon(Map<String, dynamic> data) {
 }
 
 String _channelNameFor(String channel) => switch (channel) {
+  'updates' => 'Numelixa Updates',
   'verification' => 'SMS and verification codes',
   'security' => 'Account security',
   'admin' => 'Numelixa announcements',
@@ -54,6 +56,7 @@ String _channelNameFor(String channel) => switch (channel) {
 };
 
 String _channelDescriptionFor(String channel) => switch (channel) {
+  'updates' => 'Posts from channels you follow',
   'verification' => 'Incoming SMS codes and verification updates',
   'security' => 'Login and account security alerts',
   'admin' => 'Important announcements and push tests',
@@ -143,6 +146,8 @@ class NotificationService {
         description: 'Login and account security alerts', importance: Importance.high),
       AndroidNotificationChannel('admin', 'Numelixa announcements',
         description: 'Important announcements and push tests', importance: Importance.high),
+      AndroidNotificationChannel('updates', 'Numelixa Updates',
+        description: 'Posts from channels you follow', importance: Importance.high),
     ];
     for (final channel in channels) {
       await androidNotifications?.createNotificationChannel(channel);
