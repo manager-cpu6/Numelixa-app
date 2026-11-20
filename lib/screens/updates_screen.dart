@@ -5,6 +5,8 @@ import '../core/theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 
+final ValueNotifier<bool?> updatesVisibilityChanged = ValueNotifier<bool?>(null);
+
 class UpdatesScreen extends StatefulWidget {
  const UpdatesScreen({super.key});
  @override State<UpdatesScreen> createState()=>_UpdatesScreenState();
