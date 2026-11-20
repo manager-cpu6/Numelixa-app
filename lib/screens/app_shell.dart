@@ -3513,15 +3513,3 @@ class _PartnerCenterPage extends StatelessWidget {
 }
 
 
-class _LegalCenterPage extends StatelessWidget {
-  const _LegalCenterPage();
-  Future<void> _open(String path) async { await launchUrl(Uri.parse('https://www.numelixa.com'+path),mode:LaunchMode.externalApplication); }
-  @override
-  Widget build(BuildContext context)=>_ResourcePageFrame(title:'Legal Center',subtitle:'Read the current official Numelixa policies. Published policy text is linked without rewriting it.',icon:Icons.gavel_rounded,children:[
-    for(final item in const [(Icons.description_outlined,'Terms of Service','/terms'),(Icons.privacy_tip_outlined,'Privacy Policy','/privacy'),(Icons.currency_exchange_rounded,'Refund Policy','/refund-policy'),(Icons.cookie_outlined,'Cookie Policy','/cookie-policy'),(Icons.rule_rounded,'Rules & Acceptable Use','/rules'),(Icons.delete_outline_rounded,'Account Deletion Policy','/account-deletion')])
-      Card(child:ListTile(leading:Icon(item.$1,color:AppTheme.cyan),title:Text(item.$2,style:const TextStyle(fontWeight:FontWeight.w800)),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>_open(item.$3))),
-    const Card(child:Padding(padding:EdgeInsets.all(15),child:Text('No account-deletion API or in-app deletion operation was verified. Follow the official Account Deletion Policy and contact support@numelixa.com from the email associated with your account. Review remaining balance, active orders and pending payments before requesting deletion.',style:TextStyle(color:AppTheme.muted,height:1.5)))),
-    Card(child:ListTile(leading:const Icon(Icons.email_outlined,color:AppTheme.cyan),title:const Text('Policy and privacy questions'),subtitle:const Text('support@numelixa.com'),trailing:const Icon(Icons.open_in_new_rounded),onTap:()=>launchUrl(Uri(scheme:'mailto',path:'support@numelixa.com',queryParameters:{'subject':'Numelixa legal or privacy enquiry'})))),
-  ]);
-}
-
