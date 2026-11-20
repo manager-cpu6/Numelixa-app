@@ -66,8 +66,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
    Card(child:Column(children:[
     SwitchListTile(value:auth.biometricEnabled,onChanged:_busy?null:(v)=>_toggleBiometric(v),secondary:const Icon(Icons.fingerprint_rounded,color:AppTheme.cyan),title:const Text('Biometric app lock'),subtitle:const Text('Require fingerprint, face or device authentication when returning to Numelixa')),
     const Divider(height:1),
-    ListTile(leading:const Icon(Icons.devices_rounded,color:AppTheme.cyan),title:const Text('Your devices'),subtitle:const Text('Review active sessions and sign out other devices'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountDevicesScreen()))),
-    ListTile(leading:const Icon(Icons.password_rounded,color:AppTheme.cyan),title:const Text('Change password'),subtitle:const Text('Verify using the code sent to your account email'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const AccountPasswordScreen()))),
    ])),
    const SizedBox(height:14),const _SettingHeading('SUPPORT'),
    const Card(child:ListTile(leading:Icon(Icons.support_agent_rounded,color:AppTheme.cyan),title:Text('Need help?'),subtitle:Text('Contact the official Numelixa support team.'))),

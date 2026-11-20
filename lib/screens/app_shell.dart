@@ -510,17 +510,20 @@ class _AppUnavailableScreen extends StatelessWidget {
 }
 
 class _NumelixaLogo extends StatelessWidget {
-  const _NumelixaLogo({this.size = 44});
-  final double size;
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: size, height: size,
-    child: Image.asset(
-      'assets/numelixa_icon_source.jpg',
-      width: size, height: size, fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => const Icon(Icons.public_rounded, color: AppTheme.cyan),
-    ),
-  );
+  const _NumelixaLogo({this.size=44}); final double size;
+  @override Widget build(BuildContext context)=>SizedBox(width:size,height:size,child:CustomPaint(painter:_NumelixaMarkPainter()));
+}
+class _NumelixaMarkPainter extends CustomPainter {
+  @override void paint(Canvas canvas,Size size){
+    final rect=Offset.zero&size;canvas.drawRRect(RRect.fromRectAndRadius(rect,Radius.circular(size.width*.25)),Paint()..shader=const LinearGradient(colors:[Color(0xFF0D2C50),Color(0xFF07152B)]).createShader(rect));
+    final center=Offset(size.width*.5,size.height*.5),radius=size.width*.35;
+    final globe=Paint()..color=const Color(0xFF35D6E3).withValues(alpha:.8)..style=PaintingStyle.stroke..strokeWidth=size.width*.035;
+    canvas.drawCircle(center,radius,globe);canvas.drawOval(Rect.fromCenter(center:center,width:radius*1.05,height:radius*2),globe);canvas.drawOval(Rect.fromCenter(center:center,width:radius*2,height:radius*.75),globe);
+    final n=Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..strokeWidth=size.width*.12;
+    canvas.drawPath(Path()..moveTo(size.width*.30,size.height*.72)..lineTo(size.width*.30,size.height*.29)..lineTo(size.width*.70,size.height*.71)..lineTo(size.width*.70,size.height*.28),n);
+    canvas.drawArc(Rect.fromCenter(center:center,width:size.width*.94,height:size.height*.40),.05,2.9,false,Paint()..color=const Color(0xFF35D6E3)..style=PaintingStyle.stroke..strokeWidth=size.width*.045);
+  }
+  @override bool shouldRepaint(covariant CustomPainter oldDelegate)=>false;
 }
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
@@ -1099,57 +1102,21 @@ class _EmailVerificationScreenState extends State<_EmailVerificationScreen> {
 
 class _HomePage extends StatelessWidget {
   const _HomePage();
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
-    final name = (auth.user?['name'] ?? auth.user?['email'] ?? 'there').toString().split(' ').first;
-    return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 30), children: [
-      Container(
-        padding: const EdgeInsets.fromLTRB(19, 20, 19, 18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(colors: [Color(0xFF123C64), Color(0xFF0B1B34), Color(0xFF10162F)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-          border: Border.all(color: const Color(0xFF24547B)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [const _NumelixaLogo(size: 28), const SizedBox(width: 9), const Text('NUMELIXA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: AppTheme.cyan)), const Spacer(), const Icon(Icons.public_rounded, color: AppTheme.cyan, size: 18)]),
-          const SizedBox(height: 18),
-          Row(children: [
-            Expanded(child: Text('Welcome back, $name', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900))),
-            if (auth.user?['badgeVerifiedAt'] != null) const NumelixaVerifiedBadge(verified: true, size: 18),
-          ]),
-          const SizedBox(height: 7),
-          const Text('Your numbers, messages and wallet in one secure workspace.', style: TextStyle(color: Color(0xFFB2C7DD), height: 1.45, fontSize: 12)),
-        ]),
-      ),
-      const SizedBox(height: 14),
-      const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
-      const SizedBox(height: 20),
-      const Text('QUICK ACTIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
-      const SizedBox(height: 10),
-      GridView.count(
-        crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: 1.75,
-        children: [
-          _HomeShortcut(icon: Icons.add_call, title: 'Get a number', subtitle: 'Browse live services', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _CatalogPage()))),
-          _HomeShortcut(icon: Icons.phone_android_rounded, title: 'Active numbers', subtitle: 'Waiting activations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _ActiveNumbersPage()))),
-          _HomeShortcut(icon: Icons.receipt_long_rounded, title: 'My orders', subtitle: 'Orders and SMS', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _OrdersPage()))),
-          _HomeShortcut(icon: Icons.account_balance_wallet_rounded, title: 'Wallet', subtitle: 'Balance and payments', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _WalletPage()))),
-          _HomeShortcut(icon: Icons.code_rounded, title: 'Developer API', subtitle: 'API access and docs', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/developers'), mode: LaunchMode.externalApplication)),
-          _HomeShortcut(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Invite and earn', onTap: () => launchUrl(Uri.parse('https://www.numelixa.com/referrals'), mode: LaunchMode.externalApplication)),
-        ],
-      ),
-      const SizedBox(height: 20),
-      const _HomeNotificationsPreview(),
-      const SizedBox(height: 12),
-      const _RecentServicesPreview(),
-      const SizedBox(height: 12),
-      const _HomeUpdatesPreview(),
-      const SizedBox(height: 18),
-      const Text('HELP & RESOURCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppTheme.muted)),
-      const SizedBox(height: 9),
-      const _ActionTile(icon: Icons.support_agent_rounded, title: 'Help Team', subtitle: 'Private help from the Numelixa team', destination: 'support'),
-      const _ActionTile(icon: Icons.menu_book_rounded, title: 'Help Center', subtitle: 'Guides and practical help', destination: 'clients'),
+  @override Widget build(BuildContext context) {
+    final auth=context.watch<AuthService>();
+    final name=(auth.user?['name']??auth.user?['email']??'there').toString().trim().split(RegExp(r'\s+')).first;
+    return ListView(padding:const EdgeInsets.fromLTRB(16,12,16,30),children:[
+      Container(padding:const EdgeInsets.all(19),decoration:BoxDecoration(borderRadius:BorderRadius.circular(24),gradient:const LinearGradient(colors:[Color(0xFF123C64),Color(0xFF0B1B34),Color(0xFF10162F)]),border:Border.all(color:const Color(0xFF24547B))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(children:[const _NumelixaLogo(size:30),const SizedBox(width:10),const Text('NUMELIXA',style:TextStyle(fontWeight:FontWeight.w900,letterSpacing:2,fontSize:11,color:AppTheme.cyan)),const Spacer(),const Icon(Icons.public_rounded,color:AppTheme.cyan)]),
+        const SizedBox(height:20),
+        Row(children:[Expanded(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:25,fontWeight:FontWeight.w900))),if(auth.user?['badgeVerifiedAt']!=null)const NumelixaVerifiedBadge(verified:true,size:18)]),
+        const SizedBox(height:7),const Text('Your numbers, messages and wallet in one secure workspace.',style:TextStyle(color:Color(0xFFB2C7DD),height:1.45,fontSize:12)),
+      ])),
+      const SizedBox(height:14),const _DataCard(title:'Available balance',icon:Icons.account_balance_wallet_outlined),
+      const SizedBox(height:18),const _HomeNotificationsPreview(),const SizedBox(height:12),const _RecentServicesPreview(),const SizedBox(height:12),const _HomeUpdatesPreview(),
+      const SizedBox(height:18),const Text('YOUR NUMELIXA',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted)),
+      const SizedBox(height:9),const _ActionTile(icon:Icons.support_agent_rounded,title:'Help Team',subtitle:'Private help from the Numelixa team',destination:'support'),
+      const _ActionTile(icon:Icons.menu_book_rounded,title:'Help Center',subtitle:'Guides and practical help',destination:'clients'),
     ]);
   }
 }
@@ -3081,198 +3048,67 @@ class _AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<_AccountPage> {
-  final ImagePicker _picker = ImagePicker();
-  bool _photoBusy = false;
-  ImageProvider<Object>? _avatarProvider(Map<String, dynamic> user) {
-    final value = (user['avatarDataUrl'] ?? user['avatarUrl'] ?? '').toString();
-    if (value.startsWith('data:image/') && value.contains(',')) {
-      try { return MemoryImage(base64Decode(value.substring(value.indexOf(',') + 1))); } catch (_) { return null; }
-    }
-    if (value.startsWith('https://') || value.startsWith('http://')) return NetworkImage(value);
-    return null;
-  }
-  Future<void> _pickPhoto(ImageSource source) async {
-    final file = await _picker.pickImage(source: source, maxWidth: 640, maxHeight: 640, imageQuality: 72);
-    if (file == null || !mounted) return;
-    setState(() => _photoBusy = true);
-    try {
-      final bytes = await file.readAsBytes();
-      if (bytes.length > 450 * 1024) throw const ApiException('Profile photo must be smaller than 450 KB.');
-      final lower = file.name.toLowerCase();
-      final mime = lower.endsWith('.png') ? 'image/png' : lower.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
-      await context.read<AuthService>().uploadProfilePhoto('data:' + mime + ';base64,' + base64Encode(bytes));
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile photo updated.')));
-    } on ApiException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not update profile photo. Try again.')));
-    } finally {
-      if (mounted) setState(() => _photoBusy = false);
-    }
-  }
-  Future<void> _showPhotoOptions() async {
-    await showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Take a photo'), onTap: () { Navigator.pop(sheetContext); _pickPhoto(ImageSource.camera); }),
-        ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose from gallery'), onTap: () { Navigator.pop(sheetContext); _pickPhoto(ImageSource.gallery); }),
-      ],
-    )));
-  }
-  Future<void> _openWeb(String path) async {
-    final uri = Uri.parse('https://www.numelixa.com' + path);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  Future<void> _copyPublicId(String value) async {
-    if (value.trim().isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: value));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Numelixa ID copied.')));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
-    final user = auth.user ?? const <String, dynamic>{};
-    final avatar = _avatarProvider(user);
-    final name = (user['name'] ?? 'Numelixa user').toString();
-    final email = (user['email'] ?? user['phone'] ?? 'Numelixa account').toString();
-    final publicIdRaw = (user['publicId'] ?? user['numelixaId'] ?? '').toString();
-    final publicId = RegExp(r'^\d{7}$').hasMatch(publicIdRaw) ? publicIdRaw : '';
-    final emailVerified = user['emailVerifiedAt'] != null;
-    final phoneVerified = user['phoneVerifiedAt'] != null;
-    final isEmailAccount = email.contains('@');
-    final verified = isEmailAccount ? emailVerified : phoneVerified;
-    final verificationLabel = isEmailAccount ? (emailVerified ? 'Email verified' : 'Email verification pending') : (phoneVerified ? 'Phone verified' : 'Verification pending');
-    final isAdmin = (user['role'] ?? '').toString() == 'admin';
-    final isMerchant = user['merchantEnabled'] == true || (user['role'] ?? '').toString() == 'merchant';
-    return ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 32), children: [
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-          child: Column(children: [
-            Center(child: Stack(children: [
-              CircleAvatar(radius: 39, backgroundColor: const Color(0xFF123C64), backgroundImage: avatar,
-                child: avatar == null ? const Icon(Icons.person_outline_rounded, size: 36, color: AppTheme.cyan) : null),
-              Positioned(right: 0, bottom: 0, child: Material(
-                color: AppTheme.cyan, shape: const CircleBorder(),
-                child: IconButton(
-                  tooltip: 'Change profile photo',
-                  onPressed: _photoBusy ? null : _showPhotoOptions,
-                  icon: _photoBusy ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Color(0xFF03121F), size: 18),
-                ),
-              )),
-            ])),
-            const SizedBox(height: 10),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
-              if (user['badgeVerifiedAt'] != null) const SizedBox(width: 6),
-              NumelixaVerifiedBadge(verified: user['badgeVerifiedAt'] != null, size: 18),
-            ]),
-            const SizedBox(height: 4),
-            Text(email, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.muted, fontSize: 12)),
-            const SizedBox(height: 6),
-            Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),decoration:BoxDecoration(color:const Color(0xFF102844),borderRadius:BorderRadius.circular(20),border:Border.all(color:AppTheme.glassBorder)),child:Text(isMerchant?'MERCHANT ACCOUNT':'PERSONAL ACCOUNT',style:const TextStyle(color:AppTheme.cyan,fontSize:9,fontWeight:FontWeight.w900,letterSpacing:1))),
-            const SizedBox(height: 8),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(verified ? Icons.verified_rounded : Icons.pending_outlined, size: 15, color: verified ? AppTheme.mint : AppTheme.warning),
-              const SizedBox(width: 5),
-              Text(verificationLabel, style: TextStyle(color: verified ? AppTheme.mint : AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700)),
-            ]),
-            if (publicId.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-                decoration: BoxDecoration(color: const Color(0xFF0D1930), borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.glassBorder)),
-                child: Row(children: [
-                  const Icon(Icons.badge_outlined, color: AppTheme.cyan, size: 19),
-                  const SizedBox(width: 9),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('NUMELIXA ID', style: TextStyle(color: AppTheme.muted, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
-                    const SizedBox(height: 2),
-                    Text(publicId, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                  ])),
-                  IconButton(tooltip: 'Copy Numelixa ID', onPressed: () => _copyPublicId(publicId), icon: const Icon(Icons.copy_rounded, color: AppTheme.cyan, size: 19)),
-                ]),
-              ),
-            ],
-          ]),
-        ),
-      ),
-      const SizedBox(height: 12),
-      const _DataCard(title: 'Available balance', icon: Icons.account_balance_wallet_outlined),
-      const SizedBox(height: 16),
-      const Padding(padding: EdgeInsets.only(left: 5,bottom: 9),child:Text('QUICK ACCESS',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted))),
-      GridView.count(
-        crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
-        mainAxisSpacing:9,crossAxisSpacing:9,childAspectRatio:1.75,
-        children:[
-          _HomeShortcut(icon:Icons.add_call,title:'Get a Number',subtitle:'Browse live services',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _CatalogPage()))),
-          _HomeShortcut(icon:Icons.receipt_long_rounded,title:'My Orders',subtitle:'Orders and SMS codes',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _OrdersPage()))),
-          _HomeShortcut(icon:Icons.account_balance_wallet_rounded,title:'Wallet',subtitle:'Balance and payments',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _WalletPage()))),
-          _HomeShortcut(icon:Icons.code_rounded,title:'Developer API',subtitle:'API access and docs',onTap:()=>_openWeb('/developers')),
-        ],
-      ),
-      const SizedBox(height: 16),
-      if (isMerchant) ...[
-        _AccountSection(title:'MERCHANT ACCOUNT',children:[
-          _AccountAction(icon:Icons.storefront_rounded,title:'Merchant Dashboard',subtitle:'Transfers and merchant activity',onTap:()=>_openWeb('/merchant')),
-        ]),
-        const SizedBox(height:14),
-      ],
-      if (isAdmin) ...[
-        const SizedBox(height: 12),
-        _AccountSection(title: 'ADMINISTRATION', children: [
-          _AccountAction(icon: Icons.admin_panel_settings_rounded, title: 'Admin control center', subtitle: 'Users, payments, referrals and operations', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _AdminControlPage(accessToken: auth.accessToken!)))),
-          _AccountAction(icon: Icons.dashboard_customize_rounded, title: 'Full Admin Dashboard', subtitle: 'Merchant access and extended platform controls', onTap: () => _openWeb('/admin')),
-          _AccountAction(icon: Icons.campaign_rounded, title: 'Updates management', subtitle: 'Manage channels, posts, publishing and notifications', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => AdminUpdatesScreen(accessToken: auth.accessToken!)))),
-          _AccountAction(icon: Icons.handshake_outlined, title: 'Partner enquiries', subtitle: 'Review and respond to partnership requests', onTap: () => _openWeb('/admin/partner-inquiries')),
-        ]),
-      ],
-      const SizedBox(height: 16),
-      _AccountSection(title: 'ACCOUNT & IDENTITY', children: [
-        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications and account preferences', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
-         _AccountAction(icon: Icons.fingerprint_rounded, title: 'Fingerprint & app lock', subtitle: 'Protect Numelixa with fingerprint, face or device authentication', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
-        _AccountAction(icon: Icons.devices_rounded, title: 'Your devices', subtitle: 'Active sessions and sign out other devices', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountDevicesScreen()))),
-        _AccountAction(icon: Icons.security_rounded, title: 'Security activity', subtitle: 'Account protection and recent security information', onTap: () => _openWeb('/security')),
-        _AccountAction(icon: Icons.password_rounded, title: 'Change password', subtitle: 'Verify the change with your email code', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountPasswordScreen()))),
+  final ImagePicker _picker=ImagePicker(); bool _photoBusy=false;
+  ImageProvider<Object>? _avatarProvider(Map<String,dynamic> u){final v=(u['avatarDataUrl']??u['avatarUrl']??'').toString();if(v.startsWith('data:image/')&&v.contains(',')){try{return MemoryImage(base64Decode(v.substring(v.indexOf(',')+1)));}catch(_){return null;}}if(v.startsWith('https://')||v.startsWith('http://'))return NetworkImage(v);return null;}
+  Future<void> _pickPhoto(ImageSource source)async{final f=await _picker.pickImage(source:source,maxWidth:640,maxHeight:640,imageQuality:72);if(f==null||!mounted)return;setState(()=>_photoBusy=true);try{final b=await f.readAsBytes();if(b.length>450*1024)throw const ApiException('Profile photo must be smaller than 450 KB.');final n=f.name.toLowerCase(),mime=n.endsWith('.png')?'image/png':n.endsWith('.webp')?'image/webp':'image/jpeg';await context.read<AuthService>().uploadProfilePhoto('data:$mime;base64,${base64Encode(b)}');if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Profile photo updated.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e is ApiException?e.message:'Could not update profile photo.')));}finally{if(mounted)setState(()=>_photoBusy=false);}}
+  Future<void> _photoOptions()async{await showModalBottomSheet<void>(context:context,builder:(c)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,children:[ListTile(leading:const Icon(Icons.photo_camera_outlined),title:const Text('Take a photo'),onTap:(){Navigator.pop(c);_pickPhoto(ImageSource.camera);}),ListTile(leading:const Icon(Icons.photo_library_outlined),title:const Text('Choose from gallery'),onTap:(){Navigator.pop(c);_pickPhoto(ImageSource.gallery);})])));}
+  Future<void> _web(String path)async{await launchUrl(Uri.parse('https://www.numelixa.com'+path),mode:LaunchMode.externalApplication);}
+  @override Widget build(BuildContext context){
+    final auth=context.watch<AuthService>(),u=auth.user??const <String,dynamic>{},avatar=_avatarProvider(u);
+    final name=(u['name']??'Numelixa user').toString(),email=(u['email']??u['phone']??'Numelixa account').toString(),id=(u['publicId']??u['numelixaId']??'').toString();
+    final verified=email.contains('@')?u['emailVerifiedAt']!=null:u['phoneVerifiedAt']!=null;
+    final status=email.contains('@')?(verified?'Email verified':'Email verification pending'):(verified?'Phone verified':'Verification pending');
+    final admin=(u['role']??'').toString()=='admin',merchant=u['merchantEnabled']==true||(u['role']??'').toString()=='merchant';
+    return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,32),children:[
+      Card(child:Padding(padding:const EdgeInsets.all(17),child:Column(children:[
+        Stack(children:[CircleAvatar(radius:39,backgroundColor:const Color(0xFF123C64),backgroundImage:avatar,child:avatar==null?const Icon(Icons.person_outline_rounded,size:36,color:AppTheme.cyan):null),Positioned(right:0,bottom:0,child:Material(color:AppTheme.cyan,shape:const CircleBorder(),child:IconButton(onPressed:_photoBusy?null:_photoOptions,icon:_photoBusy?const SizedBox(width:17,height:17,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.camera_alt_rounded,color:Color(0xFF03121F)))))]),
+        const SizedBox(height:10),Row(mainAxisAlignment:MainAxisAlignment.center,children:[Flexible(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),if(u['badgeVerifiedAt']!=null)const Padding(padding:EdgeInsets.only(left:6),child:NumelixaVerifiedBadge(verified:true,size:17))]),
+        const SizedBox(height:4),Text(email,style:const TextStyle(color:AppTheme.muted,fontSize:12)),const SizedBox(height:8),
+        Text(status,style:TextStyle(color:verified?AppTheme.mint:AppTheme.warning,fontSize:11,fontWeight:FontWeight.w700)),
+        if(RegExp(r'^\d{7}$').hasMatch(id))... [const SizedBox(height:12),Text('NUMELIXA ID  $id',style:const TextStyle(color:AppTheme.cyan,fontWeight:FontWeight.w800))],
+        const SizedBox(height:6),Text(merchant?'MERCHANT ACCOUNT':'PERSONAL ACCOUNT',style:const TextStyle(color:AppTheme.muted,fontSize:9,fontWeight:FontWeight.w900,letterSpacing:1)),
+      ]))),
+      const SizedBox(height:14),const _DataCard(title:'Available balance',icon:Icons.account_balance_wallet_outlined),const SizedBox(height:14),
+      _AccountSection(title:'ACCOUNT',children:[
+        _AccountAction(icon:Icons.person_outline_rounded,title:'Account details',subtitle:'Profile information and identity',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _AccountDetailsPage()))),
+        _AccountAction(icon:Icons.devices_rounded,title:'Devices',subtitle:'Active sessions and sign out other devices',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const AccountDevicesScreen()))),
+        _AccountAction(icon:Icons.password_rounded,title:'Change password',subtitle:'Secure your account with a new password',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const AccountPasswordScreen()))),
+        _AccountAction(icon:Icons.shield_outlined,title:'Security activity',subtitle:'Account protection and sign-in activity',onTap:()=>_web('/security')),
+        _AccountAction(icon:Icons.delete_outline_rounded,title:'Delete account',subtitle:'Review the account deletion process',iconColor:AppTheme.error,onTap:()=>_web('/account-deletion')),
       ]),
-      const SizedBox(height: 14),
-      _AccountSection(title: 'REWARDS', children: [
-        _AccountAction(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Your referral code, rewards and withdrawal status', onTap: () => _openWeb('/referrals')),
+      const SizedBox(height:14),_AccountSection(title:'PREFERENCES',children:[
+        _AccountAction(icon:Icons.settings_outlined,title:'Settings',subtitle:'Notifications, fingerprint and app preferences',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const AccountSettingsScreen()))),
       ]),
-      const SizedBox(height: 14),
-      _AccountSection(title: 'OFFICIAL SUPPORT', children: [
-        _AccountAction(icon: Icons.forum_rounded, title: 'Help Team', subtitle: 'Private one-to-one chat with the official Numelixa team', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HelpTeamScreen(accessToken: auth.accessToken)))),
-        _AccountAction(icon: Icons.confirmation_number_outlined, title: 'Support Ticket', subtitle: 'Create and track a support request', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const _SupportCenterPage()))),
-        _AccountAction(icon: Icons.chat_rounded, title: 'WhatsApp Support', subtitle: 'Contact the configured support team', iconColor: const Color(0xFF25D366), onTap: () => launchUrl(Uri.parse('https://wa.me/252907868526'), mode: LaunchMode.externalApplication)),
-        _AccountAction(icon: Icons.help_outline_rounded, title: 'Help Center', subtitle: 'Guides and frequently asked questions', onTap: () => _openWeb('/clients')),
+      if(merchant)...[const SizedBox(height:14),_AccountSection(title:'MERCHANT',children:[_AccountAction(icon:Icons.storefront_rounded,title:'Merchant dashboard',subtitle:'Transfers and merchant activity',onTap:()=>_web('/merchant'))])],
+      if(admin)...[const SizedBox(height:14),_AccountSection(title:'ADMINISTRATION',children:[
+        _AccountAction(icon:Icons.admin_panel_settings_rounded,title:'Admin control center',subtitle:'Users, payments, referrals and operations',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>_AdminControlPage(accessToken:auth.accessToken!)))),
+        _AccountAction(icon:Icons.dashboard_customize_rounded,title:'Full Admin Dashboard',subtitle:'Merchant access and platform controls',onTap:()=>_web('/admin')),
+        _AccountAction(icon:Icons.campaign_rounded,title:'Updates management',subtitle:'Manage channels, posts and notifications',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>AdminUpdatesScreen(accessToken:auth.accessToken!)))),
+        _AccountAction(icon:Icons.handshake_outlined,title:'Partner enquiries',subtitle:'Review partnership requests',onTap:()=>_web('/admin/partner-inquiries')),
+      ])],
+      const SizedBox(height:14),_AccountSection(title:'REWARDS & SUPPORT',children:[
+        _AccountAction(icon:Icons.card_giftcard_rounded,title:'Referral rewards',subtitle:'Your referral code and rewards',onTap:()=>_web('/referrals')),
+        _AccountAction(icon:Icons.forum_rounded,title:'Help Team',subtitle:'Private chat with the Numelixa team',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>HelpTeamScreen(accessToken:auth.accessToken)))),
+        _AccountAction(icon:Icons.confirmation_number_outlined,title:'Support Ticket',subtitle:'Create and track a support request',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _SupportCenterPage()))),
+        _AccountAction(icon:Icons.help_outline_rounded,title:'Help Center',subtitle:'Guides and frequently asked questions',onTap:()=>_web('/clients')),
       ]),
-      const SizedBox(height: 14),
-      _AccountSection(title: 'DEVELOPER & RESOURCES', children: [
-        _AccountAction(icon: Icons.code_rounded, title: 'Developer Portal', subtitle: 'API access and developer tools', onTap: () => _openWeb('/developers')),
-        _AccountAction(icon: Icons.menu_book_rounded, title: 'API Documentation', subtitle: 'Verified API routes and integration examples', onTap: () => _openWeb('/developers/docs')),
+      const SizedBox(height:14),_AccountSection(title:'LEGAL & PRIVACY',children:[
+        _AccountAction(icon:Icons.gavel_rounded,title:'Legal Center',subtitle:'Official policies and account information',onTap:()=>_web('/legal')),
+        _AccountAction(icon:Icons.description_outlined,title:'Terms of Service',subtitle:'Terms governing use of Numelixa',onTap:()=>_web('/terms')),
+        _AccountAction(icon:Icons.privacy_tip_outlined,title:'Privacy Policy',subtitle:'How account data is handled',onTap:()=>_web('/privacy')),
+        _AccountAction(icon:Icons.receipt_long_outlined,title:'Refund Policy',subtitle:'Refund eligibility and procedures',onTap:()=>_web('/refunds')),
+        _AccountAction(icon:Icons.cookie_outlined,title:'Cookie Policy',subtitle:'Website cookie information',onTap:()=>_web('/cookies')),
+        _AccountAction(icon:Icons.rule_rounded,title:'Acceptable Use',subtitle:'Permitted and prohibited use',onTap:()=>_web('/acceptable-use')),
       ]),
-      const SizedBox(height: 14),
-      _AccountSection(title: 'LEGAL & PRIVACY', children: [
-        _AccountAction(icon: Icons.gavel_rounded, title: 'Legal Center', subtitle: 'Official policies and account information', onTap: () => _openWeb('/legal')),
-        _AccountAction(icon: Icons.description_outlined, title: 'Terms of Service', subtitle: 'Terms governing use of Numelixa', onTap: () => _openWeb('/terms')),
-        _AccountAction(icon: Icons.privacy_tip_outlined, title: 'Privacy Policy', subtitle: 'How account and service data is handled', onTap: () => _openWeb('/privacy')),
-        _AccountAction(icon: Icons.receipt_long_outlined, title: 'Refund Policy', subtitle: 'Refund eligibility and procedures', onTap: () => _openWeb('/refunds')),
-        _AccountAction(icon: Icons.cookie_outlined, title: 'Cookie Policy', subtitle: 'Website cookie information', onTap: () => _openWeb('/cookies')),
-        _AccountAction(icon: Icons.rule_rounded, title: 'Acceptable Use', subtitle: 'Permitted and prohibited platform use', onTap: () => _openWeb('/acceptable-use')),
-        _AccountAction(icon: Icons.delete_outline_rounded, title: 'Account deletion', subtitle: 'Official account deletion request process', iconColor: const Color(0xFFFF788C), onTap: () => _openWeb('/account-deletion')),
-      ]),
-      const SizedBox(height: 16),
-      OutlinedButton.icon(
-        onPressed: () async { await auth.logout(); },
-        icon: const Icon(Icons.logout_rounded),
-        label: const Text('Sign out'),
-        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50), foregroundColor: const Color(0xFFFF788C)),
-      ),
+      const SizedBox(height:16),OutlinedButton.icon(onPressed:auth.logout,icon:const Icon(Icons.logout_rounded),label:const Text('Sign out'),style:OutlinedButton.styleFrom(minimumSize:const Size.fromHeight(50),foregroundColor:AppTheme.error)),
     ]);
   }
 }
+class _AccountDetailsPage extends StatelessWidget {
+  const _AccountDetailsPage();
+  @override Widget build(BuildContext context){final u=context.watch<AuthService>().user??const <String,dynamic>{};final rows=<String,String>{'Full name':(u['name']??'—').toString(),'Email':(u['email']??'—').toString(),'Phone':(u['phone']??'—').toString(),'Numelixa ID':(u['publicId']??u['numelixaId']??'—').toString()};return Scaffold(appBar:AppBar(title:const Text('Account details')),body:ListView(padding:const EdgeInsets.all(16),children:[Card(child:Column(children:rows.entries.map((e)=>ListTile(title:Text(e.key,style:const TextStyle(color:AppTheme.muted,fontSize:12)),subtitle:Text(e.value,style:const TextStyle(fontWeight:FontWeight.w700)))).toList()))]));}
+}
+
 class _AccountSection extends StatelessWidget {
   const _AccountSection({required this.title, required this.children});
   final String title;
