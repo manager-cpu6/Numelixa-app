@@ -89,7 +89,7 @@ class _UpdatesChannelScreenState extends State<UpdatesChannelScreen>{
  }
  Future<void> _more()async{
   if(_busy||!_hasMore)return;setState(()=>_busy=true);
-  try{final next=_page+1;final r=await ApiClient().get(_path('?page=$next'),accessToken:_token);final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];if(mounted)setState((){_page=next;_posts=[..._posts,...items];_hasMore=r['hasMore']==true;});
+  try{final next=_page+1;final r=await ApiClient().get(_path('?page=$next'),accessToken:_token);final raw=r['posts'];final items=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];if(mounted)setState((){_page=next;_posts=[..._posts,...items];_hasMore=r['hasMore']==true;});}
   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
   finally{if(mounted)setState(()=>_busy=false);}
  }
