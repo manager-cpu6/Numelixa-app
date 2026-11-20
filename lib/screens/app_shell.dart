@@ -3003,6 +3003,16 @@ class _PaymentChoiceCard extends StatelessWidget {
   );
 }
 
+IconData _notificationIconFor(Map<String, dynamic> item) {
+  final text = (item['title'] ?? '').toString() + ' ' + (item['message'] ?? '').toString();
+  final normalized = text.toLowerCase();
+  if (RegExp(r'payment|purchase|wallet|deposit|top.?up|credit|refund|checkout|transaction').hasMatch(normalized)) return Icons.account_balance_wallet_rounded;
+  if (RegExp(r'order|activation|number|service').hasMatch(normalized)) return Icons.sim_card_rounded;
+  if (RegExp(r'sms|verification|code|otp').hasMatch(normalized)) return Icons.sms_rounded;
+  if (RegExp(r'security|login|password|device').hasMatch(normalized)) return Icons.shield_rounded;
+  return Icons.notifications_active_rounded;
+}
+
 class _NotificationsPage extends StatelessWidget {
   const _NotificationsPage();
   @override
@@ -3046,7 +3056,7 @@ class _ProtectedListPageState extends State<_ProtectedListPage> {
         return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView(padding: const EdgeInsets.all(12), children: [
           for (final item in items)
             Card(child: ListTile(
-              leading: Icon(widget.title == 'Notifications' ? Icons.notifications_none_rounded : Icons.receipt_long_rounded, color: AppTheme.cyan),
+              leading: Icon(widget.title == 'Notifications' ? _notificationIconFor(item) : Icons.receipt_long_rounded, color: AppTheme.cyan),
               title: Text(widget.itemTitle(item), maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(widget.itemSubtitle(item), maxLines: 3, overflow: TextOverflow.ellipsis),
               onTap: widget.onItemTap == null ? null : () => widget.onItemTap!(item),
