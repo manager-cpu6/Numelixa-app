@@ -1294,7 +1294,7 @@ class _ActionTile extends StatelessWidget {
           'orders' => const _OrdersPage(),
           'active' => const _ActiveNumbersPage(),
           'notifications' => const _NotificationsPage(),
-          'support' => const _SupportCenterPage(),
+          'support' => HelpTeamScreen(accessToken: context.read<AuthService>().accessToken ?? ''),
           'clients' => const _ClientHelpPage(),
           'wallet' => const _WalletPage(),
           'updates' => const UpdatesScreen(),
