@@ -38,7 +38,9 @@ The shell uses an IndexedStack to retain tab state. When Updates visibility chan
 - Profile avatar and upload: existing endpoint/UI.
 - Full name and email: existing account data.
 - Email verification state: displayed from the signed-in user record.
-- Numelixa ID and copy: displayed when the server provides publicId/numelixaId.
+- Numelixa ID and copy: shown only when the server value matches the seven-digit public ID contract.
+- Account Quick Access: two-column Get a Number, My Orders, Wallet and Developer API shortcuts.
+- Merchant Dashboard: exposed only for accounts marked merchant-enabled/merchant by the server; the full web admin dashboard remains linked for administrators.
 - Referral rewards: existing web route linked.
 - Help Team Chat: existing native screen linked.
 - Support Ticket: existing native screen linked.
