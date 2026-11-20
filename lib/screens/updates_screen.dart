@@ -13,7 +13,7 @@ class UpdatesScreen extends StatefulWidget {
 }
 class _UpdatesScreenState extends State<UpdatesScreen>{
  late Future<Map<String,dynamic>> _future;
- final _search=TextEditingController();String _query='';
+ final _search=TextEditingController();String _query='',_category='All';
  @override void initState(){super.initState();_load();}
  @override void dispose(){_search.dispose();super.dispose();}
  void _load(){_future=ApiClient().get('/api/updates',accessToken:context.read<AuthService>().accessToken);}
@@ -22,33 +22,50 @@ class _UpdatesScreenState extends State<UpdatesScreen>{
   if(s.hasError)return _UpdatesMessage(message:s.error.toString(),retry:()=>setState(_load));
   final d=s.data??{};if(d['enabled']!=true||d['hidden']==true)return const _UpdatesMessage(message:'Updates is not currently available.');
   final raw=d['channels'];final channels=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
-  final filtered=channels.where((c){final text=(c['name']??'').toString()+' '+(c['description']??'').toString()+' '+(c['category']??'').toString();return text.toLowerCase().contains(_query);}).toList();
+  final categories=<String>['All',...channels.map((x)=>(x['category']??'General').toString()).toSet().toList()..sort()];
+  final filtered=channels.where((c){final text=(c['name']??'').toString()+' '+(c['description']??'').toString()+' '+(c['category']??'').toString();final categoryOk=_category=='All'||(c['category']??'General').toString()==_category;return categoryOk&&text.toLowerCase().contains(_query);}).toList();
   return RefreshIndicator(onRefresh:()async{setState(_load);await _future;},child:ListView(padding:const EdgeInsets.fromLTRB(16,16,16,30),children:[
    Row(children:[const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NUMELIXA CHANNELS',style:TextStyle(color:AppTheme.cyan,fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.6)),SizedBox(height:5),Text('Updates',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900))])),IconButton(onPressed:()=>setState(_load),icon:const Icon(Icons.refresh_rounded))]),
    const Text('Official announcements, service news and product updates.',style:TextStyle(color:AppTheme.muted,height:1.45)),
    const SizedBox(height:14),
    TextField(controller:_search,onChanged:(v)=>setState(()=>_query=v.trim().toLowerCase()),decoration:InputDecoration(prefixIcon:const Icon(Icons.search_rounded),hintText:'Search channels',suffixIcon:_query.isEmpty?null:IconButton(onPressed:(){_search.clear();setState(()=>_query='');},icon:const Icon(Icons.close_rounded)))),
+   const SizedBox(height:12),
+   SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:categories.map((category)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(category),selected:_category==category,onSelected:(_)=>setState(()=>_category=category)))).toList())),
    const SizedBox(height:14),
-   if(filtered.isEmpty)_UpdatesMessage(message:channels.isEmpty?'No channels have been published yet.':'No channels match your search.')
-   else ...filtered.map((c)=>_ChannelCard(channel:c,onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:c))))),
+   if(filtered.isEmpty)_UpdatesMessage(message:channels.isEmpty?'No channels have been published yet.':'No channels match your filters.')
+   else ...filtered.map((channel)=>_ChannelCard(channel:channel,accessToken:context.read<AuthService>().accessToken??'',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:channel))))),
   ]));
  });
 }
 
-class _ChannelCard extends StatelessWidget{
- const _ChannelCard({required this.channel,required this.onTap});final Map<String,dynamic> channel;final VoidCallback onTap;
+class _ChannelCard extends StatefulWidget{
+ const _ChannelCard({required this.channel,required this.accessToken,required this.onTap});final Map<String,dynamic> channel;final String accessToken;final VoidCallback onTap;
+ @override State<_ChannelCard> createState()=>_ChannelCardState();
+}
+class _ChannelCardState extends State<_ChannelCard>{
+ late bool _joined;bool _busy=false;
+ @override void initState(){super.initState();_joined=widget.channel['joined']==true;}
+ Future<void> _join()async{
+  if(_busy||_joined)return;setState(()=>_busy=true);
+  try{await ApiClient().post('/api/updates/channels/'+Uri.encodeComponent((widget.channel['slug']??'').toString())+'/membership',accessToken:widget.accessToken,body:{'notificationsEnabled':true});if(mounted){setState(()=>_joined=true);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('You joined this channel.')));}}
+  catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
+  finally{if(mounted)setState(()=>_busy=false);}
+ }
  @override Widget build(BuildContext context){
-  final name=(channel['name']??'Numelixa channel').toString(),avatar=(channel['avatarUrl']??'').toString();
+  final channel=widget.channel,name=(channel['name']??'Numelixa channel').toString(),avatar=(channel['avatarUrl']??'').toString();
   final latest=channel['latestPost'] is Map?Map<String,dynamic>.from(channel['latestPost']):<String,dynamic>{};
   final preview=(latest['title']??latest['body']??channel['description']??'Official channel').toString();
   final count=(channel['publicSubscriberCount']??channel['actualSubscriberCount']??0).toString();
-  return Card(margin:const EdgeInsets.only(bottom:10),child:InkWell(borderRadius:BorderRadius.circular(18),onTap:onTap,child:Padding(padding:const EdgeInsets.all(14),child:Row(children:[
-   _ChannelAvatar(url:avatar,size:54),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Row(children:[Flexible(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800))),if(channel['verified']==true)...[const SizedBox(width:5),const Icon(Icons.verified_rounded,color:AppTheme.cyan,size:17)]]),
-    const SizedBox(height:4),Text((channel['description']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:AppTheme.muted,fontSize:12)),
-    const SizedBox(height:7),Row(children:[const Icon(Icons.people_alt_outlined,size:14,color:AppTheme.cyan),const SizedBox(width:4),Text('$count subscribers',style:const TextStyle(color:AppTheme.muted,fontSize:11)),const SizedBox(width:8),Expanded(child:Text(preview,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600)))])
-   ])),const Icon(Icons.chevron_right_rounded,color:AppTheme.muted)
-  ]))));
+  return Card(margin:const EdgeInsets.only(bottom:10),child:Padding(padding:const EdgeInsets.all(13),child:Row(children:[
+   GestureDetector(onTap:widget.onTap,child:_ChannelAvatar(url:avatar,size:52)),const SizedBox(width:11),
+   Expanded(child:InkWell(onTap:widget.onTap,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Row(children:[Flexible(child:Text(name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800))),if(channel['verified']==true)...[const SizedBox(width:4),const Icon(Icons.verified_rounded,color:AppTheme.cyan,size:16)],if(channel['featured']==true)...[const SizedBox(width:5),const Text('FEATURED',style:TextStyle(color:AppTheme.warning,fontSize:8,fontWeight:FontWeight.w900,letterSpacing:.6)]]]),
+    const SizedBox(height:4),Text((channel['description']??'').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:AppTheme.muted,fontSize:11)),
+    const SizedBox(height:6),Row(children:[const Icon(Icons.people_alt_outlined,size:13,color:AppTheme.cyan),const SizedBox(width:4),Text('$count subscribers',style:const TextStyle(color:AppTheme.muted,fontSize:10)),const SizedBox(width:7),Expanded(child:Text(preview,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w600)))])
+   ]))),
+   const SizedBox(width:7),
+   _joined?const Chip(label:Text('Joined',style:TextStyle(fontSize:10)),visualDensity:VisualDensity.compact,padding:EdgeInsets.zero):TextButton(onPressed:_busy?null:_join,child:Text(_busy?'…':'Join')),
+  ])));
  }
 }
 
