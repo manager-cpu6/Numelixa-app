@@ -278,7 +278,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       final channel = matches.isEmpty ? null : matches.first;
       if (!mounted || channel == null) return;
       setState(() => _index = 2);
-      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpdatesChannelScreen(channel: channel)));
+      final postId=parts.length>2?parts[2].trim():null;
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => UpdatesChannelScreen(channel: channel,initialPostId:postId)));
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This channel update is temporarily unavailable.')));
     }
