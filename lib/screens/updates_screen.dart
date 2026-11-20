@@ -22,7 +22,8 @@ class _UpdatesScreenState extends State<UpdatesScreen>{
   if(s.hasError)return _UpdatesMessage(message:s.error.toString(),retry:()=>setState(_load));
   final d=s.data??{};if(d['enabled']!=true||d['hidden']==true)return const _UpdatesMessage(message:'Updates is not currently available.');
   final raw=d['channels'];final channels=raw is List?raw.whereType<Map>().map((x)=>Map<String,dynamic>.from(x)).toList():<Map<String,dynamic>>[];
-  final categories=<String>['All',...channels.map((x)=>(x['category']??'General').toString()).toSet().toList()..sort()];
+  final categoryValues=channels.map((x)=>(x['category']??'General').toString()).toSet().toList()..sort();
+  final categories=<String>['All',...categoryValues];
   final filtered=channels.where((c){final text=(c['name']??'').toString()+' '+(c['description']??'').toString()+' '+(c['category']??'').toString();final categoryOk=_category=='All'||(c['category']??'General').toString()==_category;return categoryOk&&text.toLowerCase().contains(_query);}).toList();
   return RefreshIndicator(onRefresh:()async{setState(_load);await _future;},child:ListView(padding:const EdgeInsets.fromLTRB(16,16,16,30),children:[
    Row(children:[const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('NUMELIXA CHANNELS',style:TextStyle(color:AppTheme.cyan,fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.6)),SizedBox(height:5),Text('Updates',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900))])),IconButton(onPressed:()=>setState(_load),icon:const Icon(Icons.refresh_rounded))]),
@@ -33,7 +34,7 @@ class _UpdatesScreenState extends State<UpdatesScreen>{
    SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:categories.map((category)=>Padding(padding:const EdgeInsets.only(right:7),child:ChoiceChip(label:Text(category),selected:_category==category,onSelected:(_)=>setState(()=>_category=category)))).toList())),
    const SizedBox(height:14),
    if(filtered.isEmpty)_UpdatesMessage(message:channels.isEmpty?'No channels have been published yet.':'No channels match your filters.')
-   else ...filtered.map((channel)=>_ChannelCard(channel:channel,accessToken:context.read<AuthService>().accessToken??'',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:channel))))),
+   else ...filtered.map((channel)=>_ChannelCard(channel:channel,accessToken:context.read<AuthService>().accessToken??'',onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>UpdatesChannelScreen(channel:channel))).then((_) {if(mounted)setState(_load);}))),
   ]));
  });
 }
