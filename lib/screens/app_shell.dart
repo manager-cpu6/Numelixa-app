@@ -3248,9 +3248,7 @@ class _AccountPageState extends State<_AccountPage> {
         ]),
       ],
       const SizedBox(height: 16),
-      _AccountSection(title: 'PREFERENCES', children: [
-        _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications, Updates and app lock', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
-      ]),
+
       const SizedBox(height: 14),
       _AccountSection(title: 'REWARDS', children: [
         _AccountAction(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Your referral code, rewards and withdrawal status', onTap: () => _openWeb('/referrals')),
