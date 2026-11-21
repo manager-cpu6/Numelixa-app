@@ -123,11 +123,3 @@ class ServiceBrandIcon extends StatelessWidget {
     return colors[key] ?? Colors.white;
   }
 }
-
-extension on String {
-  String normalizeNfkd() {
-    // The current brand IDs are ASCII; this identity extension keeps the
-    // normalization pipeline deterministic without adding dependencies.
-    return this;
-  }
-}
