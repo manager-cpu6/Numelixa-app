@@ -1343,6 +1343,7 @@ class _CatalogPageState extends State<_CatalogPage> {
     final raw = (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString().trim();
     final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     const names = <String, String>{
+      'am': 'Amazon', 'az': 'Amazon', 'mi': 'Microsoft', 'op': 'OpenAI', 'oi': 'OpenAI', 'cg': 'ChatGPT', 'chatgpt': 'ChatGPT', 'openai': 'OpenAI', 'pp': 'PayPal', 'py': 'PayPal', 'ap': 'Apple', 'li': 'LinkedIn', 'rd': 'Reddit', 'sp': 'Spotify', 'nf': 'Netflix',
       'wa': 'WhatsApp', 'whatsapp': 'WhatsApp', 'tg': 'Telegram', 'telegram': 'Telegram',
       'fb': 'Facebook', 'facebook': 'Facebook', 'ig': 'Instagram', 'instagram': 'Instagram',
       'tt': 'TikTok', 'tiktok': 'TikTok', 'googlevoice': 'Google Voice', 'google': 'Google',
@@ -1640,6 +1641,7 @@ class _OrdersPageState extends State<_OrdersPage> {
   String _platformName(String raw) {
     final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     const names = <String, String>{
+      'am': 'Amazon', 'az': 'Amazon', 'mi': 'Microsoft', 'op': 'OpenAI', 'oi': 'OpenAI', 'cg': 'ChatGPT', 'chatgpt': 'ChatGPT', 'openai': 'OpenAI', 'pp': 'PayPal', 'py': 'PayPal', 'ap': 'Apple', 'li': 'LinkedIn', 'rd': 'Reddit', 'sp': 'Spotify', 'nf': 'Netflix',
       'wa': 'WhatsApp', 'whatsapp': 'WhatsApp',
       'fb': 'Facebook', 'facebook': 'Facebook',
       'ig': 'Instagram', 'instagram': 'Instagram',
