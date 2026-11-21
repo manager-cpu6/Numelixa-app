@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:numelixa_app/core/theme/app_theme.dart';
+import 'package:numelixa_app/core/theme/app_theme.dart';\nimport 'package:numelixa_app/widgets/service_brand_icon.dart';
 
 void main() {
   test('Numelixa uses the unified dark brand background', () {
@@ -17,7 +17,7 @@ void main() {
     expect(AppTheme.glassBorder, const Color(0xFF263957));
   });
 
-  test('Material navigation and card styles are defined centrally', () {
+  test('service brand resolver keeps similar names separate and recognizes requested brands', () {\n    expect(ServiceBrandIcon.canonicalSlug('X/Twitter'), 'x');\n    expect(ServiceBrandIcon.canonicalSlug('Alibaba.com'), 'alibabadotcom');\n    expect(ServiceBrandIcon.canonicalSlug('TikTok/douying'), 'tiktok');\n    expect(ServiceBrandIcon.canonicalSlug('imo'), 'imo');\n    expect(ServiceBrandIcon.canonicalSlug('Microsoft'), 'microsoft');\n    expect(ServiceBrandIcon.canonicalSlug('NovaPošta'), 'novaposhta');\n    expect(ServiceBrandIcon.canonicalSlug('PayPal'), 'paypal');\n    expect(ServiceBrandIcon.canonicalSlug('Moneza'), 'moneza');\n    expect(ServiceBrandIcon.canonicalSlug('Unknown Service'), isNull);\n  });\n\n  test('Material navigation and card styles are defined centrally', () {
     expect(AppTheme.dark.navigationBarTheme.height, 68);
     expect(AppTheme.dark.cardTheme, isNotNull);
     expect(AppTheme.dark.inputDecorationTheme, isNotNull);
