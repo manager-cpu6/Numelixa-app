@@ -450,7 +450,7 @@ jobs:
       - name: Unit and widget tests
         run: flutter test
       - name: Build release APK
-        run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+        run: flutter build apk --release --dart-define=NUMELIXA_API_BASE=https://numelixa.com
       - name: Rename release APK for public downloads and updates
         run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Numelixa.apk
       - name: Verify APK package and in-place update signing
@@ -503,7 +503,7 @@ jobs:
           echo "Verified package=$PACKAGE, size=$SIZE bytes, and matching release signing certificate."
           sha256sum "$APK"
       - name: Build AAB
-        run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://www.numelixa.com
+        run: flutter build appbundle --release --dart-define=NUMELIXA_API_BASE=https://numelixa.com
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
