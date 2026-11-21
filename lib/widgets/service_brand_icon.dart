@@ -19,7 +19,7 @@ class ServiceBrandIcon extends StatelessWidget {
     'fb':'facebook','facebook':'facebook','go':'google','google':'google','gm':'gmail','gmail':'gmail',
     'yt':'youtube','youtube':'youtube','ms':'microsoft','msft':'microsoft','microsoft':'microsoft',
     'ds':'discord','discord':'discord','sn':'snapchat','snapchat':'snapchat',
-    'x':'x','tw':'x','twitter':'x','threads':'threads','linkedin':'linkedin',
+    'x':'x','tw':'x','twitter':'x','tewitter':'x','xtwitter':'x','xtewitter':'x','threads':'threads','linkedin':'linkedin',
     'reddit':'reddit','spotify':'spotify','netflix':'netflix','amazon':'amazon',
     'alibaba':'alibabadotcom','alibabacom':'alibabadotcom','alibabadotcom':'alibabadotcom',
     'alibabacloud':'alibabacloud','apple':'apple','paypal':'paypal','viber':'viber',
