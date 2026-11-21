@@ -14,18 +14,19 @@ class ServiceBrandIcon extends StatelessWidget {
 
   static const Map<String, String> _aliases = {
     'wa':'whatsapp','tg':'telegram','tt':'tiktok','ig':'instagram','fb':'facebook',
-    'go':'google','gm':'gmail','yt':'youtube','ms':'microsoft','ds':'discord',
+    'am':'amazon','az':'amazon','mi':'microsoft','ms':'microsoft','op':'openai','oi':'openai','cg':'openai','pp':'paypal','py':'paypal','ap':'apple','li':'linkedin','rd':'reddit','sp':'spotify','nf':'netflix',
+    'go':'google','gm':'gmail','yt':'youtube','ds':'discord',
     'sn':'snapchat','googleplaystore':'googleplay','gplay':'googleplay',
     'gpay':'googlepay','googlepay':'googlepay','msft':'microsoft',
     'x':'x','twitter':'x','tw':'x','threads':'threads','linkedin':'linkedin',
-    'reddit':'reddit','spotify':'spotify','netflix':'netflix','amazon':'amazon',
+    'reddit':'reddit','spotify':'spotify','netflix':'netflix','amazon':'amazon','amazonprime':'amazon',
     'apple':'apple','paypal':'paypal','viber':'viber','signal':'signal',
     'wechat':'wechat','line':'line','kakaotalk':'kakaotalk','imo':'imo',
     'pinterest':'pinterest','twitch':'twitch','steam':'steam','uber':'uber',
     'airbnb':'airbnb','yahoo':'yahoo','binance':'binance','aliexpress':'aliexpress',
     'ebay':'ebay','microsoftteams':'microsoftteams','telegramx':'telegram',
     'olx':'olx','tinder':'tinder','bumble':'bumble','grab':'grab','bolt':'bolt',
-    'openai':'openai','chatgpt':'openai','claude':'claude','capcut':'capcut',
+    'openai':'openai','chatgpt':'openai','chatgptapp':'openai','claude':'claude','capcut':'capcut',
     'dropbox':'dropbox','slack':'slack','zoom':'zoom','notion':'notion',
     'canva':'canva','figma':'figma','protonmail':'protonmail','proton':'proton',
     'xbox':'xbox','playstation':'playstation','epicgames':'epicgames','roblox':'roblox',
@@ -46,14 +47,32 @@ class ServiceBrandIcon extends StatelessWidget {
     'googleplay': FontAwesomeIcons.googlePlay,
     'googlepay': FontAwesomeIcons.googlePay,
     'youtube': FontAwesomeIcons.youtube,
-    'microsoft': FontAwesomeIcons.microsoft,
     'snapchat': FontAwesomeIcons.snapchat,
     'discord': FontAwesomeIcons.discord,
+    'amazon': FontAwesomeIcons.amazon,
+    'microsoft': FontAwesomeIcons.microsoft,
+    'paypal': FontAwesomeIcons.paypal,
+    'apple': FontAwesomeIcons.apple,
+    'linkedin': FontAwesomeIcons.linkedin,
+    'reddit': FontAwesomeIcons.reddit,
+    'spotify': FontAwesomeIcons.spotify,
   };
 
   static String _slugFor(String name, {String? id}) {
     final raw = _key(name);
-    if (raw.isNotEmpty) return _aliases[raw] ?? raw;
+    if (raw.isNotEmpty) {
+      final exact = _aliases[raw];
+      if (exact != null) return exact;
+      final keys = _aliases.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
+      for (final alias in keys) {
+        if (alias.length < 3 || !raw.startsWith(alias)) continue;
+        final suffix = raw.substring(alias.length);
+        if (const ['verification', 'verify', 'otp', 'sms', 'activation', 'account'].contains(suffix)) {
+          return _aliases[alias]!;
+        }
+      }
+      return raw;
+    }
     final fallback = _key(id ?? '');
     return _aliases[fallback] ?? fallback;
   }
@@ -77,6 +96,45 @@ class ServiceBrandIcon extends StatelessWidget {
 
   static bool hasVerifiedIcon(String name, {String? id}) =>
       canonicalKey(name, id: id) != null || _slugFor(name, id: id).isNotEmpty;
+
+  static String displayName(String name, {String? id}) {
+    final raw = name.trim();
+    final key = _key(raw.isEmpty ? (id ?? '') : raw);
+    if (key == 'cg' || key == 'chatgpt') return 'ChatGPT';
+    const labels = <String, String>{
+      'wa':'WhatsApp','whatsapp':'WhatsApp','tg':'Telegram','telegram':'Telegram',
+      'tt':'TikTok','tiktok':'TikTok','ig':'Instagram','instagram':'Instagram',
+      'fb':'Facebook','facebook':'Facebook','go':'Google','google':'Google',
+      'am':'Amazon','amazon':'Amazon','az':'Amazon','ms':'Microsoft','mi':'Microsoft','microsoft':'Microsoft',
+      'op':'OpenAI','oi':'OpenAI','openai':'OpenAI','pp':'PayPal','paypal':'PayPal',
+      'ap':'Apple','apple':'Apple','ds':'Discord','discord':'Discord','sn':'Snapchat','snapchat':'Snapchat',
+      'gm':'Gmail','gmail':'Gmail','yt':'YouTube','youtube':'YouTube','tw':'X','twitter':'X','x':'X',
+      'li':'LinkedIn','linkedin':'LinkedIn','rd':'Reddit','reddit':'Reddit','sp':'Spotify','spotify':'Spotify',
+      'nf':'Netflix','netflix':'Netflix','vb':'Viber','viber':'Viber','sg':'Signal','signal':'Signal',
+      'wechat':'WeChat','line':'LINE','kakaotalk':'KakaoTalk','imo':'imo','ebay':'eBay',
+      'googlepay':'Google Pay','gpay':'Google Pay','googleplay':'Google Play','microsoftteams':'Microsoft Teams',
+    };
+    final known = labels[key];
+    if (known != null) return known;
+    if (raw.isEmpty) return 'Virtual number';
+    return raw.replaceAll(RegExp(r'[_-]+'), ' ').split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .map((part) => part.length <= 2 ? part.toUpperCase() : part[0].toUpperCase() + part.substring(1))
+      .join(' ');
+  }
+
+  String _faviconDomain(String slug) {
+    const domains = <String, String>{
+      'amazon': 'amazon.com', 'microsoft': 'microsoft.com', 'openai': 'openai.com',
+      'chatgpt': 'chatgpt.com', 'paypal': 'paypal.com', 'apple': 'apple.com',
+      'google': 'google.com', 'youtube': 'youtube.com', 'discord': 'discord.com',
+      'telegram': 'telegram.org', 'whatsapp': 'whatsapp.com', 'tiktok': 'tiktok.com',
+      'instagram': 'instagram.com', 'facebook': 'facebook.com', 'snapchat': 'snapchat.com',
+      'spotify': 'spotify.com', 'netflix': 'netflix.com', 'linkedin': 'linkedin.com',
+      'reddit': 'reddit.com', 'x': 'x.com', 'threads': 'threads.net',
+    };
+    return domains[slug] ?? slug + '.com';
+  }
 
   String _initials() {
     final words = name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
@@ -103,7 +161,11 @@ class ServiceBrandIcon extends StatelessWidget {
         height: size * .78,
         fit: BoxFit.contain,
         placeholderBuilder: (_) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
-        errorBuilder: (_, __, ___) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
+        errorBuilder: (_, __, ___) => Image.network(
+          'https://www.google.com/s2/favicons?domain=' + _faviconDomain(slug) + '&sz=128',
+          width: size * .78, height: size * .78, fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
+        ),
       ),
     );
   }

@@ -1210,7 +1210,7 @@ class _RecentServicesPreviewState extends State<_RecentServicesPreview> {
       const Text('RECENTLY USED SERVICES',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted)),
       const SizedBox(height:9),
       SizedBox(height:82,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:recent.length,separatorBuilder:(_,__)=>const SizedBox(width:9),itemBuilder:(context,index){
-        final order=recent[index],id=(order['service']??order['serviceId']??'').toString(),name=(order['serviceName']??order['service']??'Service').toString();
+        final order=recent[index],id=(order['service']??order['serviceId']??'').toString(),name=ServiceBrandIcon.displayName((order['serviceName']??order['service']??'Service').toString(),id:id);
         return InkWell(onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _CatalogPage())),borderRadius:BorderRadius.circular(15),child:Container(width:132,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFF0D1930),borderRadius:BorderRadius.circular(15),border:Border.all(color:AppTheme.glassBorder)),child:Row(children:[ServiceBrandIcon(name:name,id:id,size:34),const SizedBox(width:8),Expanded(child:Text(name,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)))])));
       })),
       const SizedBox(height:15),
@@ -1343,6 +1343,7 @@ class _CatalogPageState extends State<_CatalogPage> {
     final raw = (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString().trim();
     final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     const names = <String, String>{
+      'am': 'Amazon', 'az': 'Amazon', 'mi': 'Microsoft', 'op': 'OpenAI', 'oi': 'OpenAI', 'cg': 'ChatGPT', 'chatgpt': 'ChatGPT', 'openai': 'OpenAI', 'pp': 'PayPal', 'py': 'PayPal', 'ap': 'Apple', 'li': 'LinkedIn', 'rd': 'Reddit', 'sp': 'Spotify', 'nf': 'Netflix',
       'wa': 'WhatsApp', 'whatsapp': 'WhatsApp', 'tg': 'Telegram', 'telegram': 'Telegram',
       'fb': 'Facebook', 'facebook': 'Facebook', 'ig': 'Instagram', 'instagram': 'Instagram',
       'tt': 'TikTok', 'tiktok': 'TikTok', 'googlevoice': 'Google Voice', 'google': 'Google',
@@ -1640,6 +1641,7 @@ class _OrdersPageState extends State<_OrdersPage> {
   String _platformName(String raw) {
     final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     const names = <String, String>{
+      'am': 'Amazon', 'az': 'Amazon', 'mi': 'Microsoft', 'op': 'OpenAI', 'oi': 'OpenAI', 'cg': 'ChatGPT', 'chatgpt': 'ChatGPT', 'openai': 'OpenAI', 'pp': 'PayPal', 'py': 'PayPal', 'ap': 'Apple', 'li': 'LinkedIn', 'rd': 'Reddit', 'sp': 'Spotify', 'nf': 'Netflix',
       'wa': 'WhatsApp', 'whatsapp': 'WhatsApp',
       'fb': 'Facebook', 'facebook': 'Facebook',
       'ig': 'Instagram', 'instagram': 'Instagram',
@@ -1889,10 +1891,10 @@ class _OrdersPageState extends State<_OrdersPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(children: [
-                                  _platformLogo((order['service'] ?? '').toString()),
+                                  _platformLogo((order['serviceName'] ?? order['service'] ?? order['serviceId'] ?? '').toString()),
                                   const SizedBox(width: 10),
                                   Expanded(child: Text(
-                                    _platformName((order['service'] ?? 'Virtual number').toString()),
+                                    _platformName((order['serviceName'] ?? order['service'] ?? order['serviceId'] ?? 'Virtual number').toString()),
                                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                                   )),
                                   Text(
@@ -2124,7 +2126,7 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
         final status = (order['status'] ?? 'unknown').toString();
         return ListView(padding: const EdgeInsets.all(18), children: [
           Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text((order['service'] ?? 'Virtual number').toString(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text(ServiceBrandIcon.displayName((order['serviceName'] ?? order['service'] ?? 'Virtual number').toString(), id: (order['serviceId'] ?? order['service'] ?? '').toString()), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(child: SelectableText((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700))),
