@@ -10,7 +10,7 @@ class ServiceBrandIcon extends StatelessWidget {
   final String? id;
   final double size;
 
-  static String _key(String value) => value.toLowerCase().normalizeNfkd().replaceAll(RegExp(r'[\u0300-\u036f]'), '').replaceAll(RegExp(r'[^a-z0-9]'), '');
+  static String _key(String value) => value.toLowerCase().replaceAll('š', 's').replaceAll('Š', 's').replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   static const Map<String, String> _aliases = {
     'wa':'whatsapp','whatsapp':'whatsapp','whatsappbusiness':'whatsapp',
