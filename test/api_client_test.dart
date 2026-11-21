@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:numelixa_app/services/api_client.dart';
+import 'package:numelixa_app/core/config/app_config.dart';
 
 class _FakeClient extends http.BaseClient {
   _FakeClient(this.handler);
@@ -20,6 +21,10 @@ class _FakeClient extends http.BaseClient {
 }
 
 void main() {
+  test('production API base uses the canonical www host directly', () {
+    expect(AppConfig.apiBase, 'https://www.numelixa.com');
+  });
+
   test('GET sends bearer authorization and decodes JSON', () async {
     late _FakeClient client;
     client = _FakeClient((_) async => http.Response(
