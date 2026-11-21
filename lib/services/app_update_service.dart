@@ -6,6 +6,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+const numelixaUpdateApiUrl = 'https://www.numelixa.com/api/app-update';
+const numelixaLatestApkUrl = 'https://www.numelixa.com/api/mobile/apk';
+
 class AppUpdateInfo {
   const AppUpdateInfo({required this.version, required this.versionCode, required this.apkUrl, required this.releaseNotes, required this.mandatory, required this.allowSkip, this.apkSizeBytes, this.sha256});
   final String version;
@@ -29,7 +32,7 @@ class AppUpdateInfo {
 }
 
 String _preferCanonicalApkUrl(String rawUrl) =>
-    'https://numelixa.com/api/mobile/apk';
+    numelixaLatestApkUrl;
 
 String _cleanReleaseNotes(dynamic raw) {
   var text = (raw ?? '').toString()
@@ -78,7 +81,7 @@ class AppUpdateService {
     // update policy, release notes and optional SHA-256 verification.
     try {
       final response = await _dio.get<Map<String,dynamic>>(
-        'https://numelixa.com/api/app-update',
+        numelixaUpdateApiUrl,
         queryParameters: {
           'platform':'android',
           'packageId':'com.numelixa.app',
@@ -124,7 +127,7 @@ class AppUpdateService {
     final file = File('${dir.path}/numelixa-update-${update.versionCode}.apk');
     await _dio.download(update.apkUrl, file.path, deleteOnError: true,
       onReceiveProgress: onProgress,
-      options: Options(receiveTimeout: const Duration(minutes: 5),
+      options: Options(followRedirects: false, receiveTimeout: const Duration(minutes: 5),
         sendTimeout: const Duration(seconds: 30)));
     if (!await file.exists() || await file.length() < 20 * 1024 * 1024) {
       throw Exception('The downloaded APK is incomplete or is not the official package.');
