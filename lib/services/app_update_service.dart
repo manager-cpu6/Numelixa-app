@@ -29,7 +29,7 @@ class AppUpdateInfo {
 }
 
 String _preferCanonicalApkUrl(String rawUrl) =>
-    'https://www.numelixa.com/api/mobile/apk';
+    'https://numelixa.com/api/mobile/apk';
 
 String _cleanReleaseNotes(dynamic raw) {
   var text = (raw ?? '').toString()
@@ -78,7 +78,7 @@ class AppUpdateService {
     // update policy, release notes and optional SHA-256 verification.
     try {
       final response = await _dio.get<Map<String,dynamic>>(
-        'https://www.numelixa.com/api/app-update',
+        'https://numelixa.com/api/app-update',
         queryParameters: {
           'platform':'android',
           'packageId':'com.numelixa.app',
