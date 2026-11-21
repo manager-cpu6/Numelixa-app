@@ -56,7 +56,6 @@ class ServiceBrandIcon extends StatelessWidget {
     'linkedin': FontAwesomeIcons.linkedin,
     'reddit': FontAwesomeIcons.reddit,
     'spotify': FontAwesomeIcons.spotify,
-    'netflix': FontAwesomeIcons.netflix,
   };
 
   static String _slugFor(String name, {String? id}) {
