@@ -13,8 +13,9 @@ class ServiceBrandIcon extends StatelessWidget {
   static String _key(String value) => value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   static const Map<String, String> _aliases = {
-    'wa':'whatsapp','tg':'telegram','tt':'tiktok','ig':'instagram','fb':'facebook',\n    'am':'amazon','az':'amazon','mi':'microsoft','ms':'microsoft','op':'openai','oi':'openai','cg':'openai','pp':'paypal','py':'paypal','ap':'apple','li':'linkedin','rd':'reddit','sp':'spotify','nf':'netflix',
-    'go':'google','gm':'gmail','yt':'youtube','ms':'microsoft','ds':'discord',
+    'wa':'whatsapp','tg':'telegram','tt':'tiktok','ig':'instagram','fb':'facebook',
+    'am':'amazon','az':'amazon','mi':'microsoft','ms':'microsoft','op':'openai','oi':'openai','cg':'openai','pp':'paypal','py':'paypal','ap':'apple','li':'linkedin','rd':'reddit','sp':'spotify','nf':'netflix',
+    'go':'google','gm':'gmail','yt':'youtube','ds':'discord',
     'sn':'snapchat','googleplaystore':'googleplay','gplay':'googleplay',
     'gpay':'googlepay','googlepay':'googlepay','msft':'microsoft',
     'x':'x','twitter':'x','tw':'x','threads':'threads','linkedin':'linkedin',
@@ -46,9 +47,16 @@ class ServiceBrandIcon extends StatelessWidget {
     'googleplay': FontAwesomeIcons.googlePlay,
     'googlepay': FontAwesomeIcons.googlePay,
     'youtube': FontAwesomeIcons.youtube,
-    'microsoft': FontAwesomeIcons.microsoft,
     'snapchat': FontAwesomeIcons.snapchat,
-    'discord': FontAwesomeIcons.discord,\n    'amazon': FontAwesomeIcons.amazon,\n    'microsoft': FontAwesomeIcons.microsoft,\n    'paypal': FontAwesomeIcons.paypal,\n    'apple': FontAwesomeIcons.apple,\n    'linkedin': FontAwesomeIcons.linkedin,\n    'reddit': FontAwesomeIcons.reddit,\n    'spotify': FontAwesomeIcons.spotify,\n    'netflix': FontAwesomeIcons.netflix,
+    'discord': FontAwesomeIcons.discord,
+    'amazon': FontAwesomeIcons.amazon,
+    'microsoft': FontAwesomeIcons.microsoft,
+    'paypal': FontAwesomeIcons.paypal,
+    'apple': FontAwesomeIcons.apple,
+    'linkedin': FontAwesomeIcons.linkedin,
+    'reddit': FontAwesomeIcons.reddit,
+    'spotify': FontAwesomeIcons.spotify,
+    'netflix': FontAwesomeIcons.netflix,
   };
 
   static String _slugFor(String name, {String? id}) {
