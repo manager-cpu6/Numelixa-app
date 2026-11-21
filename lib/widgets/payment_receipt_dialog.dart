@@ -24,12 +24,12 @@ Future<void> showPaymentReceipt(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 470),
+        constraints: const BoxConstraints(maxWidth: double.infinity),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.zero,
             border: Border.all(color: AppTheme.glassBorder),
             boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 32, offset: Offset(0, 16))],
           ),
@@ -71,7 +71,7 @@ Future<void> showPaymentReceipt(
                 line('DATE & TIME', paidAt == null ? '—' : paidAt.toLocal().toString().split('.').first),
                 line('WALLET CREDIT', (double.tryParse(value('walletCredit')) ?? 0).toStringAsFixed(0) + ' credits'),
                 if ((double.tryParse(value('amountEtb')) ?? 0) > 0)
-                  line('LOCAL PAYMENT', (double.tryParse(value('amountEtb')) ?? 0).toStringAsFixed(2) + ' ETB'),
+                  line('LOCAL PAYMENT', (double.tryParse(value('amountEtb')) ?? 0).ceil().toString() + ' ETB'),
                 const SizedBox(height: 16),
                 Center(child: Container(
                   width: 118, height: 118, padding: const EdgeInsets.all(9),
