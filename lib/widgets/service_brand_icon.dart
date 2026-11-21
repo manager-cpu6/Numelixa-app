@@ -41,7 +41,14 @@ class ServiceBrandIcon extends StatelessWidget {
 
   static const Map<String, String> _domains = {
     'imo':'imo.im','moneza':'moneza.com','miratorg':'miratorg.ru',
-    'douyin':'douyin.com','novaposhta':'novaposhta.ua'
+    'douyin':'douyin.com','novaposhta':'novaposhta.ua',
+    'x':'x.com','alibabadotcom':'alibaba.com','alibabacloud':'alibabacloud.com',
+    'microsoft':'microsoft.com','paypal':'paypal.com','tiktok':'tiktok.com',
+    'amazon':'amazon.com','whatsapp':'whatsapp.com','telegram':'telegram.org',
+    'instagram':'instagram.com','facebook':'facebook.com','google':'google.com',
+    'youtube':'youtube.com','snapchat':'snapchat.com','discord':'discord.com',
+    'spotify':'spotify.com','netflix':'netflix.com','linkedin':'linkedin.com',
+    'reddit':'reddit.com','openai':'openai.com','apple':'apple.com'
   };
 
   static const Map<String, IconData> _brands = {
