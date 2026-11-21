@@ -1246,11 +1246,30 @@ class _DataCard extends StatefulWidget {
   @override
   State<_DataCard> createState() => _DataCardState();
 }
-class _DataCardState extends State<_DataCard> {
+class _DataCardState extends State<_DataCard> with WidgetsBindingObserver {
   late Future<Map<String, dynamic>> _future;
+  Timer? _refreshTimer;
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
+    // Keep the home balance synchronized with server-side payment credits.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(_load);
+    });
+  }
   void _load() { _future = NumelixaRepository().balance(token: context.read<AuthService>().accessToken!); }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) setState(_load);
+  }
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(18), child: FutureBuilder<Map<String, dynamic>>(
     future: _future,
