@@ -124,11 +124,11 @@ class _AdminUpdatesScreenState extends State<AdminUpdatesScreen> {
       SegmentedButton<String>(segments:const [ButtonSegment(value:'Channels',label:Text('Channels'),icon:Icon(Icons.campaign_outlined)),ButtonSegment(value:'Posts',label:Text('Posts'),icon:Icon(Icons.article_outlined))],selected:{_tab},onSelectionChanged:(v)=>setState(()=>_tab=v.first)),
       const SizedBox(height:12),
       if(_tab=='Channels')...[
-        Align(alignment:Alignment.centerRight,child:FilledButton.icon(onPressed:_busy?_createChannel:null,icon:const Icon(Icons.add),label:const Text('New channel'))),
+        Align(alignment:Alignment.centerRight,child:FilledButton.icon(onPressed:_busy?null:_createChannel,icon:const Icon(Icons.add),label:const Text('New channel'))),
         if(_channels.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('No channels created yet.',textAlign:TextAlign.center)),
         ..._channels.map((c){final status=(c['status']??'inactive').toString();return Card(child:ListTile(isThreeLine:true,leading:const Icon(Icons.campaign_rounded,color:AppTheme.cyan),title:Text((c['name']??'Channel').toString()),subtitle:Text('@${c['slug']??''} · ${c['category']??'General'}\n${c['actualSubscribers']??0} subscribers · ${c['postCount']??0} posts · $status'),trailing:PopupMenuButton<String>(onSelected:(v){if(v=='archive')_archiveChannel(c);else _changeChannel(c,v);},itemBuilder:(_)=>[PopupMenuItem(value:status=='active'?'inactive':'active',child:Text(status=='active'?'Deactivate':'Activate')),const PopupMenuItem(value:'archive',child:Text('Archive'))])));}),
       ] else ...[
-        Align(alignment:Alignment.centerRight,child:FilledButton.icon(onPressed:_busy?_createPost:null,icon:const Icon(Icons.add),label:const Text('New post'))),
+        Align(alignment:Alignment.centerRight,child:FilledButton.icon(onPressed:_busy?null:_createPost,icon:const Icon(Icons.add),label:const Text('New post'))),
         if(_posts.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('No posts yet.',textAlign:TextAlign.center)),
         ..._posts.map((p){final status=(p['status']??'draft').toString();return Card(child:ListTile(isThreeLine:true,leading:const Icon(Icons.article_outlined,color:AppTheme.cyan),title:Text((p['title']??'Untitled post').toString(),maxLines:2,overflow:TextOverflow.ellipsis),subtitle:Text('${p['actualViews']??0} views · $status\n${p['body']??''}',maxLines:2,overflow:TextOverflow.ellipsis),trailing:PopupMenuButton<String>(onSelected:(v){if(v=='publish')_publish(p);if(v=='delete')_deletePost(p);},itemBuilder:(_)=>[if(status=='draft')const PopupMenuItem(value:'publish',child:Text('Publish')),const PopupMenuItem(value:'delete',child:Text('Delete'))])));}),
       ],
