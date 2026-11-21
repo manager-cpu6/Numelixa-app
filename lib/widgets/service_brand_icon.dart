@@ -13,19 +13,19 @@ class ServiceBrandIcon extends StatelessWidget {
   static String _key(String value) => value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   static const Map<String, String> _aliases = {
-    'wa':'whatsapp','tg':'telegram','tt':'tiktok','ig':'instagram','fb':'facebook',
+    'wa':'whatsapp','tg':'telegram','tt':'tiktok','ig':'instagram','fb':'facebook',\n    'am':'amazon','az':'amazon','mi':'microsoft','ms':'microsoft','op':'openai','oi':'openai','cg':'openai','pp':'paypal','py':'paypal','ap':'apple','li':'linkedin','rd':'reddit','sp':'spotify','nf':'netflix',
     'go':'google','gm':'gmail','yt':'youtube','ms':'microsoft','ds':'discord',
     'sn':'snapchat','googleplaystore':'googleplay','gplay':'googleplay',
     'gpay':'googlepay','googlepay':'googlepay','msft':'microsoft',
     'x':'x','twitter':'x','tw':'x','threads':'threads','linkedin':'linkedin',
-    'reddit':'reddit','spotify':'spotify','netflix':'netflix','amazon':'amazon',
+    'reddit':'reddit','spotify':'spotify','netflix':'netflix','amazon':'amazon','amazonprime':'amazon',
     'apple':'apple','paypal':'paypal','viber':'viber','signal':'signal',
     'wechat':'wechat','line':'line','kakaotalk':'kakaotalk','imo':'imo',
     'pinterest':'pinterest','twitch':'twitch','steam':'steam','uber':'uber',
     'airbnb':'airbnb','yahoo':'yahoo','binance':'binance','aliexpress':'aliexpress',
     'ebay':'ebay','microsoftteams':'microsoftteams','telegramx':'telegram',
     'olx':'olx','tinder':'tinder','bumble':'bumble','grab':'grab','bolt':'bolt',
-    'openai':'openai','chatgpt':'openai','claude':'claude','capcut':'capcut',
+    'openai':'openai','chatgpt':'openai','chatgptapp':'openai','claude':'claude','capcut':'capcut',
     'dropbox':'dropbox','slack':'slack','zoom':'zoom','notion':'notion',
     'canva':'canva','figma':'figma','protonmail':'protonmail','proton':'proton',
     'xbox':'xbox','playstation':'playstation','epicgames':'epicgames','roblox':'roblox',
@@ -48,7 +48,7 @@ class ServiceBrandIcon extends StatelessWidget {
     'youtube': FontAwesomeIcons.youtube,
     'microsoft': FontAwesomeIcons.microsoft,
     'snapchat': FontAwesomeIcons.snapchat,
-    'discord': FontAwesomeIcons.discord,
+    'discord': FontAwesomeIcons.discord,\n    'amazon': FontAwesomeIcons.amazon,\n    'microsoft': FontAwesomeIcons.microsoft,\n    'paypal': FontAwesomeIcons.paypal,\n    'apple': FontAwesomeIcons.apple,\n    'linkedin': FontAwesomeIcons.linkedin,\n    'reddit': FontAwesomeIcons.reddit,\n    'spotify': FontAwesomeIcons.spotify,\n    'netflix': FontAwesomeIcons.netflix,
   };
 
   static String _slugFor(String name, {String? id}) {
