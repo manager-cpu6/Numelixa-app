@@ -1341,9 +1341,9 @@ class _CatalogPageState extends State<_CatalogPage> {
   }
   String _serviceName(Map<String, dynamic> service) {
     final raw = (service['name'] ?? service['title'] ?? service['id'] ?? service['code'] ?? 'Service').toString().trim();
-    final key = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final key = raw.toLowerCase().replaceAll('š', 's').replaceAll(RegExp(r'[^a-z0-9]'), '');
     const names = <String, String>{
-      'wa': 'WhatsApp', 'whatsapp': 'WhatsApp', 'tg': 'Telegram', 'telegram': 'Telegram',
+      'wa': 'WhatsApp', 'whatsapp': 'WhatsApp', 'xtwitter': 'X', 'tiktokdouying': 'TikTok', 'tiktokdouyin': 'TikTok', 'tg': 'Telegram', 'telegram': 'Telegram',
       'fb': 'Facebook', 'facebook': 'Facebook', 'ig': 'Instagram', 'instagram': 'Instagram',
       'tt': 'TikTok', 'tiktok': 'TikTok', 'googlevoice': 'Google Voice', 'google': 'Google',
       'gmail': 'Gmail', 'youtube': 'YouTube', 'ms': 'Microsoft', 'microsoft': 'Microsoft',
@@ -1352,7 +1352,7 @@ class _CatalogPageState extends State<_CatalogPage> {
       'linkedin': 'LinkedIn', 'pinterest': 'Pinterest', 'twitch': 'Twitch', 'steam': 'Steam',
       'uber': 'Uber', 'airbnb': 'Airbnb', 'yahoo': 'Yahoo', 'signal': 'Signal',
       'viber': 'Viber', 'wechat': 'WeChat', 'line': 'LINE', 'kakaotalk': 'KakaoTalk',
-      'imo': 'imo', 'paypal': 'PayPal', 'binance': 'Binance', 'aliexpress': 'AliExpress',
+      'imo': 'imo', 'paypal': 'PayPal', 'binance': 'Binance', 'alibaba': 'Alibaba', 'alibabacom': 'Alibaba', 'alibabadotcom': 'Alibaba', 'douyin': 'Douyin', 'douying': 'Douyin', 'novaposhta': 'Nova Poshta', 'novaposta': 'Nova Poshta', 'novapoahta': 'Nova Poshta', 'aliexpress': 'AliExpress',
       'ebay': 'eBay', 'microsoftteams': 'Microsoft Teams', 'telegramx': 'Telegram X',
       'olx': 'OLX', 'tinder': 'Tinder', 'bumble': 'Bumble', 'grab': 'Grab', 'bolt': 'Bolt',
     };
