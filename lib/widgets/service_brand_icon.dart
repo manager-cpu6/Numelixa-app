@@ -69,9 +69,8 @@ class ServiceBrandIcon extends StatelessWidget {
   static String? canonicalSlug(String name, {String? id}) {
     final rawName = _key(name);
     final rawId = _key(id ?? '');
-    for (final value in [rawName, rawId]) {
-      if (_aliases.containsKey(value)) return _aliases[value];
-    }
+    if (_aliases.containsKey(rawName)) return _aliases[rawName];
+    if (rawName.isEmpty && _aliases.containsKey(rawId)) return _aliases[rawId];
     if (rawName.contains('twitter')) return 'x';
     if (rawName.contains('tiktok')) return 'tiktok';
     if (rawName.contains('douyin') || rawName.contains('douying')) return 'douyin';
