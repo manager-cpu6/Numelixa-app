@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numelixa_app/core/theme/app_theme.dart';
+import 'package:numelixa_app/widgets/service_brand_icon.dart';
 
 void main() {
   test('Numelixa uses the unified dark brand background', () {
@@ -15,6 +16,19 @@ void main() {
     expect(AppTheme.textPrimary, const Color(0xFFF4F7FC));
     expect(AppTheme.textSecondary, const Color(0xFF98A9C2));
     expect(AppTheme.glassBorder, const Color(0xFF263957));
+  });
+
+  test('service brand resolver keeps similar names separate and recognizes requested brands', () {
+    expect(ServiceBrandIcon.canonicalSlug('X/Twitter'), 'x');
+    expect(ServiceBrandIcon.canonicalSlug('Alibaba.com'), 'alibabadotcom');
+    expect(ServiceBrandIcon.canonicalSlug('TikTok/douying'), 'tiktok');
+    expect(ServiceBrandIcon.canonicalSlug('imo'), 'imo');
+    expect(ServiceBrandIcon.canonicalSlug('Microsoft'), 'microsoft');
+    expect(ServiceBrandIcon.canonicalSlug('NovaPošta'), 'novaposhta');
+    expect(ServiceBrandIcon.canonicalSlug('PayPal'), 'paypal');
+    expect(ServiceBrandIcon.canonicalSlug('Moneza'), 'moneza');
+    expect(ServiceBrandIcon.canonicalSlug('Unknown Service'), isNull);
+    expect(ServiceBrandIcon.canonicalSlug('Unknown Service', id: 'ms'), isNull);
   });
 
   test('Material navigation and card styles are defined centrally', () {

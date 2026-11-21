@@ -2,41 +2,56 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Displays a local brand mark when available, otherwise resolves official
-/// transparent SVG marks from the Simple Icons catalogue.
+/// Brand marks are resolved from an explicit, reviewed catalogue. Unknown
+/// service IDs never become random Simple Icons slugs or misleading initials.
 class ServiceBrandIcon extends StatelessWidget {
   const ServiceBrandIcon({super.key, required this.name, this.id, this.size = 46});
   final String name;
   final String? id;
   final double size;
 
-  static String _key(String value) => value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  static String _key(String value) => value.toLowerCase().replaceAll('š', 's').replaceAll('Š', 's').replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   static const Map<String, String> _aliases = {
-    'wa':'whatsapp','tg':'telegram','tt':'tiktok','ig':'instagram','fb':'facebook',
-    'go':'google','gm':'gmail','yt':'youtube','ms':'microsoft','ds':'discord',
-    'sn':'snapchat','googleplaystore':'googleplay','gplay':'googleplay',
-    'gpay':'googlepay','googlepay':'googlepay','msft':'microsoft',
-    'x':'x','twitter':'x','tw':'x','threads':'threads','linkedin':'linkedin',
+    'wa':'whatsapp','whatsapp':'whatsapp','whatsappbusiness':'whatsapp',
+    'tg':'telegram','telegram':'telegram','tt':'tiktok','tiktok':'tiktok','tiktokdouyin':'tiktok',
+    'douyin':'douyin','douying':'douyin','ig':'instagram','instagram':'instagram',
+    'fb':'facebook','facebook':'facebook','go':'google','google':'google','gm':'gmail','gmail':'gmail',
+    'yt':'youtube','youtube':'youtube','ms':'microsoft','msft':'microsoft','microsoft':'microsoft',
+    'ds':'discord','discord':'discord','sn':'snapchat','snapchat':'snapchat',
+    'x':'x','tw':'x','twitter':'x','tewitter':'x','xtwitter':'x','xtewitter':'x','threads':'threads','linkedin':'linkedin',
     'reddit':'reddit','spotify':'spotify','netflix':'netflix','amazon':'amazon',
-    'apple':'apple','paypal':'paypal','viber':'viber','signal':'signal',
-    'wechat':'wechat','line':'line','kakaotalk':'kakaotalk','imo':'imo',
-    'pinterest':'pinterest','twitch':'twitch','steam':'steam','uber':'uber',
-    'airbnb':'airbnb','yahoo':'yahoo','binance':'binance','aliexpress':'aliexpress',
-    'ebay':'ebay','microsoftteams':'microsoftteams','telegramx':'telegram',
-    'olx':'olx','tinder':'tinder','bumble':'bumble','grab':'grab','bolt':'bolt',
-    'openai':'openai','chatgpt':'openai','claude':'claude','capcut':'capcut',
-    'dropbox':'dropbox','slack':'slack','zoom':'zoom','notion':'notion',
-    'canva':'canva','figma':'figma','protonmail':'protonmail','proton':'proton',
-    'xbox':'xbox','playstation':'playstation','epicgames':'epicgames','roblox':'roblox',
-    'coinbase':'coinbase','kucoin':'kucoin','bybit':'bybit','okx':'okx','bitget':'bitget',
-    'shopee':'shopee','rakuten':'rakuten','disneyplus':'disneyplus','hulu':'hulu',
-    'booking':'bookingdotcom','bookingcom':'bookingdotcom','expedia':'expedia',
+    'alibaba':'alibabadotcom','alibabacom':'alibabadotcom','alibabadotcom':'alibabadotcom',
+    'alibabacloud':'alibabacloud','apple':'apple','paypal':'paypal','viber':'viber',
+    'signal':'signal','wechat':'wechat','line':'line','kakaotalk':'kakaotalk','imo':'imo',
+    'pinterest':'pinterest','twitch':'twitch','steam':'steam','uber':'uber','airbnb':'airbnb',
+    'yahoo':'yahoo','binance':'binance','aliexpress':'aliexpress','ebay':'ebay',
+    'microsoftteams':'microsoftteams','telegramx':'telegram','olx':'olx','tinder':'tinder',
+    'bumble':'bumble','grab':'grab','bolt':'bolt','openai':'openai','chatgpt':'chatgpt',
+    'claude':'claude','capcut':'capcut','dropbox':'dropbox','slack':'slack','zoom':'zoom',
+    'notion':'notion','canva':'canva','figma':'figma','protonmail':'protonmail',
+    'proton':'proton','xbox':'xbox','playstation':'playstation','epicgames':'epicgames',
+    'roblox':'roblox','coinbase':'coinbase','kucoin':'kucoin','bybit':'bybit','okx':'okx',
+    'bitget':'bitget','shopee':'shopee','rakuten':'rakuten','disneyplus':'disneyplus',
+    'hulu':'hulu','booking':'bookingdotcom','bookingcom':'bookingdotcom','expedia':'expedia',
     'agoda':'agoda','skype':'skype','vkontakte':'vk','vk':'vk','yandex':'yandex',
-    'googlevoice':'googlevoice',
+    'googlevoice':'googlevoice','zupee':'zupee','huya':'huya','moneza':'moneza',
+    'miratorg':'miratorg','novaposhta':'novaposhta','novaposta':'novaposhta','novapoahta':'novaposhta'
   };
 
-  static final Map<String, IconData> _brands = {
+  static const Map<String, String> _domains = {
+    'imo':'imo.im','moneza':'moneza.com','miratorg':'miratorg.ru',
+    'douyin':'douyin.com','novaposhta':'novaposhta.ua',
+    'x':'x.com','alibabadotcom':'alibaba.com','alibabacloud':'alibabacloud.com',
+    'microsoft':'microsoft.com','paypal':'paypal.com','tiktok':'tiktok.com',
+    'amazon':'amazon.com','whatsapp':'whatsapp.com','telegram':'telegram.org',
+    'instagram':'instagram.com','facebook':'facebook.com','google':'google.com',
+    'youtube':'youtube.com','snapchat':'snapchat.com','discord':'discord.com',
+    'spotify':'spotify.com','netflix':'netflix.com','linkedin':'linkedin.com',
+    'reddit':'reddit.com','openai':'openai.com','apple':'apple.com'
+  };
+
+  static const Map<String, IconData> _brands = {
     'whatsapp': FontAwesomeIcons.whatsapp,
     'telegram': FontAwesomeIcons.telegram,
     'tiktok': FontAwesomeIcons.tiktok,
@@ -51,61 +66,56 @@ class ServiceBrandIcon extends StatelessWidget {
     'discord': FontAwesomeIcons.discord,
   };
 
-  static String _slugFor(String name, {String? id}) {
-    final raw = _key(name);
-    if (raw.isNotEmpty) return _aliases[raw] ?? raw;
-    final fallback = _key(id ?? '');
-    return _aliases[fallback] ?? fallback;
-  }
-
-  static String? canonicalKey(String name, {String? id}) {
+  static String? canonicalSlug(String name, {String? id}) {
     final rawName = _key(name);
-    final nameKey = _aliases[rawName] ?? rawName;
-    if (_brands.containsKey(nameKey)) return nameKey;
-    final keys = _brands.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
-    for (final key in keys) {
-      if (!rawName.startsWith(key)) continue;
-      final suffix = rawName.substring(key.length);
-      if (suffix.isEmpty || const ['verification', 'otp', 'sms', 'activation'].contains(suffix)) return key;
-    }
-    if (rawName.isEmpty || rawName == _key(id ?? '')) {
-      final idKey = _aliases[_key(id ?? '')] ?? _key(id ?? '');
-      if (_brands.containsKey(idKey)) return idKey;
-    }
+    final rawId = _key(id ?? '');
+    if (_aliases.containsKey(rawName)) return _aliases[rawName];
+    if (rawName.isEmpty && _aliases.containsKey(rawId)) return _aliases[rawId];
+    if (rawName.contains('twitter')) return 'x';
+    if (rawName.contains('tiktok')) return 'tiktok';
+    if (rawName.contains('douyin') || rawName.contains('douying')) return 'douyin';
     return null;
   }
 
-  static bool hasVerifiedIcon(String name, {String? id}) =>
-      canonicalKey(name, id: id) != null || _slugFor(name, id: id).isNotEmpty;
-
-  String _initials() {
-    final words = name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
-    if (words.isEmpty) return '?';
-    if (words.length == 1) return words.first.substring(0, 1).toUpperCase();
-    return (words.first.substring(0, 1) + words.last.substring(0, 1)).toUpperCase();
+  static String? canonicalKey(String name, {String? id}) {
+    final slug = canonicalSlug(name, id: id);
+    return slug != null && _brands.containsKey(slug) ? slug : null;
   }
+
+  static bool hasVerifiedIcon(String name, {String? id}) =>
+      canonicalSlug(name, id: id) != null;
 
   @override
   Widget build(BuildContext context) {
-    final key = canonicalKey(name, id: id);
-    final localIcon = key == null ? null : _brands[key];
+    final slug = canonicalSlug(name, id: id);
+    if (slug == null) return SizedBox(width: size, height: size);
+    final localIcon = _brands[slug];
     if (localIcon != null) {
-      return Center(child: FaIcon(localIcon, size: size * .66, color: _brandColor(key!)));
+      return SizedBox(width: size, height: size,
+        child: Center(child: FaIcon(localIcon, size: size * .66, color: _brandColor(slug))));
     }
-    final slug = _slugFor(name, id: id);
-    if (slug.isEmpty) {
-      return Center(child: Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)));
+    final domain = _domains[slug];
+    if (domain != null) {
+      return SizedBox(width: size, height: size,
+        child: Center(child: Image.network(
+          'https://www.google.com/s2/favicons?domain=$domain&sz=128',
+          width: size * .72, height: size * .72, fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        )));
     }
-    return Center(
-      child: SvgPicture.network(
+    return SizedBox(width: size, height: size,
+      child: Center(child: SvgPicture.network(
         'https://cdn.simpleicons.org/$slug',
-        width: size * .78,
-        height: size * .78,
-        fit: BoxFit.contain,
-        placeholderBuilder: (_) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
-        errorBuilder: (_, __, ___) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
-      ),
-    );
+        width: size * .78, height: size * .78, fit: BoxFit.contain,
+        placeholderBuilder: (_) => const SizedBox.shrink(),
+        errorBuilder: (_, __, ___) {
+          final fallbackDomain = _domains[slug];
+          if (fallbackDomain == null) return const SizedBox.shrink();
+          return Image.network('https://www.google.com/s2/favicons?domain=$fallbackDomain&sz=128',
+            width: size * .72, height: size * .72, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink());
+        },
+      )));
   }
 
   static Color _brandColor(String key) {
