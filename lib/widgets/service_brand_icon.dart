@@ -98,6 +98,19 @@ class ServiceBrandIcon extends StatelessWidget {
   static bool hasVerifiedIcon(String name, {String? id}) =>
       canonicalKey(name, id: id) != null || _slugFor(name, id: id).isNotEmpty;
 
+  String _faviconDomain(String slug) {
+    const domains = <String, String>{
+      'amazon': 'amazon.com', 'microsoft': 'microsoft.com', 'openai': 'openai.com',
+      'chatgpt': 'chatgpt.com', 'paypal': 'paypal.com', 'apple': 'apple.com',
+      'google': 'google.com', 'youtube': 'youtube.com', 'discord': 'discord.com',
+      'telegram': 'telegram.org', 'whatsapp': 'whatsapp.com', 'tiktok': 'tiktok.com',
+      'instagram': 'instagram.com', 'facebook': 'facebook.com', 'snapchat': 'snapchat.com',
+      'spotify': 'spotify.com', 'netflix': 'netflix.com', 'linkedin': 'linkedin.com',
+      'reddit': 'reddit.com', 'x': 'x.com', 'threads': 'threads.net',
+    };
+    return domains[slug] ?? slug + '.com';
+  }
+
   String _initials() {
     final words = name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
     if (words.isEmpty) return '?';
@@ -123,7 +136,11 @@ class ServiceBrandIcon extends StatelessWidget {
         height: size * .78,
         fit: BoxFit.contain,
         placeholderBuilder: (_) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
-        errorBuilder: (_, __, ___) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
+        errorBuilder: (_, __, ___) => Image.network(
+          'https://www.google.com/s2/favicons?domain=' + _faviconDomain(slug) + '&sz=128',
+          width: size * .78, height: size * .78, fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => Text(_initials(), style: TextStyle(color: Colors.white70, fontSize: size * .30, fontWeight: FontWeight.w900)),
+        ),
       ),
     );
   }
