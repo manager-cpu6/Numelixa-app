@@ -27,7 +27,8 @@ void main() {
     expect(ServiceBrandIcon.canonicalSlug('NovaPošta'), 'novaposhta');
     expect(ServiceBrandIcon.canonicalSlug('PayPal'), 'paypal');
     expect(ServiceBrandIcon.canonicalSlug('Moneza'), 'moneza');
-    expect(ServiceBrandIcon.canonicalSlug('Unknown Service'), isNull);\n    expect(ServiceBrandIcon.canonicalSlug('Unknown Service', id: 'ms'), isNull);
+    expect(ServiceBrandIcon.canonicalSlug('Unknown Service'), isNull);
+    expect(ServiceBrandIcon.canonicalSlug('Unknown Service', id: 'ms'), isNull);
   });
 
   test('Material navigation and card styles are defined centrally', () {
