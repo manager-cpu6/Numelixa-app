@@ -117,7 +117,7 @@ class ServiceBrandIcon extends StatelessWidget {
     final known = labels[key];
     if (known != null) return known;
     if (raw.isEmpty) return 'Virtual number';
-    return raw.replaceAll(RegExp(r'[_-]+'), ' ').split(RegExp(r'\\s+'))
+    return raw.replaceAll(RegExp(r'[_-]+'), ' ').split(RegExp(r'\s+'))
       .where((part) => part.isNotEmpty)
       .map((part) => part.length <= 2 ? part.toUpperCase() : part[0].toUpperCase() + part.substring(1))
       .join(' ');
