@@ -1210,7 +1210,7 @@ class _RecentServicesPreviewState extends State<_RecentServicesPreview> {
       const Text('RECENTLY USED SERVICES',style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.5,color:AppTheme.muted)),
       const SizedBox(height:9),
       SizedBox(height:82,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:recent.length,separatorBuilder:(_,__)=>const SizedBox(width:9),itemBuilder:(context,index){
-        final order=recent[index],id=(order['service']??order['serviceId']??'').toString(),name=(order['serviceName']??order['service']??'Service').toString();
+        final order=recent[index],id=(order['service']??order['serviceId']??'').toString(),name=ServiceBrandIcon.displayName((order['serviceName']??order['service']??'Service').toString(),id:id);
         return InkWell(onTap:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const _CatalogPage())),borderRadius:BorderRadius.circular(15),child:Container(width:132,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFF0D1930),borderRadius:BorderRadius.circular(15),border:Border.all(color:AppTheme.glassBorder)),child:Row(children:[ServiceBrandIcon(name:name,id:id,size:34),const SizedBox(width:8),Expanded(child:Text(name,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)))])));
       })),
       const SizedBox(height:15),
@@ -2126,7 +2126,7 @@ class _OrderDetailPageState extends State<_OrderDetailPage> {
         final status = (order['status'] ?? 'unknown').toString();
         return ListView(padding: const EdgeInsets.all(18), children: [
           Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text((order['service'] ?? 'Virtual number').toString(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text(ServiceBrandIcon.displayName((order['serviceName'] ?? order['service'] ?? 'Virtual number').toString(), id: (order['serviceId'] ?? order['service'] ?? '').toString()), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(child: SelectableText((order['phone'] ?? order['number'] ?? 'Number unavailable').toString(), style: const TextStyle(fontSize: 19, color: AppTheme.cyan, fontWeight: FontWeight.w700))),
