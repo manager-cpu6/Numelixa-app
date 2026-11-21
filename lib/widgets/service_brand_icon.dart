@@ -65,7 +65,7 @@ class ServiceBrandIcon extends StatelessWidget {
     for (final value in [rawName, rawId]) {
       if (_aliases.containsKey(value)) return _aliases[value];
     }
-    if (rawName.contains('tiktok')) return 'tiktok';
+    if (rawName.contains('twitter')) return 'x';\n    if (rawName.contains('tiktok')) return 'tiktok';
     if (rawName.contains('douyin') || rawName.contains('douying')) return 'douyin';
     return null;
   }
