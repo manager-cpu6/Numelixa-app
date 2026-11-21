@@ -1891,10 +1891,10 @@ class _OrdersPageState extends State<_OrdersPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(children: [
-                                  _platformLogo((order['service'] ?? '').toString()),
+                                  _platformLogo((order['serviceName'] ?? order['service'] ?? order['serviceId'] ?? '').toString()),
                                   const SizedBox(width: 10),
                                   Expanded(child: Text(
-                                    _platformName((order['service'] ?? 'Virtual number').toString()),
+                                    _platformName((order['serviceName'] ?? order['service'] ?? order['serviceId'] ?? 'Virtual number').toString()),
                                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                                   )),
                                   Text(
