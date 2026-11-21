@@ -97,6 +97,32 @@ class ServiceBrandIcon extends StatelessWidget {
   static bool hasVerifiedIcon(String name, {String? id}) =>
       canonicalKey(name, id: id) != null || _slugFor(name, id: id).isNotEmpty;
 
+  static String displayName(String name, {String? id}) {
+    final raw = name.trim();
+    final key = _key(raw.isEmpty ? (id ?? '') : raw);
+    if (key == 'cg' || key == 'chatgpt') return 'ChatGPT';
+    const labels = <String, String>{
+      'wa':'WhatsApp','whatsapp':'WhatsApp','tg':'Telegram','telegram':'Telegram',
+      'tt':'TikTok','tiktok':'TikTok','ig':'Instagram','instagram':'Instagram',
+      'fb':'Facebook','facebook':'Facebook','go':'Google','google':'Google',
+      'am':'Amazon','amazon':'Amazon','az':'Amazon','ms':'Microsoft','mi':'Microsoft','microsoft':'Microsoft',
+      'op':'OpenAI','oi':'OpenAI','openai':'OpenAI','pp':'PayPal','paypal':'PayPal',
+      'ap':'Apple','apple':'Apple','ds':'Discord','discord':'Discord','sn':'Snapchat','snapchat':'Snapchat',
+      'gm':'Gmail','gmail':'Gmail','yt':'YouTube','youtube':'YouTube','tw':'X','twitter':'X','x':'X',
+      'li':'LinkedIn','linkedin':'LinkedIn','rd':'Reddit','reddit':'Reddit','sp':'Spotify','spotify':'Spotify',
+      'nf':'Netflix','netflix':'Netflix','vb':'Viber','viber':'Viber','sg':'Signal','signal':'Signal',
+      'wechat':'WeChat','line':'LINE','kakaotalk':'KakaoTalk','imo':'imo','ebay':'eBay',
+      'googlepay':'Google Pay','gpay':'Google Pay','googleplay':'Google Play','microsoftteams':'Microsoft Teams',
+    };
+    final known = labels[key];
+    if (known != null) return known;
+    if (raw.isEmpty) return 'Virtual number';
+    return raw.replaceAll(RegExp(r'[_-]+'), ' ').split(RegExp(r'\\s+'))
+      .where((part) => part.isNotEmpty)
+      .map((part) => part.length <= 2 ? part.toUpperCase() : part[0].toUpperCase() + part.substring(1))
+      .join(' ');
+  }
+
   String _faviconDomain(String slug) {
     const domains = <String, String>{
       'amazon': 'amazon.com', 'microsoft': 'microsoft.com', 'openai': 'openai.com',
