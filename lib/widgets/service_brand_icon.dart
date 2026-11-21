@@ -61,7 +61,19 @@ class ServiceBrandIcon extends StatelessWidget {
 
   static String _slugFor(String name, {String? id}) {
     final raw = _key(name);
-    if (raw.isNotEmpty) return _aliases[raw] ?? raw;
+    if (raw.isNotEmpty) {
+      final exact = _aliases[raw];
+      if (exact != null) return exact;
+      final keys = _aliases.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
+      for (final alias in keys) {
+        if (alias.length < 3 || !raw.startsWith(alias)) continue;
+        final suffix = raw.substring(alias.length);
+        if (const ['verification', 'verify', 'otp', 'sms', 'activation', 'account'].contains(suffix)) {
+          return _aliases[alias]!;
+        }
+      }
+      return raw;
+    }
     final fallback = _key(id ?? '');
     return _aliases[fallback] ?? fallback;
   }
