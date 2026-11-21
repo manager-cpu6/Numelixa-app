@@ -1,4 +1,5 @@
 name: Numelixa Android CI
+# The launcher artwork is sourced from assets/numelixa_app_icon.webp.
 'on':
   push:
     branches: [main, feat/numelixa-product-preservation-updates, feat/native-commerce-auth-notifications, fix/google-fcm-orders-account, support-chat-upgrade, feat/numelixa-premium-mobile-upgrade, feat/numelixa-major-brand-security-2026, feat/exact-brand-icon-native-login, feat/reliable-inplace-updates-2026, feat/numelixa-liquid-glass-refresh, feat/wallet-somalia-crypto-receipts-premium]
@@ -170,36 +171,26 @@ jobs:
           print('Configured Google Maven Central mirror with Maven Central and Gradle Plugin Portal fallbacks in Flutter included-build repositories.')
           PY
           fi
-      - name: Install exact Numelixa PNG launcher icon
+      - name: Install official supplied Numelixa launcher artwork
         shell: bash
         run: |
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageDraw
-          # Draw the official N + globe + orbital ring mark at high resolution.
-          source = Image.new('RGBA', (512, 512), (7, 19, 41, 255))
-          draw = ImageDraw.Draw(source)
-          draw.ellipse((88, 88, 424, 424), outline=(22, 119, 255, 255), width=13)
-          draw.ellipse((174, 88, 338, 424), outline=(0, 217, 255, 235), width=9)
-          draw.ellipse((88, 174, 424, 338), outline=(0, 217, 255, 235), width=9)
-          # A clear, custom N sits in the center of the globe.
-          draw.line((178, 346, 178, 166, 334, 346, 334, 166), fill=(245, 250, 255, 255), width=38, joint='curve')
-          # Orbital arc is rendered on a transparent layer so the mark stays crisp.
-          orbit = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
-          ImageDraw.Draw(orbit).ellipse((18, 130, 494, 382), outline=(139, 92, 246, 245), width=13)
-          orbit = orbit.rotate(-22, resample=Image.Resampling.BICUBIC)
-          source.alpha_composite(orbit)
-          ImageDraw.Draw(source).ellipse((418, 95, 448, 125), fill=(0, 217, 255, 255))
+          from PIL import Image
+          # Use the exact user-supplied Numelixa artwork. The source was cleaned
+          # of its white canvas and edge fringe, then normalized to a full-bleed
+          # black square so no white margins appear on launcher masks.
+          source = Image.open('assets/numelixa_app_icon.webp').convert('RGBA').resize((512,512), Image.Resampling.LANCZOS)
           res = Path('android/app/src/main/res')
           for density, size in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)]:
               folder = res / f'mipmap-{density}'
               folder.mkdir(parents=True, exist_ok=True)
               source.resize((size,size), Image.Resampling.LANCZOS).save(folder / 'ic_launcher.png', optimize=True)
-          # Adaptive icon foreground keeps the complete original artwork inside Android's safe mask.
+          # Full-bleed foreground with a solid black adaptive background:
+          # no white canvas, no extra inset, and no mismatched synthetic logo.
           foreground = Image.new('RGBA',(432,432),(0,0,0,0))
-          artwork = source.resize((284,284), Image.Resampling.LANCZOS)
-          foreground.alpha_composite(artwork,((432-284)//2,(432-284)//2))
+          foreground.alpha_composite(source.resize((432,432), Image.Resampling.LANCZOS))
           drawable = res / 'drawable-nodpi'
           drawable.mkdir(parents=True, exist_ok=True)
           foreground.save(drawable / 'numelixa_launcher.png', optimize=True)
