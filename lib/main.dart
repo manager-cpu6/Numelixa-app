@@ -66,7 +66,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final rawBody = (data['body'] ?? data['message'] ?? '').toString();
   final body = rawBody.trim().isEmpty ? 'You have a new update from Numelixa.' : rawBody;
   final rawCode = (data['code'] ?? data['otp'] ?? data['verificationCode'] ?? data['smsCode'] ?? '').toString();
-  final code = RegExp(r'^[0-9]{4,8}
+  final code = RegExp(r'^[0-9]{4,8}$').hasMatch(rawCode)
+      ? rawCode
+      : RegExp(r'(?<![0-9])[0-9]{4,8}(?![0-9])').firstMatch(body)?.group(0);
+  final actions = <AndroidNotificationAction>[
+    if (code != null) const AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
+    if ((data['orderId'] ?? '').toString().isNotEmpty)
+      const AndroidNotificationAction('open_order', 'Open Order', showsUserInterface: true),
+  ];
+  await local.show(
     message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
     title,
     body,
