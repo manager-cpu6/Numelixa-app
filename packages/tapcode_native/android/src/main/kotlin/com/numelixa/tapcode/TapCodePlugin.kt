@@ -127,6 +127,11 @@ class TapCodePlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAw
                     result.error("INVALID_TEST_CODE", "The test code must contain six digits.", null)
                 } else {
                     TapCodeVault.putAdminTestCode(appContext, code)
+                    val overlayPrefs = appContext.getSharedPreferences(TapCodeOverlayService.PREFS, 0)
+                    if (overlayPrefs.getBoolean(TapCodeOverlayService.KEY_OVERLAY_ENABLED, false) &&
+                        Build.VERSION.SDK_INT >= 23 && Settings.canDrawOverlays(appContext)) {
+                        TapCodeOverlayService.show(appContext, TapCodeVault.ADMIN_TEST_ORDER_ID)
+                    }
                     result.success(null)
                 }
             }
