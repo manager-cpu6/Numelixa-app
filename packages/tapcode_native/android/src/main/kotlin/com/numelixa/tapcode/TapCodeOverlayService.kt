@@ -106,8 +106,9 @@ class TapCodeOverlayService : Service() {
         actions.addView(copy, LinearLayout.LayoutParams(0, dp(46), 1f))
         root.addView(actions)
 
+        @Suppress("DEPRECATION")
         val type = if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
+            else WindowManager.LayoutParams.TYPE_PHONE
         val layout = WindowManager.LayoutParams(
             min(resources.displayMetrics.widthPixels - dp(32), dp(360)),
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -153,8 +154,7 @@ class TapCodeOverlayService : Service() {
             val intent = Intent(context, TapCodeOverlayService::class.java)
                 .setAction(ACTION_SHOW).putExtra(EXTRA_ORDER_ID, orderId)
             try {
-                if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent)
-                else context.startService(intent)
+                context.startService(intent)
             } catch (_: Exception) { /* Notification/Autofill remains the fallback. */ }
         }
     }
