@@ -368,8 +368,10 @@ class TapCodeAutofillService : android.service.autofill.AutofillService() {
         }
         val callerPackage = request.fillContexts.lastOrNull()?.structure?.activityComponent?.packageName
         val isNumelixaTestScreen = callerPackage == packageName
+        // The synthetic admin test OTP must be offered only to external apps.
+        // Never show the test code inside Numelixa itself.
         val entries = TapCodeVault.read(this).filter {
-            it.orderId != TapCodeVault.ADMIN_TEST_ORDER_ID || isNumelixaTestScreen
+            it.orderId != TapCodeVault.ADMIN_TEST_ORDER_ID || !isNumelixaTestScreen
         }
         if (entries.isEmpty()) { callback.onSuccess(null); return }
         val fields = mutableListOf<Pair<android.view.autofill.AutofillId, Int?>>()
@@ -414,8 +416,37 @@ class TapCodeAutofillService : android.service.autofill.AutofillService() {
         val position = hints.firstNotNullOfOrNull { hint ->
             Regex("^smsOTPCode([1-8])$").matchEntire(hint)?.groupValues?.get(1)?.toInt()
         }
-        if (hints.contains("smsOTPCode") || position != null) {
-            node.autofillId?.let { output.add(Pair(it, position)) }
+        val explicitOtpHint = hints.any { hint ->
+            val value = hint.lowercase()
+            value == "smsotpcode" || value.startsWith("smsotpcode") ||
+                value == "onetimecode" || value == "one_time_code" ||
+                value == "verificationcode" || value == "verification_code" ||
+                value == "otp" || value == "otpcode"
+        }
+
+        val semanticText = listOfNotNull(
+            node.hint?.toString(),
+            node.contentDescription?.toString(),
+            node.idEntry,
+            hints.joinToString(" ")
+        ).joinToString(" ").lowercase()
+        val otpLabel = Regex(
+            "(\\\botp\\\b|one[ _-]?time[ _-]?(password|code)|verification[ _-]?(code|token)|authentication[ _-]?code|security[ _-]?code)"
+        ).containsMatchIn(semanticText)
+        val excludedLabel = Regex(
+            "(phone|mobile|telephone|credit|debit|card|cvv|cvc|postal|zip|address)"
+        ).containsMatchIn(semanticText)
+
+        val inputClass = node.inputType and android.text.InputType.TYPE_MASK_CLASS
+        val numericInput = inputClass == android.text.InputType.TYPE_CLASS_NUMBER
+        val editableText = node.autofillType == android.view.View.AUTOFILL_TYPE_TEXT ||
+            node.className?.contains("EditText", ignoreCase = true) == true
+        val boundedNumericCode = numericInput && editableText &&
+            node.maxTextLength in 4..8 && !excludedLabel
+
+        if ((explicitOtpHint || (otpLabel && !excludedLabel) || boundedNumericCode) &&
+            node.autofillId != null) {
+            output.add(Pair(node.autofillId!!, position))
         }
         for (i in 0 until node.childCount) walk(node.getChildAt(i), output)
     }
