@@ -40,7 +40,10 @@ class TapCodePlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAw
                     "available" to (Build.VERSION.SDK_INT >= 26),
                     "enabled" to TapCodeVault.isEnabled(appContext),
                     "osEnabled" to osEnabled,
-                    "hasCodes" to TapCodeVault.read(appContext).isNotEmpty()
+                    "hasCodes" to TapCodeVault.read(appContext).isNotEmpty(),
+                    "overlayAvailable" to (Build.VERSION.SDK_INT >= 23),
+                    "overlayPermission" to (Build.VERSION.SDK_INT >= 23 && Settings.canDrawOverlays(appContext)),
+                    "overlayEnabled" to appContext.getSharedPreferences(TapCodeOverlayService.PREFS, 0).getBoolean(TapCodeOverlayService.KEY_OVERLAY_ENABLED, false)
                 ))
             }
             "enableTapCode", "openAutofillSettings" -> {
@@ -60,6 +63,31 @@ class TapCodePlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAw
                     }
                 }
             }
+            "requestOverlayPermission" -> {
+                if (Build.VERSION.SDK_INT < 23) {
+                    result.error("UNSUPPORTED", "Floating windows require Android 6.0 or newer.", null)
+                } else if (Settings.canDrawOverlays(appContext)) {
+                    appContext.getSharedPreferences(TapCodeOverlayService.PREFS, 0).edit().putBoolean(TapCodeOverlayService.KEY_OVERLAY_ENABLED, true).apply()
+                    result.success(true)
+                } else {
+                    val current = activity
+                    if (current == null) result.error("NO_ACTIVITY", "Open Numelixa settings to grant floating-window permission.", null)
+                    else {
+                        current.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + appContext.packageName)))
+                        result.success(false)
+                    }
+                }
+            }
+            "setOverlayEnabled" -> {
+                val enabled = call.argument<Boolean>("enabled") == true
+                appContext.getSharedPreferences(TapCodeOverlayService.PREFS, 0).edit().putBoolean(TapCodeOverlayService.KEY_OVERLAY_ENABLED, enabled).apply()
+                if (!enabled) appContext.stopService(Intent(appContext, TapCodeOverlayService::class.java))
+                result.success(null)
+            }
+            "dismissOverlay" -> {
+                appContext.stopService(Intent(appContext, TapCodeOverlayService::class.java))
+                result.success(null)
+            }
             "disableTapCode" -> {
                 TapCodeVault.setEnabled(appContext, false)
                 result.success(null)
@@ -73,11 +101,14 @@ class TapCodePlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAw
                 result.success(null)
             }
             "cachePushOtp" -> {
-                TapCodeVault.updateExistingOrder(
-                    appContext,
-                    call.argument<String>("orderId").orEmpty(),
-                    call.argument<String>("code").orEmpty()
-                )
+                val orderId = call.argument<String>("orderId").orEmpty()
+                TapCodeVault.updateExistingOrder(appContext, orderId, call.argument<String>("code").orEmpty())
+                val overlayPrefs = appContext.getSharedPreferences(TapCodeOverlayService.PREFS, 0)
+                if (overlayPrefs.getBoolean(TapCodeOverlayService.KEY_OVERLAY_ENABLED, false) &&
+                    Build.VERSION.SDK_INT >= 23 && Settings.canDrawOverlays(appContext) &&
+                    TapCodeVault.read(appContext).any { it.orderId == orderId }) {
+                    TapCodeOverlayService.show(appContext, orderId)
+                }
                 result.success(null)
             }
             "clearOrder" -> {
