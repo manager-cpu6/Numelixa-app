@@ -151,37 +151,41 @@ internal object TapCodeVault {
             }
         }
 
+        val suppressed = readSuppressedOrderIds(context).filter { it in active }
         val merged = LinkedHashMap<String, TapCodeEntry>()
-        read(context).filter { it.orderId in active && it.expiresAt > now }
+        read(context).filter { it.orderId in active && it.orderId !in suppressed && it.expiresAt > now }
             .forEach { merged[it.orderId] = it }
         orders.take(10).forEach { item ->
             val id = item["orderId"]?.toString()?.trim().orEmpty()
             val code = item["code"]?.toString()?.trim().orEmpty()
             val expiry = (item["expiresAt"] as? Number)?.toLong() ?: 0L
             val metadata = active[id]
-            if (metadata != null && code.matches(Regex("^\\d{4,8}$")) && expiry > now) {
+            if (metadata != null && id !in suppressed && code.matches(Regex("^\\d{4,8}$")) && expiry > now) {
                 merged[id] = TapCodeEntry(id, code, metadata.service, metadata.phone,
                     minOf(expiry, metadata.expiresAt))
             }
         }
-        writePayload(context, merged.values.take(10).toList(), active.values.toList())
+        writePayload(context, merged.values.take(10).toList(), active.values.toList(), suppressed)
     }
 
     fun updateExistingOrder(context: Context, orderId: String, code: String) {
         if (!isEnabled(context) || orderId.isBlank() || !code.matches(Regex("^\\d{4,8}$"))) return
+        if (orderId in readSuppressedOrderIds(context)) return
         val active = readActiveOrders(context).firstOrNull { it.orderId == orderId } ?: return
         val now = System.currentTimeMillis()
         if (active.expiresAt <= now) return
         val expiry = minOf(active.expiresAt, now + 10 * 60 * 1000L)
         val entries = read(context).filterNot { it.orderId == orderId }.toMutableList()
         entries.add(TapCodeEntry(orderId, code, active.service, active.phone, expiry))
-        writePayload(context, entries.take(10), readActiveOrders(context))
+        writePayload(context, entries.take(10), readActiveOrders(context), readSuppressedOrderIds(context))
     }
 
     fun clearOrder(context: Context, orderId: String) {
         val entries = read(context).filterNot { it.orderId == orderId }
-        val active = readActiveOrders(context).filterNot { it.orderId == orderId }
-        writePayload(context, entries, active)
+        val active = readActiveOrders(context)
+        val activeIds = active.map { it.orderId }.toSet()
+        val suppressed = (readSuppressedOrderIds(context) + orderId).distinct().filter { it in activeIds }
+        writePayload(context, entries, active, suppressed)
     }
 
     fun clear(context: Context) {
@@ -204,9 +208,12 @@ internal object TapCodeVault {
             }
         }
         val active = readActiveOrders(context)
+        val suppressed = readSuppressedOrderIds(context).filter { id -> active.any { it.orderId == id } }
         val rawActiveCount = payload.optJSONArray("activeOrders")?.length() ?: 0
-        if (entries.size != list.length() || active.size != rawActiveCount) {
-            writePayload(context, entries, active)
+        val rawSuppressedCount = payload.optJSONArray("suppressedOrderIds")?.length() ?: 0
+        if (entries.size != list.length() || active.size != rawActiveCount ||
+            suppressed.size != rawSuppressedCount) {
+            writePayload(context, entries.filterNot { it.orderId in suppressed }, active, suppressed)
         }
         return entries
     }
@@ -225,6 +232,20 @@ internal object TapCodeVault {
             }
         }
         return orders
+    }
+
+    private fun readSuppressedOrderIds(context: Context): List<String> {
+        val payload = readPayload(context) ?: return emptyList()
+        val active = payload.optJSONArray("activeOrders") ?: JSONArray()
+        val activeIds = mutableSetOf<String>()
+        val now = System.currentTimeMillis()
+        for (i in 0 until active.length()) {
+            val item = active.optJSONObject(i) ?: continue
+            val id = item.optString("orderId")
+            if (id.isNotBlank() && item.optLong("expiresAt") > now) activeIds.add(id)
+        }
+        val list = payload.optJSONArray("suppressedOrderIds") ?: JSONArray()
+        return (0 until list.length()).mapNotNull { list.optString(it).takeIf { id -> id in activeIds } }.distinct()
     }
 
     private fun readPayload(context: Context): JSONObject? {
@@ -246,7 +267,8 @@ internal object TapCodeVault {
     private fun writePayload(
         context: Context,
         entries: List<TapCodeEntry>,
-        activeOrders: List<TapCodeActiveOrder>
+        activeOrders: List<TapCodeActiveOrder>,
+        suppressedIds: List<String> = emptyList()
     ) {
         val entryJson = JSONArray()
         entries.forEach { entry ->
@@ -258,8 +280,10 @@ internal object TapCodeVault {
             activeJson.put(JSONObject().put("orderId", order.orderId).put("service", order.service)
                 .put("phone", order.phone).put("expiresAt", order.expiresAt))
         }
+        val suppressedJson = JSONArray()
+        suppressedIds.distinct().forEach { suppressedJson.put(it) }
         writeEncrypted(context, JSONObject().put("entries", entryJson)
-            .put("activeOrders", activeJson).toString())
+            .put("activeOrders", activeJson).put("suppressedOrderIds", suppressedJson).toString())
     }
 
     private fun writeEncrypted(context: Context, value: String) {

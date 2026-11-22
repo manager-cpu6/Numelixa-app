@@ -70,7 +70,7 @@ class _TapCodeSettingsScreenState extends State<TapCodeSettingsScreen> {
         SizedBox(height:5),
         Text('That app may not expose compatible Autofill hints. Use Copy Code from the matching activation instead.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.45)),
       ]))),
-      const SizedBox(height:12),const Text('TapCode never uses Accessibility, reads another app’s screen, or inserts a code without your tap.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.5)),
+      const SizedBox(height:12),const Text('Android Autofill requires Android 8.0 (API 26) or newer. TapCode never uses Accessibility, reads another app’s screen, or inserts a code without your tap.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.5)),
     ]));
   }
 }
