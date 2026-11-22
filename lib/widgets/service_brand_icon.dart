@@ -16,7 +16,7 @@ class ServiceBrandIcon extends StatelessWidget {
     'wa':'whatsapp','whatsapp':'whatsapp','whatsappbusiness':'whatsapp',
     'tg':'telegram','telegram':'telegram','tt':'tiktok','tiktok':'tiktok','tiktokdouyin':'tiktok',
     'douyin':'douyin','douying':'douyin','ig':'instagram','instagram':'instagram',
-    'fb':'facebook','facebook':'facebook','go':'google','google':'google','gm':'gmail','gmail':'gmail',
+    'fb':'facebook','facebook':'facebook','go':'google','google':'google','googlepay':'googlepay','gpay':'googlepay','googleplay':'googleplay','playstore':'googleplay','gm':'gmail','gmail':'gmail',
     'yt':'youtube','youtube':'youtube','ms':'microsoft','msft':'microsoft','microsoft':'microsoft',
     'ds':'discord','discord':'discord','sn':'snapchat','snapchat':'snapchat',
     'x':'x','tw':'x','twitter':'x','tewitter':'x','xtwitter':'x','xtewitter':'x','threads':'threads','linkedin':'linkedin',
