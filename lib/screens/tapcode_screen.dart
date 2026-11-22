@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../services/notification_service.dart';
 import '../services/tapcode_service.dart';
+import 'admin_tapcode_test_screen.dart';
 
 class TapCodeSettingsScreen extends StatefulWidget {
   const TapCodeSettingsScreen({super.key});
@@ -233,6 +234,16 @@ class _TapCodeSettingsScreenState extends State<TapCodeSettingsScreen> with Widg
             },
           ),
         ])),
+        const SizedBox(height: 12),
+        Card(child: ListTile(
+          leading: const Icon(Icons.timer_rounded, color: AppTheme.cyan),
+          title: const Text('Test floating OTP popup'),
+          subtitle: const Text('Run a short timer and show a sample Numelixa OTP card on this screen.'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const AdminTapCodeTestScreen()),
+          ),
+        )),
         const SizedBox(height: 16),
         const _Heading('HOW TO SET UP'),
         const Card(child: Padding(padding: EdgeInsets.all(15), child: Column(children: [
