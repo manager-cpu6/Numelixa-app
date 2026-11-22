@@ -14,6 +14,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/numelixa_repository.dart';
+import '../services/tapcode_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_update_service.dart';
 import '../widgets/payment_receipt_dialog.dart';
@@ -1612,10 +1613,18 @@ class _OrdersPageState extends State<_OrdersPage> {
   }
 
   void _load() {
-    _future = NumelixaRepository().orders(
+    final future = NumelixaRepository().orders(
       token: context.read<AuthService>().accessToken!,
       limit: 100,
     );
+    _future = future;
+    future.then((response) {
+      final raw = response['orders'];
+      if (raw is List) {
+        final orders = raw.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+        TapCodeService.instance.syncOrders(orders).catchError((_) {});
+      }
+    }).catchError((_) {});
   }
 
   Future<void> _refreshQuietly() async {
@@ -1626,7 +1635,12 @@ class _OrdersPageState extends State<_OrdersPage> {
         token: context.read<AuthService>().accessToken!,
         limit: 100,
       );
-      await fresh;
+      final response = await fresh;
+      final raw = response['orders'];
+      if (raw is List) {
+        final orders = raw.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+        await TapCodeService.instance.syncOrders(orders);
+      }
       if (mounted) setState(() => _future = fresh);
     } catch (_) {
       // Keep the last usable order list if a background refresh temporarily fails.
@@ -1928,6 +1942,8 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   Padding(padding: const EdgeInsets.only(top: 5), child: Text(_remainingTime(order), style: const TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700))),
                                 if (_smsCode(order).isNotEmpty) ...[
                                   const SizedBox(height: 8),
+                                  const Text('NUMELIXA TAPCODE · VERIFICATION CODE', style: TextStyle(color: AppTheme.cyan, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .8)),
+                                  const SizedBox(height: 4),
                                   Row(children: [
                                     const Text('SMS code: ', style: TextStyle(color: Color(0xFF91A8C4))),
                                     Expanded(child: SelectableText(_smsCode(order), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17))),
@@ -1940,6 +1956,12 @@ class _OrdersPageState extends State<_OrdersPage> {
                                   if (_selected == 'active')
                                     Text('This code stays in Activations for up to 10 minutes before moving to Successful.',
                                       style: const TextStyle(color: Color(0xFF91A8C4), fontSize: 12)),
+                                  if (_selected == 'active')
+                                    Align(alignment: Alignment.centerRight, child: TextButton.icon(
+                                      onPressed: () => TapCodeService.instance.clearOrder((order['id'] ?? order['_id'] ?? '').toString()),
+                                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                                      label: const Text('Clear TapCode suggestion'),
+                                    )),
                                 ] else if (_selected == 'active') ...[
                                   const SizedBox(height: 8),
                                   SizedBox(width: double.infinity, child: OutlinedButton.icon(

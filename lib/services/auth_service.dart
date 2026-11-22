@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:local_auth/local_auth.dart';
 import 'api_client.dart';
+import 'tapcode_service.dart';
 
 class AuthService extends ChangeNotifier {
   static const _storage = FlutterSecureStorage();
@@ -320,6 +321,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _clearTokens() async {
+    try { await TapCodeService.instance.clearAll(); } catch (_) {}
     await _storage.delete(key: _accessKey);
     _accessToken = null;
     _user = null;

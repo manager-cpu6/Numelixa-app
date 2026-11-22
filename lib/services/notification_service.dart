@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'api_client.dart';
 import '../core/config/app_config.dart';
 import 'auth_service.dart';
+import 'tapcode_service.dart';
 
 /// Route hints are consumed by the root app shell; payloads never execute URLs.
 final ValueNotifier<String?> appNotificationRoute = ValueNotifier<String?>(null);
@@ -243,6 +244,12 @@ class NotificationService {
     final title = rawTitle.trim().isEmpty ? 'Numelixa' : rawTitle;
     final notificationData = {...message.data, 'title': title, 'body': body};
     final code = _notificationCode(notificationData);
+    if (code != null && (notificationData['orderId'] ?? '').toString().isNotEmpty) {
+      await TapCodeService.instance.cachePushOtp({...notificationData, 'code': code}).catchError((_) {});
+      if (await TapCodeService.instance.autoCopyEnabled()) {
+        await Clipboard.setData(ClipboardData(text: code));
+      }
+    }
     await _local.show(
       notification?.hashCode ?? message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
       title,
