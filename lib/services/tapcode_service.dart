@@ -12,6 +12,11 @@ class TapCodeService {
       const {'available': false};
 
   Future<void> enable() => _channel.invokeMethod<void>('enableTapCode');
+  Future<bool> requestOverlayPermission() async =>
+      await _channel.invokeMethod<bool>('requestOverlayPermission') ?? false;
+  Future<void> setOverlayEnabled(bool value) =>
+      _channel.invokeMethod<void>('setOverlayEnabled', {'enabled': value});
+  Future<void> dismissOverlay() => _channel.invokeMethod<void>('dismissOverlay');
   Future<void> disable() => _channel.invokeMethod<void>('disableTapCode');
   Future<void> clearAll() => _channel.invokeMethod<void>('clearAll');
 
