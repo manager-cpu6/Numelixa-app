@@ -1,7 +1,7 @@
 name: numelixa_app
 description: Standalone native Numelixa mobile application.
 publish_to: "none"
-version: 1.0.40+41
+version: 1.0.41+42
 environment:
   sdk: ">=3.4.0 <4.0.0"
 dependencies:
@@ -34,6 +34,7 @@ dependencies:
   screenshot: ^3.0.0
   gal: ^2.3.0
   google_sign_in: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
