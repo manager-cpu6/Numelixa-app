@@ -308,6 +308,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _openUpdatesNotification(route);
       return;
     }
+    if (route.startsWith('order:')) {
+      final orderId = route.substring('order:'.length).trim();
+      if (orderId.isNotEmpty) {
+        final ordersIndex = _updatesEnabled && !_hideUpdates ? 3 : 2;
+        setState(() => _index = ordersIndex);
+        Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => _OrderDetailPage(orderId: orderId),
+        ));
+        return;
+      }
+    }
     setState(() => _index = 0);
   }
 

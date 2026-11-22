@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <service
+            android:name="com.numelixa.tapcode.TapCodeAutofillService"
+            android:label="Numelixa TapCode"
+            android:enabled="@bool/tapcode_autofill_supported"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/tapcode_autofill_service" />
+        </service>
+    </application>
+</manifest>

@@ -80,7 +80,9 @@ String _routeFor(Map<String, dynamic> data) {
   // Payment notifications can carry an orderId too (notably Ethiopia). Route
   // those to Wallet before applying the generic orderId -> Orders rule.
   if (type.contains('wallet') || type.contains('payment') || type.contains('balance')) return 'wallet';
-  if (data['orderId'] != null || type == 'sms' || type.contains('order')) return 'orders';
+  final orderId = (data['orderId'] ?? '').toString().trim();
+  if (orderId.isNotEmpty && (type == 'sms' || type.contains('verification') || type.contains('order'))) return 'order:' + orderId;
+  if (type == 'sms' || type.contains('order')) return 'orders';
   if (type.contains('security') || type.contains('announcement')) return 'notifications';
   final raw = (data['url'] ?? '').toString().toLowerCase();
   if (raw.contains('order') || raw.contains('sms')) return 'orders';
@@ -244,10 +246,18 @@ class NotificationService {
     final title = rawTitle.trim().isEmpty ? 'Numelixa' : rawTitle;
     final notificationData = {...message.data, 'title': title, 'body': body};
     final code = _notificationCode(notificationData);
+    final actions = <AndroidNotificationAction>[
+      if (code != null) const AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
+      if ((notificationData['orderId'] ?? '').toString().isNotEmpty)
+        const AndroidNotificationAction('open_order', 'Open Order', showsUserInterface: true),
+    ];
     if (code != null && (notificationData['orderId'] ?? '').toString().isNotEmpty) {
-      await TapCodeService.instance.cachePushOtp({...notificationData, 'code': code}).catchError((_) {});
-      if (await TapCodeService.instance.autoCopyEnabled()) {
-        await Clipboard.setData(ClipboardData(text: code));
+      final tapCodeStatus = await TapCodeService.instance.status().catchError((_) => <String, dynamic>{});
+      if (tapCodeStatus['enabled'] == true) {
+        await TapCodeService.instance.cachePushOtp({...notificationData, 'code': code}).catchError((_) {});
+        if (await TapCodeService.instance.autoCopyEnabled()) {
+          await Clipboard.setData(ClipboardData(text: code));
+        }
       }
     }
     await _local.show(
@@ -259,7 +269,7 @@ class NotificationService {
           channelDescription: _channelDescriptionFor(channelId),
           importance: Importance.max, priority: Priority.high, visibility: NotificationVisibility.private, playSound: true, icon: _notificationIcon(message.data),
           largeIcon: DrawableResourceAndroidBitmap(_notificationIcon(message.data).replaceFirst('@drawable/', '') + '_color'),
-          actions: code == null ? null : const [AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false)]),
+          actions: actions.isEmpty ? null : actions),
       ),
       payload: jsonEncode(notificationData),
     );

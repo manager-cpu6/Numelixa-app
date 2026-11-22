@@ -102,6 +102,12 @@ The native app now includes a unified dark Numelixa design system, five-destinat
 - No website/backend files were changed.
 - No fake ticket states, payment history, policies, partnership emails, stock or balances were introduced.
 
+## Numelixa TapCode
+
+- Optional native Android Autofill service for OTP fields that expose Android's SMS OTP Autofill hints.
+- Uses the existing authenticated orders API and user-scoped FCM; no new supplier API, token store or Accessibility service.
+- See [docs/TAPCODE_ANDROID.md](docs/TAPCODE_ANDROID.md) for the data flow, privacy controls and compatibility limitations.
+
 ## In-app APK updates
 
 The app checks `GET /api/app-update` without blocking launch, downloads a published APK with actual byte progress and optional SHA-256 validation, then opens Android's package installer. Android requires the user to approve installation. The update API/admin publishing controls must be implemented in the website/backend repository; see `docs/MOBILE_API_CONTRACT.md`. Preserve package ID `com.numelixa.app` and the same release signing keystore.

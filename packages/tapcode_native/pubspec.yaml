@@ -1,0 +1,15 @@
+name: tapcode_native
+description: Native Android Autofill bridge for Numelixa TapCode.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.numelixa.tapcode
+        pluginClass: TapCodePlugin

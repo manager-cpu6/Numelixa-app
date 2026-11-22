@@ -60,6 +60,16 @@ class _TapCodeSettingsScreenState extends State<TapCodeSettingsScreen> {
         _Info(Icons.apps_rounded,'Compatible fields only','Suggestions appear only when another app exposes Android’s SMS one-time-code Autofill hint. Some apps do not support this.'),
         _Info(Icons.copy_all_rounded,'Copy Code fallback','If Autofill is unavailable, use Copy Code in Activations.'),
       ]))),
+      const SizedBox(height:16),const _Heading('TROUBLESHOOTING'),
+      const Card(child:Padding(padding:EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text('No suggestion appears?',style:TextStyle(fontWeight:FontWeight.w800)),
+        SizedBox(height:5),
+        Text('Confirm Numelixa is selected in Android Autofill settings, refresh Activations, and check that the receiving app exposes an SMS OTP Autofill field.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.45)),
+        SizedBox(height:12),
+        Text('The app uses custom code boxes?',style:TextStyle(fontWeight:FontWeight.w800)),
+        SizedBox(height:5),
+        Text('That app may not expose compatible Autofill hints. Use Copy Code from the matching activation instead.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.45)),
+      ]))),
       const SizedBox(height:12),const Text('TapCode never uses Accessibility, reads another app’s screen, or inserts a code without your tap.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.5)),
     ]));
   }

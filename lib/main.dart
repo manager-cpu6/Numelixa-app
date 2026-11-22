@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'screens/app_shell.dart';
+import 'services/tapcode_service.dart';
 
 const _backgroundNotificationIconNames = <String, String>{
   'admin': 'ic_notification_admin', 'number': 'ic_notification_number',
@@ -43,6 +44,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final local = FlutterLocalNotificationsPlugin();
   await local.initialize(const InitializationSettings(android: android));
   final data = Map<String, dynamic>.from(message.data);
+  await TapCodeService.instance.cachePushOtp(data).catchError((_) {});
   final type = (data['type'] ?? '').toString().toLowerCase();
   final channelId = type == 'sms' || type == 'verification' || type == 'verification_code'
       ? 'verification'
@@ -64,9 +66,65 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final rawBody = (data['body'] ?? data['message'] ?? '').toString();
   final body = rawBody.trim().isEmpty ? 'You have a new update from Numelixa.' : rawBody;
   final rawCode = (data['code'] ?? data['otp'] ?? data['verificationCode'] ?? data['smsCode'] ?? '').toString();
-  final code = RegExp(r'^\d{4,8}$').hasMatch(rawCode)
+  final code = RegExp(r'^[0-9]{4,8}
+    message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title,
+    body,
+    NotificationDetails(android: AndroidNotificationDetails(
+      channelId,
+      channelId == 'verification' ? 'SMS and verification codes' : channelId == 'security' ? 'Account security' : channelId == 'admin' ? 'Numelixa announcements' : 'Numelixa notifications',
+      channelDescription: channelId == 'verification' ? 'Incoming SMS codes and verification updates' : 'Account, wallet and payment updates',
+      importance: Importance.max,
+      priority: Priority.high,
+      visibility: NotificationVisibility.private,
+      playSound: true,
+      icon: notificationIconFor(data),
+      largeIcon: DrawableResourceAndroidBitmap(notificationIconFor(data).replaceFirst('@drawable/', '') + '_color'),
+      actions: actions.isEmpty ? null : actions,
+    )),
+    payload: jsonEncode({...data, 'body': body}),
+  );
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  var firebaseReady = false;
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    firebaseReady = true;
+  } catch (_) {
+    // Keep the app usable for UI/API development when Firebase config is not installed.
+  }
+  runApp(NumelixaApp(firebaseReady: firebaseReady));
+}
+
+class NumelixaApp extends StatelessWidget {
+  const NumelixaApp({super.key, required this.firebaseReady});
+  final bool firebaseReady;
+
+  @override
+  Widget build(BuildContext context) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthService()),
+          Provider(create: (_) => NotificationService(firebaseReady: firebaseReady)),
+        ],
+        child: MaterialApp(
+          title: 'Numelixa',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark,
+          home: const AppShell(),
+        ),
+      );
+}
+).hasMatch(rawCode)
       ? rawCode
-      : RegExp(r'(?<!\d)\d{4,8}(?!\d)').firstMatch(body)?.group(0);
+      : RegExp(r'(?<![0-9])[0-9]{4,8}(?![0-9])').firstMatch(body)?.group(0);
+  final actions = <AndroidNotificationAction>[
+    if (code != null) const AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
+    if ((data['orderId'] ?? '').toString().isNotEmpty)
+      const AndroidNotificationAction('open_order', 'Open Order', showsUserInterface: true),
+  ];
   await local.show(
     message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
     title,
@@ -81,8 +139,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       playSound: true,
       icon: notificationIconFor(data),
       largeIcon: DrawableResourceAndroidBitmap(notificationIconFor(data).replaceFirst('@drawable/', '') + '_color'),
-      actions: code == null ? null : const [
-        AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
+      actions: [
+        if (code != null) const AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
+        if ((data['orderId'] ?? '').toString().isNotEmpty)
+          const AndroidNotificationAction('open_order', 'Open Order', showsUserInterface: true),
+      ].isEmpty ? null : [
+        if (code != null) const AndroidNotificationAction('copy_code', 'Copy code', showsUserInterface: false),
+        if ((data['orderId'] ?? '').toString().isNotEmpty)
+          const AndroidNotificationAction('open_order', 'Open Order', showsUserInterface: true),
       ],
     )),
     payload: jsonEncode({...data, 'body': body}),

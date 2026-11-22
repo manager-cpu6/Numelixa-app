@@ -34,6 +34,8 @@ dependencies:
   screenshot: ^3.0.0
   gal: ^2.3.0
   google_sign_in: ^6.3.0
+  tapcode_native:
+    path: packages/tapcode_native
 
 dev_dependencies:
   flutter_test:
