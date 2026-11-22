@@ -88,6 +88,21 @@ class TapCodePlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAw
                 TapCodeVault.clear(appContext)
                 result.success(null)
             }
+            "createAdminTestCode" -> {
+                val code = call.argument<String>("code").orEmpty()
+                if (!TapCodeVault.isEnabled(appContext)) {
+                    result.error("TAPCODE_DISABLED", "Enable TapCode before running the Autofill test.", null)
+                } else if (!code.matches(Regex("^\\d{6}$"))) {
+                    result.error("INVALID_TEST_CODE", "The test code must contain six digits.", null)
+                } else {
+                    TapCodeVault.putAdminTestCode(appContext, code)
+                    result.success(null)
+                }
+            }
+            "clearAdminTestCode" -> {
+                TapCodeVault.clearAdminTestCode(appContext)
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
     }
@@ -121,6 +136,7 @@ internal data class TapCodeActiveOrder(
 internal object TapCodeVault {
     private const val PREFS = "numelixa_tapcode_vault"
     private const val ALIAS = "numelixa_tapcode_aes_v1"
+    const val ADMIN_TEST_ORDER_ID = "__numelixa_admin_tapcode_test__"
 
     fun setEnabled(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, 0).edit().putBoolean("enabled", enabled).apply()
@@ -151,6 +167,10 @@ internal object TapCodeVault {
             }
         }
 
+        val existingTestOrder = readActiveOrders(context).firstOrNull {
+            it.orderId == ADMIN_TEST_ORDER_ID && it.expiresAt > now
+        }
+        if (existingTestOrder != null) active[ADMIN_TEST_ORDER_ID] = existingTestOrder
         val suppressed = readSuppressedOrderIds(context).filter { it in active }
         val merged = LinkedHashMap<String, TapCodeEntry>()
         read(context).filter { it.orderId in active && it.orderId !in suppressed && it.expiresAt > now }
@@ -166,6 +186,23 @@ internal object TapCodeVault {
             }
         }
         writePayload(context, merged.values.take(10).toList(), active.values.toList(), suppressed)
+    }
+
+    fun putAdminTestCode(context: Context, code: String) {
+        if (!isEnabled(context) || !code.matches(Regex("^\\d{6}$"))) return
+        val now = System.currentTimeMillis()
+        val expiry = now + 3 * 60 * 1000L
+        val entries = read(context).filterNot { it.orderId == ADMIN_TEST_ORDER_ID }.toMutableList()
+        val active = readActiveOrders(context).filterNot { it.orderId == ADMIN_TEST_ORDER_ID }.toMutableList()
+        active.add(TapCodeActiveOrder(ADMIN_TEST_ORDER_ID, "Admin Autofill test", "This device", expiry))
+        entries.add(TapCodeEntry(ADMIN_TEST_ORDER_ID, code, "Admin Autofill test", "This device", expiry))
+        writePayload(context, entries.take(10), active, readSuppressedOrderIds(context).filterNot { it == ADMIN_TEST_ORDER_ID })
+    }
+
+    fun clearAdminTestCode(context: Context) {
+        val entries = read(context).filterNot { it.orderId == ADMIN_TEST_ORDER_ID }
+        val active = readActiveOrders(context).filterNot { it.orderId == ADMIN_TEST_ORDER_ID }
+        writePayload(context, entries, active, readSuppressedOrderIds(context).filterNot { it == ADMIN_TEST_ORDER_ID })
     }
 
     fun updateExistingOrder(context: Context, orderId: String, code: String) {
@@ -329,7 +366,11 @@ class TapCodeAutofillService : android.service.autofill.AutofillService() {
             callback.onSuccess(null)
             return
         }
-        val entries = TapCodeVault.read(this)
+        val callerPackage = request.fillContexts.lastOrNull()?.structure?.activityComponent?.packageName
+        val isNumelixaTestScreen = callerPackage == packageName
+        val entries = TapCodeVault.read(this).filter {
+            it.orderId != TapCodeVault.ADMIN_TEST_ORDER_ID || isNumelixaTestScreen
+        }
         if (entries.isEmpty()) { callback.onSuccess(null); return }
         val fields = mutableListOf<Pair<android.view.autofill.AutofillId, Int?>>()
         request.fillContexts.forEach { context -> collectOtpFields(context.structure, fields) }

@@ -14,6 +14,10 @@ class TapCodeService {
   Future<void> enable() => _channel.invokeMethod<void>('enableTapCode');
   Future<void> disable() => _channel.invokeMethod<void>('disableTapCode');
   Future<void> clearAll() => _channel.invokeMethod<void>('clearAll');
+
+  Future<void> createAdminTestCode(String code) => _channel.invokeMethod<void>('createAdminTestCode', {'code': code});
+
+  Future<void> clearAdminTestCode() => _channel.invokeMethod<void>('clearAdminTestCode');
   Future<void> clearOrder(String orderId) =>
       _channel.invokeMethod<void>('clearOrder', {'orderId': orderId});
 
