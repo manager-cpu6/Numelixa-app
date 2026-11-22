@@ -110,7 +110,7 @@ class TapCodeOverlayService : Service() {
         val type = if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else WindowManager.LayoutParams.TYPE_PHONE
         val layout = WindowManager.LayoutParams(
-            min(resources.displayMetrics.widthPixels - dp(32), dp(360)),
+            (resources.displayMetrics.widthPixels - dp(32)).coerceAtMost(dp(360)),
             WindowManager.LayoutParams.WRAP_CONTENT,
             type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
