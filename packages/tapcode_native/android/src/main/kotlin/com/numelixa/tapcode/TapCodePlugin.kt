@@ -431,7 +431,7 @@ class TapCodeAutofillService : android.service.autofill.AutofillService() {
             hints.joinToString(" ")
         ).joinToString(" ").lowercase()
         val otpLabel = Regex(
-            "(\\\botp\\\b|one[ _-]?time[ _-]?(password|code)|verification[ _-]?(code|token)|authentication[ _-]?code|security[ _-]?code)"
+            """(\botp\b|one[ _-]?time[ _-]?(password|code)|verification[ _-]?(code|token)|authentication[ _-]?code|security[ _-]?code)"""
         ).containsMatchIn(semanticText)
         val excludedLabel = Regex(
             "(phone|mobile|telephone|credit|debit|card|cvv|cvc|postal|zip|address)"
