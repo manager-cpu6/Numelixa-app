@@ -16,16 +16,12 @@ class AdminTapCodeTestScreen extends StatefulWidget {
 }
 
 class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
-  final _fieldController = TextEditingController();
-  final _fieldFocus = FocusNode();
   Timer? _timer;
   int _selectedSeconds = 10;
   int _remaining = 10;
-  String _testCode = '';
   bool _counting = false;
   bool _preparing = false;
   bool _ready = false;
-  bool _passed = false;
   String? _error;
   Map<String, dynamic> _status = const {};
 
@@ -46,16 +42,13 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
 
   void _startTest() {
     _timer?.cancel();
-    _fieldController.clear();
-    _fieldFocus.unfocus();
+    TapCodeService.instance.clearAdminTestCode().catchError((_) {});
     setState(() {
       _remaining = _selectedSeconds;
       _counting = true;
       _preparing = false;
       _ready = false;
-      _passed = false;
       _error = null;
-      _testCode = '';
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remaining <= 1) {
@@ -79,12 +72,9 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
       await TapCodeService.instance.createAdminTestCode(code);
       if (!mounted) return;
       setState(() {
-        _testCode = code;
         _preparing = false;
         _ready = true;
       });
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      if (mounted) _fieldFocus.requestFocus();
     } on PlatformException catch (e) {
       if (mounted) setState(() {
         _preparing = false;
@@ -98,11 +88,17 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
     }
   }
 
-  void _onCodeChanged(String value) {
-    if (!_ready || _passed || value != _testCode) return;
-    setState(() => _passed = true);
-    HapticFeedback.mediumImpact();
-    TapCodeService.instance.clearAdminTestCode().catchError((_) {});
+  Future<void> _clearTest() async {
+    _timer?.cancel();
+    await TapCodeService.instance.clearAdminTestCode();
+    if (!mounted) return;
+    setState(() {
+      _counting = false;
+      _preparing = false;
+      _ready = false;
+      _remaining = _selectedSeconds;
+      _error = null;
+    });
   }
 
   Future<void> _openTapCodeSettings() async {
@@ -112,28 +108,11 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
     await _refreshStatus();
   }
 
-  void _reset() {
-    _timer?.cancel();
-    TapCodeService.instance.clearAdminTestCode().catchError((_) {});
-    _fieldController.clear();
-    _fieldFocus.unfocus();
-    setState(() {
-      _counting = false;
-      _preparing = false;
-      _ready = false;
-      _passed = false;
-      _testCode = '';
-      _error = null;
-      _remaining = _selectedSeconds;
-    });
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
-    TapCodeService.instance.clearAdminTestCode().catchError((_) {});
-    _fieldController.dispose();
-    _fieldFocus.dispose();
+    // Deliberately keep a ready test code when this screen/app is closed.
+    // Android Autofill must be able to offer it inside another app.
     super.dispose();
   }
 
@@ -178,7 +157,7 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
                   ),
                   const SizedBox(height: 9),
                   const Text(
-                    'Run a local test to confirm Android can offer and fill a Numelixa OTP suggestion.',
+                    'TapCode keeps OTP suggestions ready for other apps. It does not open its own OTP screen.',
                     style: TextStyle(color: AppTheme.muted, height: 1.45),
                   ),
                   const SizedBox(height: 16),
@@ -225,7 +204,7 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Text('Choose when the test OTP should arrive', style: TextStyle(fontWeight: FontWeight.w700)),
+                  const Text('Choose when the test suggestion becomes available', style: TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -269,51 +248,32 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(_preparing ? 'Preparing test suggestion…' : 'Waiting for test OTP…'),
+                        Text(_preparing ? 'Preparing the external Autofill suggestion…' : 'Waiting for test OTP…'),
                       ],
                     )
-                  else if (_passed)
+                  else if (_ready)
                     const Column(
                       children: [
                         Icon(Icons.check_circle_rounded, color: AppTheme.mint, size: 48),
                         SizedBox(height: 8),
-                        Text('Autofill test passed', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-                        Text('The test code was entered into the focused field.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, fontSize: 12)),
-                      ],
-                    )
-                  else if (_ready)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text('TEST CODE READY', style: TextStyle(color: AppTheme.cyan, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                        const SizedBox(height: 8),
-                        const Text('Tap the Numelixa TapCode suggestion above your keyboard to fill this field.', style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.4)),
-                        const SizedBox(height: 14),
-                        AutofillGroup(
-                          child: TextField(
-                            controller: _fieldController,
-                            focusNode: _fieldFocus,
-                            autofocus: true,
-                            autofillHints: const ['smsOTPCode'],
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.done,
-                            maxLength: 6,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: 8),
-                            decoration: const InputDecoration(
-                              labelText: 'Android OTP test field',
-                              hintText: '••••••',
-                              counterText: '',
-                              prefixIcon: Icon(Icons.lock_outline_rounded),
-                            ),
-                            onChanged: _onCodeChanged,
-                          ),
+                        Text('TEST OTP READY', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+                        SizedBox(height: 8),
+                        Text(
+                          'Now leave Numelixa and open another app or website with an OTP field. Tap that field. Android should show the Numelixa TapCode suggestion in its Autofill bar or bottom sheet.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.5),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'The temporary test suggestion remains available for up to 3 minutes, even after Numelixa is closed.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.45),
                         ),
                       ],
                     )
                   else
                     const Text(
-                      'A temporary six-digit test code will be created after the timer. It does not use a real order or send an SMS.',
+                      'This test creates a temporary OTP for Android Autofill. It does not create a text field inside Numelixa or send a real SMS.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.45),
                     ),
@@ -327,11 +287,11 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
                     child: FilledButton.icon(
                       onPressed: _counting || _preparing
                           ? null
-                          : _ready || _passed
-                              ? _reset
+                          : _ready
+                              ? _clearTest
                               : _startTest,
-                      icon: Icon(_ready || _passed ? Icons.restart_alt_rounded : Icons.play_arrow_rounded),
-                      label: Text(_ready || _passed ? 'Run another test' : 'Start test timer'),
+                      icon: Icon(_ready ? Icons.delete_outline_rounded : Icons.play_arrow_rounded),
+                      label: Text(_ready ? 'Clear test suggestion' : 'Start test timer'),
                     ),
                   ),
                 ],
@@ -345,13 +305,13 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('What this test verifies', style: TextStyle(fontWeight: FontWeight.w900)),
+                  Text('How the real feature works', style: TextStyle(fontWeight: FontWeight.w900)),
                   SizedBox(height: 8),
                   Text(
-                    '• Creates a temporary test-only OTP on this device.\n'
-                    '• Opens a real Android Autofill-aware field inside Numelixa.\n'
-                    '• Keeps the test code unavailable to other apps and real customer orders.\n'
-                    '• Removes the test code when you leave this screen or finish the test.',
+                    '• A real OTP received for an active Numelixa order is securely stored on this device.\n'
+                    '• When you focus an OTP field in another app, Android asks Numelixa TapCode for suggestions.\n'
+                    '• Choose the Numelixa suggestion in the system Autofill bar or bottom sheet to fill the code.\n'
+                    '• Android and the other app control when the Autofill prompt appears; Numelixa does not force a popup over other apps.',
                     style: TextStyle(color: AppTheme.muted, fontSize: 12, height: 1.55),
                   ),
                 ],
