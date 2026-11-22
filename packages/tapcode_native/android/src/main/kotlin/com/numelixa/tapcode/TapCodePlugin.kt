@@ -209,13 +209,14 @@ internal object TapCodeVault {
         }
         val active = readActiveOrders(context)
         val suppressed = readSuppressedOrderIds(context).filter { id -> active.any { it.orderId == id } }
+        val visibleEntries = entries.filterNot { it.orderId in suppressed }
         val rawActiveCount = payload.optJSONArray("activeOrders")?.length() ?: 0
         val rawSuppressedCount = payload.optJSONArray("suppressedOrderIds")?.length() ?: 0
-        if (entries.size != list.length() || active.size != rawActiveCount ||
+        if (visibleEntries.size != list.length() || active.size != rawActiveCount ||
             suppressed.size != rawSuppressedCount) {
-            writePayload(context, entries.filterNot { it.orderId in suppressed }, active, suppressed)
+            writePayload(context, visibleEntries, active, suppressed)
         }
-        return entries
+        return visibleEntries
     }
 
     private fun readActiveOrders(context: Context): List<TapCodeActiveOrder> {
