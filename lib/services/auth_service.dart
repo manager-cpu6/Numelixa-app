@@ -16,6 +16,7 @@ class AuthService extends ChangeNotifier {
   bool _validating = false;
   bool _biometricEnabled = false;
   bool _biometricLocked = false;
+  bool _welcomePending = false;
   Map<String, dynamic>? _user;
 
   bool get isReady => _ready;
@@ -26,6 +27,7 @@ class AuthService extends ChangeNotifier {
   String? get accessToken => _accessToken;
   Map<String, dynamic>? get user => _user;
   bool get needsEmailVerification => isSignedIn && _user != null && _user!.containsKey('verified_at') && _user!['verified_at'] == null;
+  bool consumeWelcomeMessage() { final value = _welcomePending; _welcomePending = false; return value; }
 
   Future<void> restore() async {
     if (_ready) return;
@@ -57,7 +59,7 @@ class AuthService extends ChangeNotifier {
         if (ticket.isNotEmpty) {
           final complete = await _api.post('/api/auth/google/native/complete', body: {'ticket': ticket});
           final token = (complete['accessToken'] ?? '').toString();
-          if (token.isNotEmpty) await _saveSession(token, complete['user']);
+          if (token.isNotEmpty) await _saveSession(token, complete['user'], welcome: complete['welcome'] == true);
         }
       }
     } catch (_) {
@@ -229,7 +231,7 @@ class AuthService extends ChangeNotifier {
       if (token.isEmpty) {
         throw const ApiException('The server did not issue a mobile session. Please try again.');
       }
-      await _saveSession(token, complete['user']);
+      await _saveSession(token, complete['user'], welcome: complete['welcome'] == true);
     } finally {
       _validating = false;
       notifyListeners();
@@ -285,9 +287,10 @@ class AuthService extends ChangeNotifier {
         accessToken: _accessToken, body: {'resend': true});
   }
 
-  Future<void> _saveSession(String token, dynamic user) async {
+  Future<void> _saveSession(String token, dynamic user, {bool welcome = false}) async {
     await _storage.write(key: _accessKey, value: token);
     _accessToken = token;
+    _welcomePending = welcome;
     if (user is Map<String, dynamic>) {
       _user = Map<String, dynamic>.from(user);
     } else {
