@@ -90,9 +90,21 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
 
   void _handleAuthChanged() {
-    if (!mounted || !_maintenancePending) return;
+    if (!mounted) return;
     final auth = context.read<AuthService>();
-    if (auth.isSignedIn) _refreshAccessStatus();
+    if (_maintenancePending && auth.isSignedIn) _refreshAccessStatus();
+    if (auth.consumeWelcomeMessage()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Welcome to Numelixa! Your account is ready.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      });
+    }
   }
 
   void _handleUpdatesVisibilityChanged() {
