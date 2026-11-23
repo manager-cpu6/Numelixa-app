@@ -23,6 +23,7 @@ import 'help_team_screen.dart';
 import 'support_admin_screen.dart';
 import 'updates_screen.dart';
 import 'account_tools_screen.dart';
+import 'request_money_screen.dart';
 import 'admin_updates_screen.dart';
 import 'admin_tapcode_test_screen.dart';
 
@@ -316,6 +317,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         ));
         return;
       }
+    }
+    if (route == 'request_money') {
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RequestMoneyScreen()));
+      return;
     }
     if (route.startsWith('updates:')) {
       _openUpdatesNotification(route);
