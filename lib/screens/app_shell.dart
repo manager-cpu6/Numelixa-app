@@ -1885,9 +1885,7 @@ class _OrdersPageState extends State<_OrdersPage> {
                     ? 'Active numbers waiting for an SMS appear here.'
                     : _selected == 'successful'
                       ? 'Completed activations appear here after the code retention period.'
-                      : _selected == 'failed'
-                        ? 'Failed or expired activations appear here when the server reports that status.'
-                        : 'Cancelled activations appear here.',
+                      : 'Cancelled, failed or expired activations appear here.',
                   onRetry: () => setState(_load),
                   empty: true,
                 )
@@ -1914,7 +1912,7 @@ class _OrdersPageState extends State<_OrdersPage> {
                                     _selected == 'active'
                                       ? (_smsCode(order).isEmpty ? 'Waiting for SMS' : 'Code received')
                                       : _selected == 'successful' ? 'Completed'
-                                        : _selected == 'failed' ? 'Failed' : 'Cancelled',
+                                        : _isFailed(order) ? 'Closed' : 'Cancelled',
                                     style: TextStyle(
                                       color: _selected == 'active'
                                         ? AppTheme.cyan
