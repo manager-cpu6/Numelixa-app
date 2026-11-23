@@ -1831,8 +1831,8 @@ class _OrdersPageState extends State<_OrdersPage> {
           if (query.isNotEmpty && !searchable.contains(query)) return false;
           if (_selected == 'active') return _isActive(order);
           if (_selected == 'successful') return _isSuccessful(order);
-          if (_selected == 'failed') return _isFailed(order);
-          return _isCanceled(status);
+          if (_selected == 'canceled') return _isCanceled(status) || _isFailed(order);
+          return _isCanceled(status) || _isFailed(order);
         }).toList()
           ..sort((a, b) {
             final aa = DateTime.tryParse((a['createdAt'] ?? '').toString());
@@ -1865,7 +1865,6 @@ class _OrdersPageState extends State<_OrdersPage> {
                     ('active', 'Active'),
                     ('successful', 'Completed'),
                     ('canceled', 'Cancelled'),
-                    ('failed', 'Failed'),
                   ])
                     Padding(
                       padding: const EdgeInsets.only(right: 7),
