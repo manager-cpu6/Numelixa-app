@@ -3235,8 +3235,12 @@ class _AccountPageState extends State<_AccountPage> {
     final email = (user['email'] ?? user['phone'] ?? 'Numelixa account').toString();
     final publicIdRaw = (user['publicId'] ?? user['numelixaId'] ?? '').toString();
     final publicId = RegExp(r'^\d{7}$').hasMatch(publicIdRaw) ? publicIdRaw : '';
-    final emailVerified = user['emailVerifiedAt'] != null;
-    final phoneVerified = user['phoneVerifiedAt'] != null;
+    // /api/me returns the canonical verified_at field. Older UI code only
+    // checked emailVerifiedAt, which does not exist in that response and made
+    // every signed-in email/Google account look unverified.
+    final verifiedAt = user['verified_at'] ?? user['verifiedAt'] ?? user['emailVerifiedAt'];
+    final emailVerified = verifiedAt != null && verifiedAt.toString().trim().isNotEmpty;
+    final phoneVerified = user['phoneVerifiedAt'] != null || user['phoneVerifiedAt'] != '';
     final isEmailAccount = email.contains('@');
     final verified = isEmailAccount ? emailVerified : phoneVerified;
     final verificationLabel = isEmailAccount ? (emailVerified ? 'Email verified' : 'Email verification pending') : (phoneVerified ? 'Phone verified' : 'Verification pending');
