@@ -88,7 +88,7 @@ class ServiceBrandIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final slug = canonicalSlug(name, id: id);
-    if (slug == null) return SizedBox(width: size, height: size);
+    if (slug == null) return _unknownMark();
     final localIcon = _brands[slug];
     if (localIcon != null) {
       return SizedBox(width: size, height: size,
@@ -100,7 +100,7 @@ class ServiceBrandIcon extends StatelessWidget {
         child: Center(child: Image.network(
           'https://www.google.com/s2/favicons?domain=$domain&sz=128',
           width: size * .72, height: size * .72, fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          errorBuilder: (_, __, ___) => _unknownMark(),
         )));
     }
     return SizedBox(width: size, height: size,
@@ -110,13 +110,40 @@ class ServiceBrandIcon extends StatelessWidget {
         placeholderBuilder: (_) => const SizedBox.shrink(),
         errorBuilder: (_, __, ___) {
           final fallbackDomain = _domains[slug];
-          if (fallbackDomain == null) return const SizedBox.shrink();
+          if (fallbackDomain == null) return _unknownMark();
           return Image.network('https://www.google.com/s2/favicons?domain=$fallbackDomain&sz=128',
             width: size * .72, height: size * .72, fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink());
+            errorBuilder: (_, __, ___) => _unknownMark());
         },
       )));
   }
+
+  Widget _unknownMark() => SizedBox(
+    width: size, height: size,
+    child: Stack(alignment: Alignment.center, children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(size * .24),
+        child: Image.asset('assets/numelixa_app_icon.webp',
+          width: size * .82, height: size * .82, fit: BoxFit.cover),
+      ),
+      Positioned(
+        right: 0, bottom: 0,
+        child: Container(
+          width: size * .34, height: size * .34,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0D2345),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF00D9E8), width: 1.2),
+          ),
+          alignment: Alignment.center,
+          child: Text('?', style: TextStyle(
+            color: Colors.white, fontWeight: FontWeight.w900,
+            fontSize: size * .22, height: 1,
+          )),
+        ),
+      ),
+    ]),
+  );
 
   static Color _brandColor(String key) {
     const colors = <String, Color>{
