@@ -3240,7 +3240,8 @@ class _AccountPageState extends State<_AccountPage> {
     // every signed-in email/Google account look unverified.
     final verifiedAt = user['verified_at'] ?? user['verifiedAt'] ?? user['emailVerifiedAt'];
     final emailVerified = verifiedAt != null && verifiedAt.toString().trim().isNotEmpty;
-    final phoneVerified = user['phoneVerifiedAt'] != null || user['phoneVerifiedAt'] != '';
+    final phoneVerifiedValue = user['phoneVerifiedAt'];
+    final phoneVerified = phoneVerifiedValue != null && phoneVerifiedValue.toString().trim().isNotEmpty;
     final isEmailAccount = email.contains('@');
     final verified = isEmailAccount ? emailVerified : phoneVerified;
     final verificationLabel = isEmailAccount ? (emailVerified ? 'Email verified' : 'Email verification pending') : (phoneVerified ? 'Phone verified' : 'Verification pending');
