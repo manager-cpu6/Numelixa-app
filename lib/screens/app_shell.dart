@@ -2277,6 +2277,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
   bool _creating = false;
   bool _localPaymentsOpen = false;
   bool _ethiopiaPaymentsOpen = false;
+  bool _localCountrySelected = false;
   Map<String, dynamic> _ethiopiaMethods = {};
   String _ethiopiaMethod = 'coopay_ebirr';
   double _ethiopiaSwipe = 0;
@@ -2818,9 +2819,9 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               const SizedBox(height: 9),
               Row(children: [
                 Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'crypto', icon: Icons.currency_bitcoin_rounded, title: 'Crypto Payment', subtitle: 'USDT and other supported coins', onTap: () => setState(() { _paymentMethod = 'crypto'; _cryptoStep = false; }))),
-                const SizedBox(width: 10), Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local', enabled: _localPaymentsOpen, icon: Icons.account_balance_wallet_rounded, title: 'Somalia', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab · Premier' : 'Somalia mobile money is currently closed', onTap: () => setState(() { _paymentMethod = 'local'; _cryptoStep = false; }))),
+                const SizedBox(width: 10),
+                Expanded(child: _PaymentChoiceCard(selected: _paymentMethod == 'local' || _paymentMethod == 'ethiopia', enabled: _localPaymentsOpen || _ethiopiaPaymentsOpen, icon: Icons.account_balance_wallet_rounded, title: 'Local Payment', subtitle: 'Choose Somalia or Ethiopia', onTap: () => setState(() { _paymentMethod = 'local'; _localCountrySelected = false; _cryptoStep = false; }))),
               ]),
-              if (_ethiopiaPaymentsOpen) ...[const SizedBox(height: 10), _PaymentChoiceCard(selected: _paymentMethod == 'ethiopia', icon: Icons.account_balance_rounded, title: 'Ethiopia Payment', subtitle: 'eBirr and Ethiopian bank transfers', onTap: () => setState(() { _paymentMethod = 'ethiopia'; _cryptoStep = false; }))],
               const SizedBox(height: 10),
               Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12), decoration: BoxDecoration(color: const Color(0xFF091A30), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF243A56))), child: Row(children: [
                 Image.network('https://cdn.simpleicons.org/visa/1A1F71', width: 34, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('VISA', style: TextStyle(fontWeight: FontWeight.w900))),
@@ -2849,7 +2850,19 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               ],
             ]))),
           ],
-          if (_localPaymentsOpen && _paymentMethod == 'local') ...[
+          if (_paymentMethod == 'local' && !_localCountrySelected) ...[
+            const SizedBox(height: 12),
+            Card(child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('3. Choose your country', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: _PaymentChoiceCard(selected: false, enabled: _somaliaPaymentEnabled, icon: Icons.flag_rounded, title: 'Somalia', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab' : 'Currently unavailable', onTap: () => setState(() { _localCountrySelected = true; _paymentMethod = 'local'; }))),
+                const SizedBox(width: 10),
+                Expanded(child: _PaymentChoiceCard(selected: false, enabled: _ethiopiaPaymentsOpen, icon: Icons.account_balance_rounded, title: 'Ethiopia', subtitle: _ethiopiaPaymentsOpen ? 'eBirr · CBE · Telebirr and more' : 'Currently unavailable', onTap: () => setState(() { _localCountrySelected = true; _paymentMethod = 'ethiopia'; }))),
+              ]),
+            ]))),
+          ],
+          if (_localPaymentsOpen && _paymentMethod == 'local' && _localCountrySelected) ...[
             const SizedBox(height: 12),
             Card(child: Padding(padding: const EdgeInsets.all(15), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('3. Local wallet details', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.cyan)),
@@ -2884,7 +2897,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               if (_pendingLocalOrderId != null) Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(onPressed: _checkingLocalPayment ? null : _verifyLocalPayment, icon: const Icon(Icons.refresh_rounded), label: Text(_checkingLocalPayment ? 'Checking payment…' : 'Check payment status'))),
             ]))),
           ],
-          if (_paymentMethod == 'ethiopia' && _ethiopiaPaymentsOpen) ...[
+          if (_paymentMethod == 'ethiopia' && _ethiopiaPaymentsOpen && _localCountrySelected) ...[
             const SizedBox(height: 12),
             Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('Ethiopia · Secure local payment', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppTheme.cyan)),
