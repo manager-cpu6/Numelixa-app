@@ -2856,7 +2856,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               const Text('3. Choose your country', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(child: _PaymentChoiceCard(selected: false, enabled: _somaliaPaymentEnabled, icon: Icons.flag_rounded, title: 'Somalia', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab' : 'Currently unavailable', onTap: () => setState(() { _localCountrySelected = true; _paymentMethod = 'local'; }))),
+                Expanded(child: _PaymentChoiceCard(selected: false, enabled: _localPaymentsOpen, icon: Icons.flag_rounded, title: 'Somalia', subtitle: _localPaymentsOpen ? 'Waafi · EVC · ZAAD · SAHAL · eDahab' : 'Currently unavailable', onTap: () => setState(() { _localCountrySelected = true; _paymentMethod = 'local'; }))),
                 const SizedBox(width: 10),
                 Expanded(child: _PaymentChoiceCard(selected: false, enabled: _ethiopiaPaymentsOpen, icon: Icons.account_balance_rounded, title: 'Ethiopia', subtitle: _ethiopiaPaymentsOpen ? 'eBirr · CBE · Telebirr and more' : 'Currently unavailable', onTap: () => setState(() { _localCountrySelected = true; _paymentMethod = 'ethiopia'; }))),
               ]),
