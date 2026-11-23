@@ -2809,7 +2809,11 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
               Container(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12), decoration: BoxDecoration(color: const Color(0xFF091A30), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF243A56))), child: Row(children: [
                 Image.network('https://cdn.simpleicons.org/visa/1A1F71', width: 34, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('VISA', style: TextStyle(fontWeight: FontWeight.w900))),
                 const SizedBox(width: 8),
-                Image.network('https://cdn.simpleicons.org/mastercard/EB001B', width: 30, height: 24, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Text('MC', style: TextStyle(fontWeight: FontWeight.w900))),
+                SizedBox(width: 34, height: 24, child: Stack(alignment: Alignment.center, children: [
+                  Positioned(left: 3, child: Container(width: 19, height: 19, decoration: const BoxDecoration(color: Color(0xFFEB001B), shape: BoxShape.circle))),
+                  Positioned(right: 3, child: Container(width: 19, height: 19, decoration: const BoxDecoration(color: Color(0xFFF79E1B), shape: BoxShape.circle))),
+                  Positioned(left: 12, child: Container(width: 10, height: 19, decoration: BoxDecoration(color: const Color(0xFFFF5F00).withOpacity(.95)))),
+                ])),
                 const SizedBox(width: 12),
                 const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Visa / Mastercard', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -3020,7 +3024,7 @@ class _WalletPageState extends State<_WalletPage> with WidgetsBindingObserver {
             if (_transactionFilter != 'all' && type != _transactionFilter) return false;
             final searchable = '${item['description'] ?? ''} ${item['reference'] ?? ''} ${item['createdAt'] ?? ''}'.toLowerCase();
             return query.isEmpty || searchable.contains(query);
-          }).toList();
+          }).take(5).toList();
           if (items.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No wallet ledger transactions have been recorded yet.')));
           if (filteredItems.isEmpty) return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No transactions match these filters.')));
           return Column(children: filteredItems.map((item) {
