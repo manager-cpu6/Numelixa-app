@@ -548,36 +548,6 @@ class _NumelixaLogo extends StatelessWidget {
   );
 }
 
-class _NumelixaMarkPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width / 2, size.height / 2);
-    final r = size.width * .37;
-    final bg = Paint()..color = const Color(0xFF071329);
-    final border = Paint()..color = const Color(0xFF1677FF)..style = PaintingStyle.stroke..strokeWidth = size.width * .035;
-    final line = Paint()..color = const Color(0xFF00D9FF)..style = PaintingStyle.stroke..strokeWidth = size.width * .025;
-    canvas.drawCircle(c, size.width * .48, bg);
-    canvas.drawCircle(c, r, border);
-    canvas.drawOval(Rect.fromCenter(center:c,width:r*1.25,height:r*2),line);
-    canvas.drawOval(Rect.fromCenter(center:c,width:r*2,height:r*.72),line);
-    final n = Path()
-      ..moveTo(c.dx-r*.48,c.dy+r*.48)
-      ..lineTo(c.dx-r*.48,c.dy-r*.48)
-      ..lineTo(c.dx+r*.48,c.dy+r*.48)
-      ..lineTo(c.dx+r*.48,c.dy-r*.48);
-    final np = Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=size.width*.105..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round;
-    canvas.drawPath(n,np);
-    final orbit=Path()
-      ..moveTo(size.width*.08,size.height*.62)
-      ..cubicTo(size.width*.24,size.height*.02,size.width*.78,size.height*.02,size.width*.93,size.height*.39);
-    final op=Paint()..color=const Color(0xFF8B5CF6)..style=PaintingStyle.stroke..strokeWidth=size.width*.035..strokeCap=StrokeCap.round;
-    canvas.drawPath(orbit,op);
-    canvas.drawCircle(Offset(size.width*.93,size.height*.39),size.width*.035,Paint()..color=const Color(0xFF8B5CF6));
-  }
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
   @override
