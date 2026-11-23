@@ -65,7 +65,8 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen>{
    await load();
    if(action=='confirm'&&mounted){
     final receipt=Map<String,dynamic>.from(result['receipt']??{});
-    final receiptText='Receipt: '+(receipt['receiptId']??'—').toString()+'\nAmount: '+money(request['amountUsd'])+' USD\nThe wallet debit and credit have been recorded.';
+    final paidTo=Map<String,dynamic>.from(receipt['paidTo']??request['requester']??{});
+    final receiptText='Receipt: '+(receipt['receiptId']??'—').toString()+'\nAmount: '+money(request['amountUsd'])+' USD\nPaid to: '+(paidTo['name']??'Numelixa user').toString()+'\nNumelixa ID: '+(paidTo['publicId']??'—').toString()+'\nPaid at: '+(receipt['paidAt']??DateTime.now().toIso8601String()).toString()+'\nThe wallet debit and credit have been recorded.';
     await showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
      title:const Text('Transfer complete'),
      content:Text(receiptText),
