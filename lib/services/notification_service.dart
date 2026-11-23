@@ -53,6 +53,7 @@ String _routeFor(Map<String, dynamic> data) {
   if (type == 'updates_post' && (data['channelSlug'] ?? '').toString().isNotEmpty) return 'updates:' + (data['channelSlug'] ?? '').toString() + ':' + (data['postId'] ?? '').toString();
   // Payment notifications can carry an orderId too (notably Ethiopia). Route
   // those to Wallet before applying the generic orderId -> Orders rule.
+  if (type.contains('wallet_request')) return 'request_money';
   if (type.contains('wallet') || type.contains('payment') || type.contains('balance')) return 'wallet';
   final orderId = (data['orderId'] ?? '').toString().trim();
   if (orderId.isNotEmpty && (type == 'sms' || type.contains('verification') || type.contains('order'))) return 'order:' + orderId;

@@ -5,9 +5,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 /// Brand marks are resolved from an explicit, reviewed catalogue. Unknown
 /// service IDs never become random Simple Icons slugs or misleading initials.
 class ServiceBrandIcon extends StatelessWidget {
-  const ServiceBrandIcon({super.key, required this.name, this.id, this.size = 46});
+  const ServiceBrandIcon({super.key, required this.name, this.id, this.iconUrl, this.size = 46});
   final String name;
   final String? id;
+  final String? iconUrl;
   final double size;
 
   static String _key(String value) => value.toLowerCase().replaceAll('š', 's').replaceAll('Š', 's').replaceAll(RegExp(r'[^a-z0-9]'), '');
@@ -87,6 +88,12 @@ class ServiceBrandIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = (iconUrl ?? "").trim();
+    if (custom.startsWith("https://")) {
+      return SizedBox(width: size, height: size,
+        child: Image.network(custom, width: size, height: size, fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => _unknownMark()));
+    }
     final slug = canonicalSlug(name, id: id);
     if (slug == null) return _unknownMark();
     final localIcon = _brands[slug];
