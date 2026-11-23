@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 import '../core/theme/app_theme.dart';
 import '../services/notification_service.dart';
 import '../services/tapcode_service.dart';
@@ -159,6 +160,7 @@ class _TapCodeSettingsScreenState extends State<TapCodeSettingsScreen> with Widg
     final osEnabled = _status['osEnabled'] == true;
     final overlayPermission = _status['overlayPermission'] == true;
     final overlayEnabled = _status['overlayEnabled'] == true;
+    final isAdmin = context.watch<AuthService>().user?['role'] == 'admin';
     return Scaffold(
       appBar: AppBar(title: const Text('Numelixa Autofill'),
         actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))]),
@@ -235,6 +237,7 @@ class _TapCodeSettingsScreenState extends State<TapCodeSettingsScreen> with Widg
           ),
         ])),
         const SizedBox(height: 12),
+        if (isAdmin) ...[
         Card(child: ListTile(
           leading: const Icon(Icons.timer_rounded, color: AppTheme.cyan),
           title: const Text('Test floating OTP popup'),
@@ -244,6 +247,7 @@ class _TapCodeSettingsScreenState extends State<TapCodeSettingsScreen> with Widg
             MaterialPageRoute<void>(builder: (_) => const AdminTapCodeTestScreen()),
           ),
         )),
+        ],
         const SizedBox(height: 16),
         const _Heading('HOW TO SET UP'),
         const Card(child: Padding(padding: EdgeInsets.all(15), child: Column(children: [
