@@ -211,9 +211,9 @@ jobs:
                   if mirror in block:
                       continue
                   if 'mavenCentral()' in block:
-                      block = block.replace('mavenCentral()', mirror + '\\n        mavenCentral()', 1)
+                      block = block.replace('mavenCentral()', mirror + '\n        mavenCentral()', 1)
                   else:
-                      block = '\\n        ' + mirror + block
+                      block = '\n        ' + mirror + block
                   source = source[:brace + 1] + block + source[end:]
               p.write_text(source)
 
