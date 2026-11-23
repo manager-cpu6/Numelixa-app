@@ -1366,6 +1366,7 @@ class _CatalogPageState extends State<_CatalogPage> {
   Widget _serviceLogo(Map<String, dynamic> service) => ServiceBrandIcon(
     name: _serviceName(service),
     id: (service['id'] ?? service['code'] ?? '').toString(),
+    iconUrl: (service['icon'] ?? '').toString(),
     size: 48,
   );
   @override
