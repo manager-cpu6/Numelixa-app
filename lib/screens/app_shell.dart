@@ -1418,7 +1418,11 @@ class _CatalogPageState extends State<_CatalogPage> {
           final brand = popularOrder[i];
           if (canonical == brand || canonical.startsWith(brand)) return i;
         }
-        return popularOrder.length;
+        final hasBrand = ServiceBrandIcon.hasVerifiedIcon(
+          _serviceName(service),
+          id: (service['id'] ?? service['code'] ?? '').toString(),
+        );
+        return popularOrder.length + (hasBrand ? 0 : 1);
       }
       services.sort((a, b) => serviceRank(a).compareTo(serviceRank(b)));
       if (services.isEmpty) return _RetryState(message: 'No live services are available right now.', onRetry: () => setState(_load));
