@@ -538,9 +538,13 @@ class _NumelixaLogo extends StatelessWidget {
   const _NumelixaLogo({this.size = 44});
   final double size;
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: size, height: size,
-    child: CustomPaint(size: Size.square(size), painter: _NumelixaMarkPainter()),
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(size * .24),
+    child: Image.asset(
+      'assets/numelixa_app_icon.webp',
+      width: size, height: size, fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+    ),
   );
 }
 
