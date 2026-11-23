@@ -3313,6 +3313,7 @@ class _AccountPageState extends State<_AccountPage> {
       ]),
       const SizedBox(height: 14),
       _AccountSection(title: 'PREFERENCES', children: [
+        _AccountAction(icon: Icons.account_balance_wallet_rounded, title: 'Request Money Another User', subtitle: 'Request a wallet transfer using a Numelixa ID', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RequestMoneyScreen()))),
         _AccountAction(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Notifications, Updates and app lock', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountSettingsScreen()))),
       ]),
       const SizedBox(height: 16),
