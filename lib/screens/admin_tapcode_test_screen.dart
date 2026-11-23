@@ -3,9 +3,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../core/theme/app_theme.dart';
 import '../services/tapcode_service.dart';
+import '../services/auth_service.dart';
 import 'tapcode_screen.dart';
 
 class AdminTapCodeTestScreen extends StatefulWidget {
@@ -28,7 +30,14 @@ class _AdminTapCodeTestScreenState extends State<AdminTapCodeTestScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshStatus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (context.read<AuthService>().user?['role'] != 'admin') {
+        Navigator.of(context).pop();
+        return;
+      }
+      _refreshStatus();
+    });
   }
 
   Future<void> _refreshStatus() async {
