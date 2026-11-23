@@ -95,9 +95,9 @@ class _RequestMoneyScreenState extends State<RequestMoneyScreen>{
    if(requests.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(16),child:Text('No money requests yet.'))),
    ...requests.map((request){
     final payer=Map<String,dynamic>.from(request['payer']??{});
-    final incoming=String(payer['id']??'')==myId;
+    final incoming=(payer['id']??'').toString()==myId;
     final other=Map<String,dynamic>.from((incoming?request['requester']:request['payer'])??{});
-    final status=String(request['status']??'pending');
+    final status=(request['status']??'pending').toString();
     final detail='ID '+(other['publicId']??'—').toString()+' · '+status.toUpperCase()+'\n'+money(request['amountUsd'])+' USD';
     return Card(child:ListTile(
      isThreeLine:true,
