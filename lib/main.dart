@@ -87,7 +87,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       visibility: NotificationVisibility.private,
       playSound: true,
       icon: notificationIconFor(data),
-      largeIcon: DrawableResourceAndroidBitmap(notificationIconFor(data).replaceFirst('@drawable/', '') + '_color'),
+      largeIcon: const DrawableResourceAndroidBitmap('numelixa_launcher'),
       actions: actions.isEmpty ? null : actions,
     )),
     payload: jsonEncode({...data, 'body': body}),
