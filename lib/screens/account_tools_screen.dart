@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import 'updates_screen.dart';
 import 'tapcode_screen.dart';
+import 'request_money_screen.dart';
 
 class AccountSettingsScreen extends StatefulWidget{
  const AccountSettingsScreen({super.key});
@@ -64,6 +65,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
     const Divider(height:1),
     ListTile(enabled:_updatesEnabled,leading:const Icon(Icons.block_outlined,color:AppTheme.cyan),title:const Text('Blocked channels'),subtitle:const Text('Review and unblock channels'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const BlockedUpdatesChannelsScreen()))),
    ])),
+   const SizedBox(height:14),const _SettingHeading('WALLET'),
+   Card(child:ListTile(leading:const Icon(Icons.request_quote_outlined,color:AppTheme.cyan),title:const Text('Request Money Another User'),subtitle:const Text('Request wallet funds using another user’s Numelixa ID'),trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const RequestMoneyScreen())))),
    const SizedBox(height:14),const _SettingHeading('TAPCODE'),
    Card(child:ListTile(leading:const Icon(Icons.password_rounded,color:AppTheme.cyan),title:const Text('Numelixa TapCode'),subtitle:const Text('User-controlled OTP Autofill and code privacy'),trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const TapCodeSettingsScreen())))),
    const SizedBox(height:14),const _SettingHeading('SECURITY'),
