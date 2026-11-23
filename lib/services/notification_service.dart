@@ -268,7 +268,7 @@ class NotificationService {
         android: AndroidNotificationDetails(channelId, _channelNameFor(channelId),
           channelDescription: _channelDescriptionFor(channelId),
           importance: Importance.max, priority: Priority.high, visibility: NotificationVisibility.private, playSound: true, icon: _notificationIcon(message.data),
-          largeIcon: DrawableResourceAndroidBitmap(_notificationIcon(message.data).replaceFirst('@drawable/', '') + '_color'),
+          largeIcon: const DrawableResourceAndroidBitmap('numelixa_launcher'),
           actions: actions.isEmpty ? null : actions),
       ),
       payload: jsonEncode(notificationData),
