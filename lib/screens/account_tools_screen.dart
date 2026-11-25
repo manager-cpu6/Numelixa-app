@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_theme.dart';
+import '../config/parent_company_branding.dart';
+import '../widgets/parent_company_attribution.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -215,17 +217,17 @@ class TavortAboutScreen extends StatelessWidget {
    const SizedBox(height:12),
    const Center(child:Text('NUMELIXA',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900,letterSpacing:2.4))),
    const SizedBox(height:5),
-   const Center(child:Text('A Tavort Company',style:TextStyle(color:AppTheme.cyan,fontSize:12,fontWeight:FontWeight.w700,letterSpacing:.5))),
+   const ParentCompanyAttribution(label: ParentCompanyBranding.companyLabel, color: AppTheme.cyan),
    const SizedBox(height:22),
    const Card(child:Padding(padding:EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text('Parent technology company',style:TextStyle(color:AppTheme.muted,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1)),
-    SizedBox(height:8),Text('TAVORT',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
-    SizedBox(height:8),Text('TAVORT is a technology company building and developing digital products, applications, and platforms.',style:TextStyle(color:AppTheme.muted,height:1.55)),
+    SizedBox(height:8),Text(ParentCompanyBranding.name,style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+    SizedBox(height:8),Text(ParentCompanyBranding.description,style:TextStyle(color:AppTheme.muted,height:1.55)),
    ]))),
    const SizedBox(height:12),
    const Card(child:ListTile(leading:Icon(Icons.layers_outlined,color:AppTheme.cyan),title:Text('Independent product identity'),subtitle:Text('Numelixa remains an independent product brand within the TAVORT family.'))),
    const SizedBox(height:18),
-   const Center(child:Text('From Tavort',style:TextStyle(color:AppTheme.muted,fontSize:11,fontWeight:FontWeight.w600))),
+   const ParentCompanyAttribution(label: ParentCompanyBranding.fromLabel),
   ]),
  );
 }
