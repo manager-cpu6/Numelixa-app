@@ -9,6 +9,7 @@ import 'package:gal/gal.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
+import '../config/tavort_logo_data.dart';
 import '../widgets/service_brand_icon.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -566,7 +567,7 @@ class _SplashScreen extends StatelessWidget {
       const SizedBox(height: 7),
       const Text('Numbers, without the noise.', style: TextStyle(color: Color(0xFF91A8C4))),
       const SizedBox(height: 18),
-      Image.asset('assets/tavort_logo.webp', width: 112, height: 112, fit: BoxFit.contain, filterQuality: FilterQuality.high),
+      Image.memory(base64Decode(TavortLogoData.base64), width: 112, height: 112, fit: BoxFit.contain, filterQuality: FilterQuality.high),
       const SizedBox(height: 8),
       const Text('From Tavort', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: .8)),
       const SizedBox(height: 22),
