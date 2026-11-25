@@ -75,6 +75,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>{
     const Divider(height:1),
 
    ])),
+   const SizedBox(height:14),const _SettingHeading('ABOUT'),
+   Card(child:ListTile(leading:const Icon(Icons.info_outline_rounded,color:AppTheme.cyan),title:const Text('About Numelixa'),subtitle:const Text('App information and parent company'),trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const TavortAboutScreen())))),
    const SizedBox(height:14),const _SettingHeading('SUPPORT'),
    const Card(child:ListTile(leading:Icon(Icons.support_agent_rounded,color:AppTheme.cyan),title:Text('Need help?'),subtitle:Text('Contact the official Numelixa support team.'))),
   ]));
@@ -200,4 +202,30 @@ class _BlockedUpdatesChannelsScreenState extends State<BlockedUpdatesChannelsScr
 class _SettingHeading extends StatelessWidget{
  const _SettingHeading(this.label);final String label;
  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.only(left:4,bottom:8),child:Text(label,style:const TextStyle(color:AppTheme.muted,fontSize:11,fontWeight:FontWeight.w900,letterSpacing:1.3)));
+}
+
+class TavortAboutScreen extends StatelessWidget {
+ const TavortAboutScreen({super.key});
+ @override
+ Widget build(BuildContext context)=>Scaffold(
+  appBar:AppBar(title:const Text('About Numelixa')),
+  body:ListView(padding:const EdgeInsets.all(20),children:[
+   const SizedBox(height:18),
+   const Center(child:Icon(Icons.phone_android_rounded,color:AppTheme.cyan,size:54)),
+   const SizedBox(height:12),
+   const Center(child:Text('NUMELIXA',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900,letterSpacing:2.4))),
+   const SizedBox(height:5),
+   const Center(child:Text('A Tavort Company',style:TextStyle(color:AppTheme.cyan,fontSize:12,fontWeight:FontWeight.w700,letterSpacing:.5))),
+   const SizedBox(height:22),
+   const Card(child:Padding(padding:EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text('Parent technology company',style:TextStyle(color:AppTheme.muted,fontSize:11,fontWeight:FontWeight.w800,letterSpacing:1)),
+    SizedBox(height:8),Text('TAVORT',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+    SizedBox(height:8),Text('TAVORT is a technology company building and developing digital products, applications, and platforms.',style:TextStyle(color:AppTheme.muted,height:1.55)),
+   ]))),
+   const SizedBox(height:12),
+   const Card(child:ListTile(leading:Icon(Icons.layers_outlined,color:AppTheme.cyan),title:Text('Independent product identity'),subtitle:Text('Numelixa remains an independent product brand within the TAVORT family.'))),
+   const SizedBox(height:18),
+   const Center(child:Text('From Tavort',style:TextStyle(color:AppTheme.muted,fontSize:11,fontWeight:FontWeight.w600))),
+  ]),
+ );
 }
