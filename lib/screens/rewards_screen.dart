@@ -51,8 +51,10 @@ class _RewardsScreenState extends State<RewardsScreen>{
         backgroundColor:const Color(0xFFF7FAFF),
         title:const Row(children:[Icon(Icons.hourglass_top_rounded,color:Color(0xFFD28B20)),SizedBox(width:9),Expanded(child:Text('Withdrawal pending',style:TextStyle(color:Color(0xFF17263B),fontWeight:FontWeight.w900)))]),
         content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Center(child:SizedBox(width:112,height:112,child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.verified_rounded,color:Color(0xFF168CFF),size:48)))),
           Text(_money(amount),style:const TextStyle(color:Color(0xFF17263B),fontSize:30,fontWeight:FontWeight.w900)),
           Text('Bank: $_bank',style:const TextStyle(color:Color(0xFF53647A))),
+          
           Text('Country: $_country',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Account: $account',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Receipt: $receiptId',style:const TextStyle(color:Color(0xFF53647A))),
@@ -70,7 +72,7 @@ class _RewardsScreenState extends State<RewardsScreen>{
     final d=_data;
     return Scaffold(appBar:AppBar(title:const Text('Numelixa Rewards'),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh_rounded))]),body:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(16,12,16,28),children:[
       Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF103B6E),Color(0xFF25184E)]),borderRadius:BorderRadius.circular(24),border:Border.all(color:AppTheme.cyan.withValues(alpha:.25))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        const Icon(Icons.card_giftcard_rounded,color:Color(0xFFFFD36B),size:34),const SizedBox(height:12),
+        ClipRRect(borderRadius:BorderRadius.circular(16),child:SizedBox(height:142,width:double.infinity,child:Image.network('https://numelixa.com/brand/numelixa-rewards-campaign.webp',fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.card_giftcard_rounded,color:Color(0xFFFFD36B),size:40))))),const SizedBox(height:12),
         const Text('Share Numelixa. Earn rewards.',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
         const SizedBox(height:8),const Text('Invite friends and earn when their eligible payments are verified.',style:TextStyle(color:AppTheme.muted,height:1.5)),
         const SizedBox(height:18),const Text('AVAILABLE REWARDS',style:TextStyle(color:AppTheme.cyan,fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.4)),
