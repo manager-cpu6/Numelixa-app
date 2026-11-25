@@ -52,8 +52,8 @@ class _RewardsScreenState extends State<RewardsScreen>{
         backgroundColor:const Color(0xFFF7FAFF),
         title:const Row(children:[Icon(Icons.hourglass_top_rounded,color:Color(0xFFD28B20)),SizedBox(width:9),Expanded(child:Text('Withdrawal pending',style:TextStyle(color:Color(0xFF17263B),fontWeight:FontWeight.w900)))]),
         content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          Center(child:SizedBox(width:112,height:112,child:SvgPicture.network('https://numelixa.com/numelixa-official-seal.svg',fit:BoxFit.contain))),\n          Text(_money(amount),style:const TextStyle(color:Color(0xFF17263B),fontSize:30,fontWeight:FontWeight.w900)),
-          Text('Bank: $_bank',style:const TextStyle(color:Color(0xFF53647A))),\n          Align(alignment:Alignment.centerRight,child:SizedBox(width:180,height:58,child:SvgPicture.network('https://numelixa.com/numelixa-signature.svg',fit:BoxFit.contain))),
+          Center(child:SizedBox(width:112,height:112,child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.verified_rounded,color:Color(0xFF168CFF),size:48)))),\n          Text(_money(amount),style:const TextStyle(color:Color(0xFF17263B),fontSize:30,fontWeight:FontWeight.w900)),
+          Text('Bank: $_bank',style:const TextStyle(color:Color(0xFF53647A))),\n          
           Text('Country: $_country',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Account: $account',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Receipt: $receiptId',style:const TextStyle(color:Color(0xFF53647A))),
