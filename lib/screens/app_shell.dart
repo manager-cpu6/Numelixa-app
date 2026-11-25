@@ -9,6 +9,8 @@ import 'package:gal/gal.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
+import '../config/parent_company_branding.dart';
+import '../widgets/parent_company_attribution.dart';
 import '../widgets/service_brand_icon.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
