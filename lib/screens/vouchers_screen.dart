@@ -27,7 +27,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
       final result=await ApiClient().post('/api/mobile/vouchers/redeem',accessToken:auth.accessToken,body:{'code':code});
       if(result['ok']!=true||result['receipt'] is! Map)throw ApiException((result['error']??'Voucher redemption was not confirmed.').toString());
       if(!mounted)return;
-      setState(()=>{_receipt=Map<String,dynamic>.from(result['receipt'] as Map),_emailSent=result['emailSent']==true});
+      setState((){_receipt=Map<String,dynamic>.from(result['receipt'] as Map);_emailSent=result['emailSent']==true;});
       _code.clear();
     }on ApiException catch(e){if(mounted)setState(()=>_error=e.message);}
     catch(_){if(mounted)setState(()=>_error='Unable to redeem this code right now. Please try again.');}
