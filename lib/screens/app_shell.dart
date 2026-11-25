@@ -9,8 +9,6 @@ import 'package:gal/gal.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/theme/app_theme.dart';
-import '../config/parent_company_branding.dart';
-import '../widgets/parent_company_attribution.dart';
 import '../widgets/service_brand_icon.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -567,9 +565,11 @@ class _SplashScreen extends StatelessWidget {
       const Text('NUMELIXA', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 3)),
       const SizedBox(height: 7),
       const Text('Numbers, without the noise.', style: TextStyle(color: Color(0xFF91A8C4))),
-      const SizedBox(height: 10),
-      const ParentCompanyAttribution(label: ParentCompanyBranding.fromLabel, color: Color(0xFF7F9AB8)),
-      const SizedBox(height: 25),
+      const SizedBox(height: 18),
+      Image.asset('assets/tavort_logo.webp', width: 112, height: 112, fit: BoxFit.contain, filterQuality: FilterQuality.high),
+      const SizedBox(height: 8),
+      const Text('From Tavort', style: TextStyle(color: Color(0xFF91A8C4), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: .8)),
+      const SizedBox(height: 22),
       const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
     ])),
   );
@@ -952,7 +952,6 @@ class _AuthScreenState extends State<_AuthScreen> {
               Center(child: Text(_creating ? 'Already registered? Sign in' : 'New to Numelixa? Create an account',
                 style: const TextStyle(color: Color(0xFFA8BED5), fontSize: 12))),
               const SizedBox(height: 22),
-              const ParentCompanyAttribution(label: ParentCompanyBranding.fromLabel, color: Color(0xFF7892AF)),
             ]),
           ),
         ))),
