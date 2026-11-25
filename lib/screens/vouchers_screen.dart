@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
@@ -40,7 +41,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
     final receipt=_receipt;
     return Scaffold(appBar:AppBar(title:const Text('Vouchers')),body:ListView(padding:const EdgeInsets.fromLTRB(16,12,16,28),children:[
       Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF103C70),Color(0xFF21194F)]),borderRadius:BorderRadius.circular(24),border:Border.all(color:AppTheme.cyan.withValues(alpha:.25))),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Icon(Icons.card_giftcard_rounded,color:AppTheme.cyan,size:34),SizedBox(height:14),
+        ClipRRect(borderRadius:BorderRadius.circular(16),child:SizedBox(height:132,width:double.infinity,child:SvgPicture.network('https://numelixa.com/numelixa-voucher-hero.svg',fit:BoxFit.cover,placeholderBuilder:(_)=>const Center(child:Icon(Icons.card_giftcard_rounded,color:AppTheme.cyan,size:42))))),const SizedBox(height:14),
         Text('Redeem a Numelixa voucher',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),SizedBox(height:6),
         Text('Enter your voucher code. If it is valid, the reward is added to your wallet and a receipt is sent to your email.',style:TextStyle(color:AppTheme.muted,height:1.5)),
       ])),
@@ -57,13 +58,13 @@ class _VouchersScreenState extends State<VouchersScreen> {
         const Text('Only official active codes can be redeemed. Each account can use a voucher only as permitted by its redemption limit.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.5)),
       ]else ...[
         Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:const Color(0xFFF8FBFF),borderRadius:BorderRadius.circular(22),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.22),blurRadius:22,offset:const Offset(0,12))]),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          const Center(child:Icon(Icons.verified_rounded,color:Color(0xFF079B79),size:54)),const SizedBox(height:10),
+          const Center(child:Icon(Icons.verified_rounded,color:Color(0xFF079B79),size:54)),const SizedBox(height:10),Center(child:SizedBox(width:116,height:116,child:SvgPicture.network('https://numelixa.com/numelixa-official-seal.svg',fit:BoxFit.contain,placeholderBuilder:(_)=>const Icon(Icons.verified_rounded,color:Color(0xFF079B79),size:52)))),const SizedBox(height:8),
           const Text('VOUCHER REDEEMED',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF087D65),fontWeight:FontWeight.w900,letterSpacing:1.4)),const SizedBox(height:6),
           Text(_money(receipt['amountUsd']),textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF101C31),fontSize:34,fontWeight:FontWeight.w900)),
           const Text('Added to your Numelixa wallet',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF53647A))),
           const Divider(height:28,color:Color(0xFFDCE4EF)),
           _receiptLine('Voucher code',receipt['code']),_receiptLine('Receipt number',receipt['receiptNumber']),_receiptLine('Date',_date(receipt['redeemedAt'])),_receiptLine('Wallet balance',_money(receipt['balanceUsd'])),_receiptLine('Status','Successful'),
-          const SizedBox(height:14),Text(_emailSent?'A copy of this receipt was sent to your registered email address.':'Your voucher was credited successfully. Email delivery could not be confirmed; keep this in-app receipt for your records.',textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF53647A),fontSize:12,height:1.45)),
+          const SizedBox(height:14),Align(alignment:Alignment.centerRight,child:SizedBox(width:190,height:62,child:SvgPicture.network('https://numelixa.com/numelixa-signature.svg',fit:BoxFit.contain,placeholderBuilder:(_)=>const SizedBox.shrink()))),Text(_emailSent?'A copy of this receipt was sent to your registered email address.':'Your voucher was credited successfully. Email delivery could not be confirmed; keep this in-app receipt for your records.',textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF53647A),fontSize:12,height:1.45)),
         ])),
         const SizedBox(height:16),FilledButton(onPressed:()=>setState(()=>_receipt=null),child:const Text('Continue')),
       ],
