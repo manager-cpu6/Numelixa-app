@@ -24,7 +24,7 @@ Future<void> showPaymentReceipt(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: double.infinity),
+        constraints: const BoxConstraints(maxWidth: 302),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
