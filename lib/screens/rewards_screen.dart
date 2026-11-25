@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
@@ -73,7 +72,7 @@ class _RewardsScreenState extends State<RewardsScreen>{
     final d=_data;
     return Scaffold(appBar:AppBar(title:const Text('Numelixa Rewards'),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh_rounded))]),body:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(16,12,16,28),children:[
       Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF103B6E),Color(0xFF25184E)]),borderRadius:BorderRadius.circular(24),border:Border.all(color:AppTheme.cyan.withValues(alpha:.25))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        ClipRRect(borderRadius:BorderRadius.circular(16),child:SizedBox(height:142,width:double.infinity,child:SvgPicture.network('https://numelixa.com/numelixa-promo-hero.svg',fit:BoxFit.cover,placeholderBuilder:(_)=>const Center(child:Icon(Icons.card_giftcard_rounded,color:Color(0xFFFFD36B),size:40))))),const SizedBox(height:12),
+        ClipRRect(borderRadius:BorderRadius.circular(16),child:SizedBox(height:142,width:double.infinity,child:Image.network('https://numelixa.com/brand/numelixa-rewards-campaign.webp',fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.card_giftcard_rounded,color:Color(0xFFFFD36B),size:40))))),const SizedBox(height:12),
         const Text('Share Numelixa. Earn rewards.',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
         const SizedBox(height:8),const Text('Invite friends and earn when their eligible payments are verified.',style:TextStyle(color:AppTheme.muted,height:1.5)),
         const SizedBox(height:18),const Text('AVAILABLE REWARDS',style:TextStyle(color:AppTheme.cyan,fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.4)),
