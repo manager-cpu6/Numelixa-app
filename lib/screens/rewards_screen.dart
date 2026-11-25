@@ -43,7 +43,10 @@ class _RewardsScreenState extends State<RewardsScreen>{
       final d=await ApiClient().post('/api/referrals',accessToken:auth.accessToken,body:{'amountUsd':amount,'method':method,'account':account});
       if(d['ok']!=true)throw ApiException((d['error']??'Withdrawal request was not accepted.').toString());
       if(!mounted)return;
-      final requestedAt=DateTime.now();
+      final receipt=d['receipt'] is Map?Map<String,dynamic>.from(d['receipt'] as Map):<String,dynamic>{};
+      final requestedAt=DateTime.tryParse(receipt['createdAt']?.toString()??'')?.toLocal()??DateTime.now();
+      final receiptId=(receipt['id']??'Pending receipt').toString();
+      final emailSent=d['emailSent']==true;
       await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
         backgroundColor:const Color(0xFFF7FAFF),
         title:const Row(children:[Icon(Icons.hourglass_top_rounded,color:Color(0xFFD28B20)),SizedBox(width:9),Expanded(child:Text('Withdrawal pending',style:TextStyle(color:Color(0xFF17263B),fontWeight:FontWeight.w900)))]),
@@ -52,8 +55,9 @@ class _RewardsScreenState extends State<RewardsScreen>{
           Text('Bank: $_bank',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Country: $_country',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Account: $account',style:const TextStyle(color:Color(0xFF53647A))),
+          Text('Receipt: $receiptId',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Date: $requestedAt',style:const TextStyle(color:Color(0xFF53647A))),
-          const SizedBox(height:10),const Text('Your request is pending Admin review. A confirmation email has been requested.',style:TextStyle(color:Color(0xFF53647A),fontSize:12)),
+          const SizedBox(height:10),Text(emailSent?'Your request is Pending Admin review. A confirmation email was sent.':'Your request is Pending Admin review. Email delivery could not be confirmed; keep this receipt.',style:const TextStyle(color:Color(0xFF53647A),fontSize:12)),
         ]),
         actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Continue'))],
       ));
