@@ -45,3 +45,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/numelixa_app_icon.webp
+    - assets/tavort_logo.webp
