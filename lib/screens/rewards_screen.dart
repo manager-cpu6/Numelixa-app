@@ -84,7 +84,7 @@ class _RewardsScreenState extends State<RewardsScreen>{
         Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           TextField(controller:_amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:'Amount (USD) · Available '+_money(d['balanceUsd']))),
           const SizedBox(height:10),
-          DropdownButtonFormField<String>(initialValue:_country,decoration:const InputDecoration(labelText:'Country'),items:_banks.keys.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:_busy?null:(v){if(v!=null)setState(()=>{_country=v,_bank=_banks[v]!.first});}),
+          DropdownButtonFormField<String>(initialValue:_country,decoration:const InputDecoration(labelText:'Country'),items:_banks.keys.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:_busy?null:(v){if(v!=null)setState((){_country=v;_bank=_banks[v]!.first;});}),
           const SizedBox(height:10),
           DropdownButtonFormField<String>(initialValue:_bank,decoration:const InputDecoration(labelText:'Bank / payout service'),items:_banks[_country]!.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:_busy?null:(v){if(v!=null)setState(()=>_bank=v);}),
           const SizedBox(height:10),
