@@ -59,7 +59,9 @@ Future<void> showPaymentReceipt(
                     child: const Text('VERIFIED', style: TextStyle(color: AppTheme.mint, fontSize: 11, fontWeight: FontWeight.w900)),
                   ),
                 ]),
-                const SizedBox(height: 12),\n                Center(child:SizedBox(width:108,height:108,child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.verified_rounded,color:AppTheme.cyan,size:44)))),\n                const SizedBox(height: 12),
+                const SizedBox(height: 12),
+                Center(child:SizedBox(width:108,height:108,child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.verified_rounded,color:AppTheme.cyan,size:44)))),
+                const SizedBox(height: 12),
                 const Text('PAYMENT RECEIVED', style: TextStyle(color: AppTheme.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
                 Text('USD ' + amount.toStringAsFixed(2), style: const TextStyle(color: AppTheme.textPrimary, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1.1)),
                 const Text('Wallet credit confirmed', style: TextStyle(color: AppTheme.mint, fontSize: 12, fontWeight: FontWeight.w800)),
@@ -82,7 +84,9 @@ Future<void> showPaymentReceipt(
                 const SizedBox(height: 7),
                 Center(child: Text(value('receiptId'), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 11))),
                 const SizedBox(height: 12),
-                const Text('Generated from the Numelixa wallet ledger after successful server-side payment verification.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.5)),\n                const SizedBox(height: 8),\n                
+                const Text('Generated from the Numelixa wallet ledger after successful server-side payment verification.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.5)),
+                const SizedBox(height: 8),
+                
                 const SizedBox(height: 16),
                 FilledButton.icon(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.check_circle_outline_rounded), label: const Text('Done')),
               ],
