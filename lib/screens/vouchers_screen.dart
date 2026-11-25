@@ -39,6 +39,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
   Widget build(BuildContext context){
     final receipt=_receipt;
     return Scaffold(appBar:AppBar(title:const Text('Vouchers')),body:ListView(padding:const EdgeInsets.fromLTRB(16,12,16,28),children:[
+      Container(height:188,margin:const EdgeInsets.only(bottom:14),padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22),border:Border.all(color:AppTheme.cyan.withValues(alpha:.28)),boxShadow:[BoxShadow(color:AppTheme.blue.withValues(alpha:.16),blurRadius:24,offset:const Offset(0,10))]),child:ClipRRect(borderRadius:BorderRadius.circular(16),child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.verified_rounded,color:Color(0xFF174A91),size:72))))),
       Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF103C70),Color(0xFF21194F)]),borderRadius:BorderRadius.circular(24),border:Border.all(color:AppTheme.cyan.withValues(alpha:.25))),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Icon(Icons.card_giftcard_rounded,color:AppTheme.cyan,size:34),SizedBox(height:14),
         Text('Redeem a Numelixa voucher',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),SizedBox(height:6),
@@ -59,6 +60,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
         Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(color:const Color(0xFFF8FBFF),borderRadius:BorderRadius.circular(22),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.22),blurRadius:22,offset:const Offset(0,12))]),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Center(child:Icon(Icons.verified_rounded,color:Color(0xFF079B79),size:54)),const SizedBox(height:10),
           const Text('VOUCHER REDEEMED',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF087D65),fontWeight:FontWeight.w900,letterSpacing:1.4)),const SizedBox(height:6),
+          Center(child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',height:142,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const SizedBox.shrink())),
           Text(_money(receipt['amountUsd']),textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF101C31),fontSize:34,fontWeight:FontWeight.w900)),
           const Text('Added to your Numelixa wallet',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF53647A))),
           const Divider(height:28,color:Color(0xFFDCE4EF)),
