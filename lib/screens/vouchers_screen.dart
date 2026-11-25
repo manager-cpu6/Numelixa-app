@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
@@ -41,7 +40,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
     final receipt=_receipt;
     return Scaffold(appBar:AppBar(title:const Text('Vouchers')),body:ListView(padding:const EdgeInsets.fromLTRB(16,12,16,28),children:[
       Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF103C70),Color(0xFF21194F)]),borderRadius:BorderRadius.circular(24),border:Border.all(color:AppTheme.cyan.withValues(alpha:.25))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        ClipRRect(borderRadius:BorderRadius.circular(16),child:SizedBox(height:132,width:double.infinity,child:SvgPicture.network('https://numelixa.com/numelixa-voucher-hero.svg',fit:BoxFit.cover,placeholderBuilder:(_)=>const Center(child:Icon(Icons.card_giftcard_rounded,color:AppTheme.cyan,size:42))))),const SizedBox(height:14),
+        ClipRRect(borderRadius:BorderRadius.circular(16),child:SizedBox(height:132,width:double.infinity,child:Image.network('https://numelixa.com/brand/numelixa-voucher-hero.webp',fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.card_giftcard_rounded,color:AppTheme.cyan,size:42))))),const SizedBox(height:14),
         Text('Redeem a Numelixa voucher',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),SizedBox(height:6),
         Text('Enter your voucher code. If it is valid, the reward is added to your wallet and a receipt is sent to your email.',style:TextStyle(color:AppTheme.muted,height:1.5)),
       ])),
