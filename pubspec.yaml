@@ -45,3 +45,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/numelixa_app_icon.webp
+    - assets/numelixa-rewards-campaign.webp
+    - assets/numelixa-voucher-hero.svg
