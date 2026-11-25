@@ -20,7 +20,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
   Future<void> _redeem() async {
     final code=_code.text.trim().toUpperCase();
     if(code.length<6){setState(()=>_error='Enter your complete voucher code.');return;}
-    setState(()=>{_busy=true,_error=null});
+    setState((){_busy=true;_error=null;});
     try{
       final auth=context.read<AuthService>();
       final result=await ApiClient().post('/api/mobile/vouchers/redeem',accessToken:auth.accessToken,body:{'code':code});
