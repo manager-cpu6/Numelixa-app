@@ -13,6 +13,7 @@ class VouchersScreen extends StatefulWidget {
 class _VouchersScreenState extends State<VouchersScreen> {
   final _code = TextEditingController();
   bool _busy = false;
+  bool _emailSent = false;
   String? _error;
   Map<String,dynamic>? _receipt;
   @override
@@ -26,7 +27,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
       final result=await ApiClient().post('/api/mobile/vouchers/redeem',accessToken:auth.accessToken,body:{'code':code});
       if(result['ok']!=true||result['receipt'] is! Map)throw ApiException((result['error']??'Voucher redemption was not confirmed.').toString());
       if(!mounted)return;
-      setState(()=>_receipt=Map<String,dynamic>.from(result['receipt'] as Map));
+      setState(()=>{_receipt=Map<String,dynamic>.from(result['receipt'] as Map),_emailSent=result['emailSent']==true});
       _code.clear();
     }on ApiException catch(e){if(mounted)setState(()=>_error=e.message);}
     catch(_){if(mounted)setState(()=>_error='Unable to redeem this code right now. Please try again.');}
@@ -62,7 +63,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
           const Text('Added to your Numelixa wallet',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF53647A))),
           const Divider(height:28,color:Color(0xFFDCE4EF)),
           _receiptLine('Voucher code',receipt['code']),_receiptLine('Receipt number',receipt['receiptNumber']),_receiptLine('Date',_date(receipt['redeemedAt'])),_receiptLine('Wallet balance',_money(receipt['balanceUsd'])),_receiptLine('Status','Successful'),
-          const SizedBox(height:14),const Text('A copy of this receipt has been sent to your registered email address.',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF53647A),fontSize:12,height:1.45)),
+          const SizedBox(height:14),Text(_emailSent?'A copy of this receipt was sent to your registered email address.':'Your voucher was credited successfully. Email delivery could not be confirmed; keep this in-app receipt for your records.',textAlign:TextAlign.center,style:const TextStyle(color:Color(0xFF53647A),fontSize:12,height:1.45)),
         ])),
         const SizedBox(height:16),FilledButton(onPressed:()=>setState(()=>_receipt=null),child:const Text('Continue')),
       ],
