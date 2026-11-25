@@ -58,7 +58,7 @@ class _RewardsScreenState extends State<RewardsScreen>{
       final emailSent=d['emailSent']==true;
       await showDialog<void>(context:context,builder:(ctx)=>Dialog(
         backgroundColor:Colors.transparent,insetPadding:const EdgeInsets.symmetric(horizontal:18,vertical:24),
-        child:SingleChildScrollView(child:Container(width:390,padding:const EdgeInsets.fromLTRB(22,22,22,18),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFD7DEE8)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.22),blurRadius:28,offset:const Offset(0,14))]),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        child:SingleChildScrollView(child:Container(width:302,padding:const EdgeInsets.fromLTRB(18,20,18,16),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFD7DEE8)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.22),blurRadius:28,offset:const Offset(0,14))]),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Center(child:Image.network('https://numelixa.com/numelixa-app-icon.webp',width:48,height:48,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.verified_rounded,color:Color(0xFF123B72),size:42))),
           const SizedBox(height:7),const Text('NUMELIXA',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF102A56),fontSize:21,fontWeight:FontWeight.w900,letterSpacing:3)),
           const Text('OFFICIAL WITHDRAWAL RECEIPT',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF64748B),fontSize:9,fontWeight:FontWeight.w900,letterSpacing:1.3)),
