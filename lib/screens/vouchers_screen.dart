@@ -57,7 +57,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
         const SizedBox(height:10),
         const Text('Only official active codes can be redeemed. Each account can use a voucher only as permitted by its redemption limit.',style:TextStyle(color:AppTheme.muted,fontSize:12,height:1.5)),
       ]else ...[
-        Center(child:Container(width:390,padding:const EdgeInsets.fromLTRB(22,22,22,18),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFD7DEE8)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.20),blurRadius:24,offset:const Offset(0,12))]),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Center(child:Container(width:302,padding:const EdgeInsets.fromLTRB(18,20,18,16),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFD7DEE8)),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.20),blurRadius:24,offset:const Offset(0,12))]),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Center(child:Image.network('https://numelixa.com/numelixa-app-icon.webp',width:48,height:48,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.verified_rounded,color:Color(0xFF123B72),size:42))),
           const SizedBox(height:7),const Text('NUMELIXA',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF102A56),fontSize:21,fontWeight:FontWeight.w900,letterSpacing:3)),
           const Text('OFFICIAL VOUCHER RECEIPT',textAlign:TextAlign.center,style:TextStyle(color:Color(0xFF64748B),fontSize:9,fontWeight:FontWeight.w900,letterSpacing:1.5)),
