@@ -80,6 +80,8 @@ Future<void> showPaymentReceipt(
                 )),
                 const SizedBox(height: 7),
                 Center(child: Text(value('receiptId'), style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.1, fontSize: 11))),
+                const SizedBox(height: 10),
+                Center(child:Container(height:160,width:190,padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14)),child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.verified_rounded,color:Color(0xFF174A91),size:62)))),
                 const SizedBox(height: 12),
                 const Text('Generated from the Numelixa wallet ledger after successful server-side payment verification.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.muted, fontSize: 11, height: 1.5)),
                 const SizedBox(height: 16),
