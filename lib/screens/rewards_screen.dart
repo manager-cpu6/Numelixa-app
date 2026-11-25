@@ -57,6 +57,7 @@ class _RewardsScreenState extends State<RewardsScreen>{
           Text('Account: $account',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Receipt: $receiptId',style:const TextStyle(color:Color(0xFF53647A))),
           Text('Date: $requestedAt',style:const TextStyle(color:Color(0xFF53647A))),
+          const SizedBox(height:8),Center(child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',height:150,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const SizedBox.shrink())),
           const SizedBox(height:10),Text(emailSent?'Your request is Pending Admin review. A confirmation email was sent.':'Your request is Pending Admin review. Email delivery could not be confirmed; keep this receipt.',style:const TextStyle(color:Color(0xFF53647A),fontSize:12)),
         ]),
         actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Continue'))],
@@ -71,6 +72,7 @@ class _RewardsScreenState extends State<RewardsScreen>{
     return Scaffold(appBar:AppBar(title:const Text('Numelixa Rewards'),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh_rounded))]),body:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(16,12,16,28),children:[
       Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF103B6E),Color(0xFF25184E)]),borderRadius:BorderRadius.circular(24),border:Border.all(color:AppTheme.cyan.withValues(alpha:.25))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         const Icon(Icons.card_giftcard_rounded,color:Color(0xFFFFD36B),size:34),const SizedBox(height:12),
+        Center(child:Container(height:148,width:190,padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18)),child:Image.network('https://numelixa.com/brand/numelixa-official-branding.jpg',fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.workspace_premium_rounded,color:Color(0xFF174A91),size:64)))),const SizedBox(height:12),
         const Text('Share Numelixa. Earn rewards.',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
         const SizedBox(height:8),const Text('Invite friends and earn when their eligible payments are verified.',style:TextStyle(color:AppTheme.muted,height:1.5)),
         const SizedBox(height:18),const Text('AVAILABLE REWARDS',style:TextStyle(color:AppTheme.cyan,fontSize:10,fontWeight:FontWeight.w900,letterSpacing:1.4)),
