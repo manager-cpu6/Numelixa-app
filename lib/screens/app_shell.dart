@@ -24,6 +24,8 @@ import 'support_admin_screen.dart';
 import 'updates_screen.dart';
 import 'account_tools_screen.dart';
 import 'request_money_screen.dart';
+import 'vouchers_screen.dart';
+import 'rewards_screen.dart';
 import 'admin_updates_screen.dart';
 import 'admin_tapcode_test_screen.dart';
 
@@ -3335,8 +3337,9 @@ class _AccountPageState extends State<_AccountPage> {
       const SizedBox(height: 16),
 
       const SizedBox(height: 14),
-      _AccountSection(title: 'REWARDS', children: [
-        _AccountAction(icon: Icons.card_giftcard_rounded, title: 'Referral rewards', subtitle: 'Your referral code, rewards and withdrawal status', onTap: () => _openWeb('/referrals')),
+      _AccountSection(title: 'REWARDS & VOUCHERS', children: [
+        _AccountAction(icon: Icons.card_giftcard_rounded, title: 'Vouchers', subtitle: 'Redeem a code and receive your wallet receipt', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const VouchersScreen()))),
+        _AccountAction(icon: Icons.redeem_rounded, title: 'Referral rewards', subtitle: 'Invite friends, track rewards and request bank withdrawals', onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RewardsScreen()))),
       ]),
       const SizedBox(height: 14),
       _AccountSection(title: 'OFFICIAL SUPPORT', children: [
