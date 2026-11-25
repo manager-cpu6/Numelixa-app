@@ -35,9 +35,11 @@ class _RewardsScreenState extends State<RewardsScreen>{
   Future<void> _withdraw()async{
     final amount=double.tryParse(_amount.text.trim())??0,balance=double.tryParse(_data?['balanceUsd']?.toString()??'')??0;
     if(amount<=0||amount>balance||_account.text.trim().length<4){setState(()=>_error='Enter a valid amount and bank account details.');return;}
-    setState(()=>{_busy=true,_error=null});
+    setState((){_busy=true;_error=null;});
     try{
-      final auth=context.read<AuthService>(),method='$_country · $_bank',account=_account.text.trim();
+      final auth=context.read<AuthService>();
+      final method='$_country · $_bank';
+      final account=_account.text.trim();
       final d=await ApiClient().post('/api/referrals',accessToken:auth.accessToken,body:{'amountUsd':amount,'method':method,'account':account});
       if(d['ok']!=true)throw ApiException((d['error']??'Withdrawal request was not accepted.').toString());
       if(!mounted)return;
